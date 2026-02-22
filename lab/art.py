@@ -270,28 +270,11 @@ class ArtGallery(Element2D, Drawable, Model):
         ray: Segment = source.to(target)
         if ray in self._visibility_cache:
             return self._visibility_cache[ray]
-        if not self.contains(ray, inclusive=True):
-            self._visibility_cache[ray] = False
-            return False
-
-        all_edges: list[Segment] = list(self.boundary.edges)
-        for obstacle in self.obstacles:
-            all_edges.extend(obstacle.edges)
-
-        for edge in all_edges:
-            if edge.connects(ray):
-                continue
-            if not edge.intersects(ray, inclusive=False):
-                continue
-            path1 = Path(start=edge[0], center=edge[1], end=ray[0])
-            path2 = Path(start=edge[0], center=edge[1], end=ray[1])
-            if path1.is_collinear() or path2.is_collinear():
-                continue
-            self._visibility_cache[ray] = False
-            return False
-
-        self._visibility_cache[ray] = True
-        return True
+        if self.contains(ray, inclusive=True):
+            self._visibility_cache[ray] = True
+            return True
+        self._visibility_cache[ray] = False
+        return False
 
     @cached_property
     def ears(self) -> list[Triangle]:

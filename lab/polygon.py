@@ -37,9 +37,13 @@ class Polygon(Bounded, Element2D):
         items: list[Point] = points.items
         self.points = PointSequence(items=items)
         if len(self.points) < 3:
-            raise PolygonTooFewPointsError(f"Polygon must have at least 3 points: {self.points}")
+            raise PolygonTooFewPointsError(
+                f"Polygon must have at least 3 points: {self.points}"
+            )
         if not (abs(self)):
-            raise PolygonDegenerateError(f"Polygon is degenerate: area is zero: {self.points}")
+            raise PolygonDegenerateError(
+                f"Polygon is degenerate: area is zero: {self.points}"
+            )
 
     def __hash__(self) -> Hash:
         return self.points.__hash__()
@@ -52,10 +56,7 @@ class Polygon(Bounded, Element2D):
 
     @cached_property
     def centroid(self) -> Point:
-        xs: list[Decimal] = sorted(point[0] for point in self.points)
-        ys: list[Decimal] = sorted(point[1] for point in self.points)
-        n: int = len(xs)
-        return Point(x=xs[n // 2], y=ys[n // 2])
+        return self.points.centroid
 
     def __repr__(self) -> str:
         return f"Polygon({self.points.items!r})"

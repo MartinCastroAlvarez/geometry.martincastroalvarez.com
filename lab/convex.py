@@ -68,22 +68,6 @@ class ConvexComponent(Model):
 
         print(f"    Shifted: {left} and {right}, with shared: {shared}")
 
-        if any(
-            (
-                Path(
-                    start=left[left.index(shared[0]) - 1],
-                    center=shared[0],
-                    end=right[right.index(shared[0]) + 1],
-                ).is_cw(),
-                Path(
-                    start=right[right.index(shared[-1]) - 1],
-                    center=shared[-1],
-                    end=left[left.index(shared[-1]) + 1],
-                ).is_cw(),
-            )
-        ):
-            raise ConvexComponentNotConvexError("Convex component must be convex.")
-
         left = left[0 : len(left) - len(shared)]
         right = right[len(shared) :]
 
