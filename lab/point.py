@@ -86,7 +86,7 @@ class Point(Element):
 
         return Segment(start=self, end=other)
 
-    def __hash__(self) -> int:
+    def __hash__(self) -> Hash:
         return Hash((self[0], self[1]))
 
     def __eq__(self, other: Any) -> bool:
@@ -335,3 +335,9 @@ class PointSequence(ElementSequence[Point]):
             )
         edge = shared_edges.pop()
         return PointSequence([edge[0], edge[1]])
+
+    def __hash__(self) -> Hash:
+        if not self.items:
+            return Hash("PointSequence(empty)")
+        canonical: PointSequence = self << self.leftmost
+        return Hash(tuple(canonical.items))

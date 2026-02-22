@@ -9,7 +9,8 @@ from colorama import Fore
 from box import Bounded, Box
 from element import Element, Element1D, ElementSequence
 from exceptions import (SegmentInvalidPointsError,
-                        SegmentSequenceInvalidItemsError)
+                        SegmentSequenceInvalidItemsError,
+                        SequencePointNotFoundError)
 from model import Hash
 from path import Path
 from point import Point, PointSequence
@@ -28,7 +29,7 @@ class Segment(Bounded, Element1D):
         self.start = start
         self.end = end
 
-    def __hash__(self) -> int:
+    def __hash__(self) -> Hash:
         low: Point = min(self[0], self[1])
         high: Point = max(self[0], self[1])
         return Hash((low, high))
@@ -186,3 +187,52 @@ class SegmentSequence(ElementSequence[Segment]):
 
     def is_convex(self) -> bool:
         return self.points.is_convex()
+
+    def __lshift__(self, other: int | Segment | Point) -> SegmentSequence:
+        n: int = len(self.items)
+        if n == 0:
+            return SegmentSequence(items=[])
+        if isinstance(other, int):
+            i = other % n
+            return SegmentSequence(items=self.items[i:] + self.items[:i])
+        if isinstance(other, Segment):
+            for idx, seg in enumerate(self.items):
+                if seg == other:
+                    return SegmentSequence(items=self.items[idx:] + self.items[:idx])
+            raise ValueError(f"Segment {other!r} not in sequence")
+        # Point: shift underlying points to that point, then return edges
+        try:
+            shifted_points: PointSequence = self.points << other
+        except SequencePointNotFoundError as e:
+            raise SequencePointNotFoundError(
+                f"Point {other!r} not in segment sequence"
+            ) from e
+        return shifted_points.edges
+
+    def __rshift__(self, other: int | Segment | Point) -> SegmentSequence:
+        n: int = len(self.items)
+        if n == 0:
+            return SegmentSequence(items=[])
+        if isinstance(other, int):
+            i = other % n
+            new_items = self.items[i + 1 :] + self.items[: i + 1]
+            return SegmentSequence(items=new_items)
+        if isinstance(other, Segment):
+            for idx, seg in enumerate(self.items):
+                if seg == other:
+                    new_items = self.items[idx + 1 :] + self.items[: idx + 1]
+                    return SegmentSequence(items=new_items)
+            raise ValueError(f"Segment {other!r} not in sequence")
+        try:
+            shifted_points = self.points >> other
+        except SequencePointNotFoundError as e:
+            raise SequencePointNotFoundError(
+                f"Point {other!r} not in segment sequence"
+            ) from e
+        return shifted_points.edges
+
+    def __hash__(self) -> Hash:
+        if not self.items:
+            return Hash("SegmentSequence(empty)")
+        canonical: SegmentSequence = (self.points << self.points.leftmost).edges
+        return Hash(tuple(canonical.items))

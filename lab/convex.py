@@ -4,7 +4,7 @@ from exceptions import (ComponentMergeError, ComponentsNoSharedEdgeError,
                         ConvexComponentInvalidPolygonError,
                         ConvexComponentMergeTooManyPointsError,
                         ConvexComponentNotConvexError)
-from model import Model
+from model import Hash, Model
 from point import PointSequence
 from polygon import Polygon
 
@@ -19,6 +19,13 @@ class ConvexComponent(Model):
         self.polygon = polygon
         if not self.polygon.points.is_convex():
             raise ConvexComponentNotConvexError("Convex component must be convex.")
+
+    def __hash__(self) -> Hash:
+        points = self.polygon.points
+        if not points.items:
+            return Hash("ConvexComponent(empty)")
+        canonical: PointSequence = points << points.leftmost
+        return Hash(tuple(canonical.items))
 
     def __repr__(self) -> str:
         return f"ConvexComponent({self.polygon!r})"

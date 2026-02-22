@@ -22,16 +22,16 @@ class Hash(int):
         int_value: int = int.from_bytes(hashed, "big")
         return super().__new__(cls, int_value)
 
-    def __hash__(self) -> int:
-        return int(self)
+    def __hash__(self) -> Hash:
+        return self
 
 
 class Model(ABC):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.id: Hash = Hash(uuid4())
 
-    def __hash__(self) -> int:
-        return int(self.id)
+    def __hash__(self) -> Hash:
+        return self.id
 
     def __str__(self) -> str:
         return self.__repr__()
