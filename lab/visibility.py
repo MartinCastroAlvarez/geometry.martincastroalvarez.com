@@ -43,16 +43,15 @@ class Visibility(Generic[T]):
         return {key for key in self.items.keys() if value in self.items[key]}
 
     @property
-    def best(self) -> Hash:
+    def best(self) -> list[Hash]:
         keys: list[Hash] = list(self.items.keys())
         if not keys:
             raise GuardCoverageFailureError("No guard can see any remaining component.")
-        best: Hash = max(
-            keys,
-            key=lambda k: (len(self.items[k]), -k),
-        )
-        if len(self.items[best]) == 0:
-            raise GuardCoverageFailureError(
-                f"Best guard cannot see any remaining component: {self.items}."
-            )
-        return best
+        coverage: dict[Hash, int] = {key: len(self.items[key]) for key in keys}
+        max_coverage: int = max(coverage.values())
+        winners: list[Hash] = [
+            key for key in keys if coverage[key] == max_coverage
+        ]
+        if not winners:
+            raise GuardCoverageFailureError("No guard can see any remaining component.")
+        return winners

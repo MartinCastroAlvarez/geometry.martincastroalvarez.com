@@ -264,7 +264,14 @@ class ArtGallery(Element2D, Drawable, Model):
 
     def sees(self, source: Point, target: Point | ConvexComponent) -> bool:
         if isinstance(target, ConvexComponent):
-            return all(self.sees(source, point) for point in target.points)
+            if source in target.points:
+                return True
+            return all((
+                all(self.sees(source, point) for point in target.points),
+                # all(self.sees(source, edge.midpoint) for edge in target.edges),
+                # self.sees(source, target.points.centroid)
+            ))
+
         if source == target:
             return True
         ray: Segment = source.to(target)
@@ -381,13 +388,14 @@ class ArtGallery(Element2D, Drawable, Model):
     @cached_property
     def guards(self) -> ModelMap[VertexGuard]:
         components: ModelMap[ConvexComponent] = self.convex_components.clone()
-        points: set[Point] = {
+        guards: ModelMap[VertexGuard] = ModelMap(items=[])
+
+        remaining: set[Point] = {
             point for component in components.values() for point in component.points
         }
         candidates: ModelMap[VertexGuard] = ModelMap(
-            items=[VertexGuard(position=point) for point in points]
+            items=[VertexGuard(position=point) for point in remaining]
         )
-        guards: ModelMap[VertexGuard] = ModelMap(items=[])
         while components:
             visibility_by_guard: Visibility[Hash] = Visibility(
                 {
@@ -409,7 +417,17 @@ class ArtGallery(Element2D, Drawable, Model):
             for component in components.values():
                 print(f"    {component.id}: {component.points}")
 
-            best_guard_id: Hash = visibility_by_guard.best
+            best_guard_ids: list[Hash] = visibility_by_guard.best
+            best_guards: list[VertexGuard] = [candidates[guard_id] for guard_id in best_guard_ids]
+            visibility_by_best_guards: Visibility[Point] = Visibility({
+                guard.id: {
+                    point
+                    for point in remaining if self.sees(guard.position, point)
+                }
+                for guard in best_guards
+            })
+
+            best_guard_id: Hash = visibility_by_best_guards.best[0]
             best_guard: VertexGuard = candidates[best_guard_id]
             covered: int = len(visibility_by_guard[best_guard.id])
             guards.add(best_guard)
@@ -422,39 +440,25 @@ class ArtGallery(Element2D, Drawable, Model):
         if components:
             print("Guards: failed to cover all convex components.")
             raise GuardCoverageFailureError("Failed to cover all convex components.")
-        print(f"Guards: {len(guards)} guard(s) placed.")
 
+        print(f"Guards: {len(guards)} guard(s) placed.")
         removed = True
         while removed:
             removed = False
-            visibility_by_guard: Visibility[Hash] = Visibility()
-            for guard in guards.values():
-                visibility_by_guard[guard.id] = {
+
+            visibility_by_guard: Visibility[Hash] = Visibility({
+                guard.id: {
                     point for point in self.points if self.sees(guard.position, point)
                 }
-            if not all(visibility_by_guard.sees(point) for point in self.points):
-                raise GuardCoverageFailureError("Failed to cover all points.")
-            for guard in list(guards.values()):
-                guard_points: set[Point] = visibility_by_guard[guard.id]
-                other_points: set[Point] = {
-                    point
-                    for other in guards.values()
-                    if other.id != guard.id
-                    for point in visibility_by_guard[other.id]
-                    if point in guard_points
-                }
-                if guard_points <= other_points:
-                    print(
-                        f"  Guard ({guard.position[0]}, {guard.position[1]}): pruned."
-                    )
-                    for point in guard_points:
-                        for viewer_id in visibility_by_guard.sees(point):
-                            viewer = guards[viewer_id]
-                            print(f"  {viewer} sees point {point}.")
+                for guard in guards.values()
+            })
 
-                    guards.pop(guard.id)
-                    removed = True
-                    break
+            uncovereed: set[Point] = {
+                point for point in self.points if not visibility_by_guard.sees(point)
+            }
+            if uncovereed:
+                raise GuardCoverageFailureError(f"Failed to cover points: {uncovereed}.")
+
         return guards
 
     @cached_property
