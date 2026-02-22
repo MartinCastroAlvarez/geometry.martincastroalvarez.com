@@ -99,3 +99,7 @@ class ModelMap(Generic[T]):
 
     def clone(self) -> ModelMap[T]:
         return ModelMap(items=dict(self.items))
+
+    def __hash__(self) -> Hash:
+        sorted_ids: list[Hash] = sorted(self.items.keys())
+        return Hash(":".join(str(key) for key in sorted_ids))

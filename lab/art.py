@@ -17,7 +17,7 @@ from exceptions import (BridgeFailureError,
                         PolygonNotSimpleError, PolygonTooFewPointsError,
                         StitchWinnerSubsequenceError)
 from guard import VertexGuard
-from model import Hash, ModelMap
+from model import Hash, Model, ModelMap
 from obstacle import Obstacle
 from path import Path
 from point import Point, PointSequence
@@ -27,9 +27,10 @@ from triangle import Triangle
 from visibility import Visibility
 
 
-class ArtGallery(Element2D, Drawable):
+class ArtGallery(Element2D, Drawable, Model):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        if all([len(args) == 1, isinstance(args[0], dict), not kwargs]):
+        super().__init__()
+        if len(args) == 1 and isinstance(args[0], dict) and not kwargs:
             kwargs = args[0]
         if all(["polygon" in kwargs, not isinstance(kwargs["polygon"], Polygon)]):
             coords = kwargs["polygon"]
@@ -52,29 +53,36 @@ class ArtGallery(Element2D, Drawable):
             kwargs["polygon"] = Polygon(points=PointSequence(points))
         if "holes" in kwargs:
             raw_holes = kwargs["holes"]
-            holes_list: list[Polygon] = []
-            for hole in raw_holes:
-                if isinstance(hole, Polygon):
-                    holes_list.append(hole)
-                else:
-                    if isinstance(hole, PointSequence):
-                        pts = list(hole.items)
-                    elif isinstance(hole, list):
-                        pts = [
-                            (
-                                point
-                                if isinstance(point, Point)
-                                else Point(
-                                    x=Decimal(str(float(point[0]))),
-                                    y=Decimal(str(float(point[1]))),
-                                )
-                            )
-                            for point in hole
-                        ]
+            if isinstance(raw_holes, ModelMap) and all(
+                isinstance(v, Obstacle) for v in raw_holes.values()
+            ):
+                pass
+            else:
+                holes_list: list[Polygon] = []
+                for hole in raw_holes:
+                    if isinstance(hole, Polygon):
+                        holes_list.append(hole)
                     else:
-                        pts = []
-                    holes_list.append(Polygon(points=PointSequence(pts)))
-            kwargs["holes"] = ModelMap(items=[Obstacle(polygon=p) for p in holes_list])
+                        if isinstance(hole, PointSequence):
+                            pts = list(hole.items)
+                        elif isinstance(hole, list):
+                            pts = [
+                                (
+                                    point
+                                    if isinstance(point, Point)
+                                    else Point(
+                                        x=Decimal(str(float(point[0]))),
+                                        y=Decimal(str(float(point[1]))),
+                                    )
+                                )
+                                for point in hole
+                            ]
+                        else:
+                            pts = []
+                        holes_list.append(Polygon(points=PointSequence(pts)))
+                kwargs["holes"] = ModelMap(
+                    items=[Obstacle(polygon=p) for p in holes_list]
+                )
         self.polygon = kwargs.get("polygon") or kwargs.get("boundary")
         self.holes: ModelMap[Obstacle] = (
             kwargs.get("holes") or kwargs.get("obstacles") or ModelMap(items=[])
@@ -118,6 +126,10 @@ class ArtGallery(Element2D, Drawable):
             if obstacle != other
         ):
             raise PolygonNotSimpleError("Obstacles intersect or touch.")
+        self.id = Hash(self)
+
+    def __hash__(self) -> Hash:
+        return Hash(f"{Hash(self.polygon)}:{Hash(self.holes)}")
 
     def __repr__(self) -> str:
         lines: list[str] = ["Art Gallery perimeter:"]
@@ -261,6 +273,7 @@ class ArtGallery(Element2D, Drawable):
         if not self.contains(ray, inclusive=True):
             self._visibility_cache[ray] = False
             return False
+
         all_edges: list[Segment] = list(self.boundary.edges)
         for obstacle in self.obstacles:
             all_edges.extend(obstacle.edges)
@@ -489,20 +502,21 @@ class ArtGallery(Element2D, Drawable):
             if not self.contains(obj.midpoint, inclusive=inclusive):
                 return False
 
-            # gartlar
             for obstacle in self.obstacles:
                 for edge in obstacle.edges:
                     if edge.connects(obj):
                         continue
-                    # strict intersection only (inclusive=False) so touching endpoints is allowed
                     if not edge.intersects(obj, inclusive=False):
                         continue
-                    # allow collinear "lying on boundary" cases
-                    if (
-                        Path(start=edge[0], center=edge[1], end=obj[0]).is_collinear()
-                        or Path(
-                            start=edge[0], center=edge[1], end=obj[1]
-                        ).is_collinear()
+                    if any(
+                        (
+                            Path(
+                                start=edge[0], center=edge[1], end=obj[0]
+                            ).is_collinear(),
+                            Path(
+                                start=edge[0], center=edge[1], end=obj[1]
+                            ).is_collinear(),
+                        )
                     ):
                         continue
                     return False
