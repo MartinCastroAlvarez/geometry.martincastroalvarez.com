@@ -1,0 +1,16 @@
+{
+    "name": "@geometry/mobile",
+    "version": "0.1.0",
+    "private": true,
+    "main": "expo/AppEntry.js",
+    "scripts": {
+        "start": "echo 'Mobile app - placeholder for future React Native implementation'",
+        "android": "echo 'Not implemented yet'",
+        "ios": "echo 'Not implemented yet'"
+    },
+    "dependencies": {
+        "@geometry/ui": "workspace:*",
+        "@geometry/data": "workspace:*",
+        "@geometry/domain": "workspace:*"
+    }
+}

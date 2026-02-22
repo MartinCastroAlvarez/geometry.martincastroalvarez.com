@@ -1,0 +1,4 @@
+
+> @geom/web@0.1.0 typecheck /Users/martincastrolaminrs/geometry.martincastroalvarez.com/web/apps/web
+> tsc --noEmit
+

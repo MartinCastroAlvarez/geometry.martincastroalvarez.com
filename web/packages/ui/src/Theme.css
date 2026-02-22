@@ -1,0 +1,541 @@
+:root {
+    /* Neutral colors - whites, grays, darks, blacks, slates */
+    --x-white: #ffffff;
+    /* pure white */
+    --x-gray: #e0e0e0;
+    /* IBM Gray 20 — subtle borders */
+    --x-dark: rgba(55, 65, 81, 1);
+
+    /* RGB triplets for neutral colors (for alpha manipulation) */
+    --x-white-rgb: 255 255 255;
+    --x-gray-rgb: 224 224 224;
+    --x-dark-rgb: 82 82 82;
+    --x-black-rgb: 0 0 0;
+
+    /* Additional neutral colors used in charts/components */
+    --x-gray-400: #9ca3af;
+    /* gray-400 for text */
+    --x-gray-400-rgb: 156 163 175;
+    --x-slate-400-rgb: 148 163 184;
+    /* slate-400 for skeletons */
+
+    /* Component-specific neutral variables */
+    --x-white-30: rgba(255, 255, 255, 0.3);
+    /* white with 30% opacity */
+    --x-white-40: rgba(255, 255, 255, 0.4);
+    /* white with 40% opacity */
+    --x-white-80: rgba(255, 255, 255, 0.8);
+    /* white with 80% opacity */
+    --x-white-20: rgba(255, 255, 255, 0.2);
+    /* white with 20% opacity for shadows */
+    --x-dark-10: rgba(55, 65, 81, 0.1);
+    /* dark with 10% opacity for shadows */
+    --x-dark-20: rgba(55, 65, 81, 0.2);
+    --x-dark-30: rgba(55, 65, 81, 0.3);
+    --x-dark-40: rgba(55, 65, 81, 0.4);
+    --x-dark-60: rgba(55, 65, 81, 0.6);
+    --x-dark-80: rgba(55, 65, 81, 0.8);
+
+    /* Button-specific colors (always blue/purple, never overridden by seasons) */
+    --x-button-primary-start: #0f62fe;
+    /* IBM Blue 60 - always blue */
+    --x-button-primary-end: #8a3ffc;
+    /* IBM Purple 60 - always purple */
+}
+
+.dark {
+    /* Neutral colors - whites, grays, darks, blacks, slates */
+    --x-white: #191818;
+    /* dark gray background */
+    --x-gray: #393939;
+    /* IBM Gray 70 — used for borders */
+    --x-dark: #ededed;
+    /* inverted light text for readability */
+
+    /* RGB triplets for neutral colors (for alpha manipulation) */
+    --x-white-rgb: 22 22 22;
+    --x-gray-rgb: 57 57 57;
+    --x-dark-rgb: 244 244 244;
+    --x-black-rgb: 0 0 0;
+
+    /* Additional neutral colors used in charts/components (same in dark mode) */
+    --x-gray-400: #9ca3af;
+    --x-gray-400-rgb: 156 163 175;
+    --x-slate-400-rgb: 148 163 184;
+
+    /* Component-specific neutral variables - dark mode */
+    --x-white-30: rgba(255, 255, 255, 0.3);
+    /* keep white variants as is for contrast */
+    --x-white-40: rgba(255, 255, 255, 0.4);
+    /* keep white variants as is for contrast */
+    --x-white-80: rgba(255, 255, 255, 0.8);
+    /* keep white variants as is for contrast */
+    --x-white-20: rgba(255, 255, 255, 0.2);
+    /* keep white with 20% for shadows */
+    --x-dark-10: rgba(255, 255, 255, 0.1);
+    /* use white with 10% for dark mode shadows */
+
+    /* Button-specific colors (always blue/purple, never overridden by seasons) */
+    --x-button-primary-start: #4589ff;
+    /* IBM Blue 60 (dark mode) - always blue */
+    --x-button-primary-end: #a56eff;
+    /* IBM Purple 60 (dark mode) - always purple */
+}
+
+/* Spring - Light Mode (Purple with Pinkish Tint) */
+.spring {
+    --x-primary: #b84ffc;
+    /* Purple with pinkish tint */
+    --x-primary-rgb: 184 79 252;
+    --x-secondary: #0f62fe;
+    /* IBM Blue 60 */
+    --x-secondary-rgb: 15 98 254;
+    --x-danger: #FCDCE1;
+    /* Soft pink */
+    --x-danger-rgb: 252 220 225;
+    --x-indigo-500: #6366f1;
+    /* indigo-500 for charts */
+    --x-indigo-500-rgb: 99 102 241;
+    --x-primary-500: #b84ffc;
+    /* primary-500 for animations */
+    --x-primary-500-rgb: 184 79 252;
+    --x-primary-50: rgba(184, 79, 252, 0.5);
+    /* primary-500 with 50% opacity */
+    /* Blue/Purple Gradient Color Palette — for activity colors (desaturated and lighter) */
+    --x-color-habit: #dde8ff;
+    /* light blue — lightest */
+    --x-color-ambitious: #d4e0ff;
+    /* lighter blue */
+    --x-color-balanced: #ccd8ff;
+    /* soft light blue */
+    --x-color-intense: #c4d0ff;
+    /* light blue */
+    --x-color-tranquil: #c4c8ff;
+    /* light blue-purple transition */
+    --x-color-serene: #c4c4ff;
+    /* light soft purple — darkest */
+}
+
+/* Spring - Dark Mode (Purple with Pinkish Tint) */
+.dark.spring {
+    --x-primary: #c97eff;
+    /* lighter purple with pinkish tint */
+    --x-primary-rgb: 201 126 255;
+    --x-secondary: #4589ff;
+    /* IBM Blue 60 — secondary CTA in dark */
+    --x-secondary-rgb: 69 137 255;
+    --x-danger: #C89BA3;
+    /* Soft pink (darker) */
+    --x-danger-rgb: 200 155 163;
+    --x-indigo-500: #6366f1;
+    --x-indigo-500-rgb: 99 102 241;
+    --x-primary-500: #c97eff;
+    --x-primary-500-rgb: 201 126 255;
+    --x-primary-50: rgba(201, 126, 255, 0.5);
+    /* Blue/Purple Gradient Color Palette — dark mode versions (desaturated) */
+    --x-color-habit: #334466;
+    /* dark blue — darkest */
+    --x-color-ambitious: #445577;
+    /* dark blue-gray */
+    --x-color-balanced: #556688;
+    /* medium blue-gray */
+    --x-color-intense: #667799;
+    /* lighter blue-gray */
+    --x-color-tranquil: #7788aa;
+    /* blue-purple gray */
+    --x-color-serene: #8899bb;
+    /* light blue-purple gray — lightest */
+}
+
+/* Easter - Light Mode (Turquoise/Teal) */
+.easter {
+    --x-primary: #20b2aa;
+    /* Easter turquoise */
+    --x-primary-rgb: 32 178 170;
+    --x-secondary: #48d1cc;
+    /* Lighter turquoise */
+    --x-secondary-rgb: 72 209 204;
+    --x-danger: #FCDCE1;
+    /* Soft pink */
+    --x-danger-rgb: 252 220 225;
+    --x-indigo-500: #20b2aa;
+    /* turquoise for charts */
+    --x-indigo-500-rgb: 32 178 170;
+    --x-primary-500: #20b2aa;
+    /* primary-500 for animations */
+    --x-primary-500-rgb: 32 178 170;
+    --x-primary-50: rgba(32, 178, 170, 0.5);
+    /* primary-500 with 50% opacity */
+    /* Turquoise Gradient Color Palette — for activity colors (desaturated and lighter) */
+    --x-color-habit: #e0f7f6;
+    /* light turquoise — lightest */
+    --x-color-ambitious: #d0f0ef;
+    /* lighter turquoise */
+    --x-color-balanced: #c0e9e8;
+    /* soft light turquoise */
+    --x-color-intense: #b0e2e1;
+    /* light turquoise */
+    --x-color-tranquil: #a0dbda;
+    /* light turquoise */
+    --x-color-serene: #90d4d3;
+    /* turquoise — darkest */
+}
+
+/* Easter - Dark Mode (Turquoise/Teal) */
+.dark.easter {
+    --x-primary: #48d1cc;
+    /* lighter turquoise for dark mode */
+    --x-primary-rgb: 72 209 204;
+    --x-secondary: #66e0db;
+    /* Even lighter turquoise */
+    --x-secondary-rgb: 102 224 219;
+    --x-danger: #C89BA3;
+    /* Soft pink (darker) */
+    --x-danger-rgb: 200 155 163;
+    --x-indigo-500: #48d1cc;
+    --x-indigo-500-rgb: 72 209 204;
+    --x-primary-500: #48d1cc;
+    --x-primary-500-rgb: 72 209 204;
+    --x-primary-50: rgba(72, 209, 204, 0.5);
+    /* Turquoise Gradient Color Palette — dark mode versions (desaturated) */
+    --x-color-habit: #1a3d3c;
+    /* dark turquoise — darkest */
+    --x-color-ambitious: #2a4d4c;
+    /* dark turquoise-gray */
+    --x-color-balanced: #3a5d5c;
+    /* medium turquoise-gray */
+    --x-color-intense: #4a6d6c;
+    /* lighter turquoise-gray */
+    --x-color-tranquil: #5a7d7c;
+    /* turquoise-gray */
+    --x-color-serene: #6a8d8c;
+    /* light turquoise-gray — lightest */
+}
+
+/* Summer - Light Mode (Blue) */
+.summer {
+    --x-primary: #546de5;
+    /* Summer blue */
+    --x-primary-rgb: 84 109 229;
+    --x-secondary: #778beb;
+    /* Lighter summer blue */
+    --x-secondary-rgb: 119 139 235;
+    --x-danger: #FCDCE1;
+    /* Soft pink */
+    --x-danger-rgb: 252 220 225;
+    --x-indigo-500: #546de5;
+    /* indigo-500 for charts */
+    --x-indigo-500-rgb: 84 109 229;
+    --x-primary-500: #546de5;
+    /* primary-500 for animations (blue) */
+    --x-primary-500-rgb: 84 109 229;
+    --x-primary-50: rgba(84, 109, 229, 0.5);
+    /* primary-500 with 50% opacity */
+    /* Blue Gradient Color Palette — for activity colors (desaturated and lighter) */
+    --x-color-habit: #e8edff;
+    /* light blue — lightest */
+    --x-color-ambitious: #dde5ff;
+    /* lighter blue */
+    --x-color-balanced: #d2ddff;
+    /* soft light blue */
+    --x-color-intense: #c7d5ff;
+    /* light blue */
+    --x-color-tranquil: #bccdff;
+    /* light blue */
+    --x-color-serene: #b1c5ff;
+    /* light blue — darkest */
+}
+
+/* Summer - Dark Mode (Blue) */
+.dark.summer {
+    --x-primary: #778beb;
+    /* lighter summer blue for dark mode */
+    --x-primary-rgb: 119 139 235;
+    --x-secondary: #9aa5f0;
+    /* Even lighter summer blue */
+    --x-secondary-rgb: 154 165 240;
+    --x-danger: #C89BA3;
+    /* Soft pink (darker) */
+    --x-danger-rgb: 200 155 163;
+    --x-indigo-500: #778beb;
+    --x-indigo-500-rgb: 119 139 235;
+    --x-primary-500: #778beb;
+    /* primary-500 for animations (blue) */
+    --x-primary-500-rgb: 119 139 235;
+    --x-primary-50: rgba(119, 139, 235, 0.5);
+    /* Blue Gradient Color Palette — dark mode versions (desaturated) */
+    --x-color-habit: #2a3d5d;
+    /* dark blue — darkest */
+    --x-color-ambitious: #3a4d6d;
+    /* dark blue-gray */
+    --x-color-balanced: #4a5d7d;
+    /* medium blue-gray */
+    --x-color-intense: #5a6d8d;
+    /* lighter blue-gray */
+    --x-color-tranquil: #6a7d9d;
+    /* blue-gray */
+    --x-color-serene: #7a8dad;
+    /* light blue-gray — lightest */
+}
+
+/* Autumn - Light Mode (Purple) */
+.autumn {
+    --x-primary: #574b90;
+    /* Autumn purple */
+    --x-primary-rgb: 87 75 144;
+    --x-secondary: #786fa6;
+    /* Lighter autumn purple */
+    --x-secondary-rgb: 120 111 166;
+    --x-danger: #FCDCE1;
+    /* Soft pink */
+    --x-danger-rgb: 252 220 225;
+    --x-indigo-500: #574b90;
+    /* indigo-500 for charts */
+    --x-indigo-500-rgb: 87 75 144;
+    --x-primary-500: #574b90;
+    /* primary-500 for animations */
+    --x-primary-500-rgb: 87 75 144;
+    --x-primary-50: rgba(87, 75, 144, 0.5);
+    /* primary-500 with 50% opacity */
+    /* Purple Gradient Color Palette — for activity colors (desaturated and lighter) */
+    --x-color-habit: #f0edf5;
+    /* very light purple — lightest */
+    --x-color-ambitious: #e5dfed;
+    /* light purple-gray */
+    --x-color-balanced: #dad1e5;
+    /* soft light purple */
+    --x-color-intense: #cfc3dd;
+    /* light purple */
+    --x-color-tranquil: #c4b5d5;
+    /* medium-light purple */
+    --x-color-serene: #b9a7cd;
+    /* purple — darkest */
+}
+
+/* Autumn - Dark Mode (Purple) */
+.dark.autumn {
+    --x-primary: #786fa6;
+    /* lighter autumn purple for dark mode */
+    --x-primary-rgb: 120 111 166;
+    --x-secondary: #9a8fc0;
+    /* Even lighter autumn purple */
+    --x-secondary-rgb: 154 143 192;
+    --x-danger: #C89BA3;
+    /* Soft pink (darker) */
+    --x-danger-rgb: 200 155 163;
+    --x-indigo-500: #786fa6;
+    --x-indigo-500-rgb: 120 111 166;
+    --x-primary-500: #786fa6;
+    --x-primary-500-rgb: 120 111 166;
+    --x-primary-50: rgba(120, 111, 166, 0.5);
+    /* Purple Gradient Color Palette — dark mode versions (desaturated) */
+    --x-color-habit: #3a3455;
+    /* dark purple — darkest */
+    --x-color-ambitious: #4a4465;
+    /* dark purple-gray */
+    --x-color-balanced: #5a5475;
+    /* medium purple-gray */
+    --x-color-intense: #6a6485;
+    /* lighter purple-gray */
+    --x-color-tranquil: #7a7495;
+    /* purple-gray */
+    --x-color-serene: #8a84a5;
+    /* light purple-gray — lightest */
+}
+
+/* Halloween - Light Mode (Orange) */
+.halloween {
+    --x-primary: #e67e22;
+    /* Halloween orange */
+    --x-primary-rgb: 230 126 34;
+    --x-secondary: #f39c12;
+    /* Lighter orange/gold */
+    --x-secondary-rgb: 243 156 18;
+    --x-danger: #FCDCE1;
+    /* Soft pink */
+    --x-danger-rgb: 252 220 225;
+    --x-indigo-500: #e67e22;
+    /* orange for charts */
+    --x-indigo-500-rgb: 230 126 34;
+    --x-primary-500: #e67e22;
+    /* primary-500 for animations */
+    --x-primary-500-rgb: 230 126 34;
+    --x-primary-50: rgba(230, 126, 34, 0.5);
+    /* primary-500 with 50% opacity */
+    /* Orange Gradient Color Palette — for activity colors (desaturated and lighter) */
+    --x-color-habit: #fef5e7;
+    /* light orange — lightest */
+    --x-color-ambitious: #fdebd0;
+    /* lighter orange */
+    --x-color-balanced: #fce1b9;
+    /* soft light orange */
+    --x-color-intense: #fbd7a2;
+    /* light orange */
+    --x-color-tranquil: #facd8b;
+    /* light orange */
+    --x-color-serene: #f9c374;
+    /* orange — darkest */
+}
+
+/* Halloween - Dark Mode (Orange) */
+.dark.halloween {
+    --x-primary: #f39c12;
+    /* lighter orange for dark mode */
+    --x-primary-rgb: 243 156 18;
+    --x-secondary: #f5b041;
+    /* Even lighter orange */
+    --x-secondary-rgb: 245 176 65;
+    --x-danger: #C89BA3;
+    /* Soft pink (darker) */
+    --x-danger-rgb: 200 155 163;
+    --x-indigo-500: #f39c12;
+    --x-indigo-500-rgb: 243 156 18;
+    --x-primary-500: #f39c12;
+    --x-primary-500-rgb: 243 156 18;
+    --x-primary-50: rgba(243, 156, 18, 0.5);
+    /* Orange Gradient Color Palette — dark mode versions (desaturated) */
+    --x-color-habit: #4a3520;
+    /* dark orange — darkest */
+    --x-color-ambitious: #5a4530;
+    /* dark orange-brown */
+    --x-color-balanced: #6a5540;
+    /* medium orange-brown */
+    --x-color-intense: #7a6550;
+    /* lighter orange-brown */
+    --x-color-tranquil: #8a7560;
+    /* orange-brown */
+    --x-color-serene: #9a8570;
+    /* light orange-brown — lightest */
+}
+
+/* Winter - Light Mode (Pinkish/Reddish) */
+.winter {
+    --x-primary: #c44569;
+    /* Winter pinkish-red */
+    --x-primary-rgb: 196 69 105;
+    --x-secondary: #cf6a87;
+    /* Lighter winter pink */
+    --x-secondary-rgb: 207 106 135;
+    --x-danger: #FCDCE1;
+    /* Soft pink */
+    --x-danger-rgb: 252 220 225;
+    --x-indigo-500: #c44569;
+    /* indigo-500 for charts */
+    --x-indigo-500-rgb: 196 69 105;
+    --x-primary-500: #c44569;
+    /* primary-500 for animations */
+    --x-primary-500-rgb: 196 69 105;
+    --x-primary-50: rgba(196, 69, 105, 0.5);
+    /* primary-500 with 50% opacity */
+    /* Pink-Red Gradient Color Palette — for activity colors (desaturated and lighter) */
+    --x-color-habit: #ffeef2;
+    /* light pink — lightest */
+    --x-color-ambitious: #ffe5eb;
+    /* lighter pink */
+    --x-color-balanced: #ffdce4;
+    /* soft light pink */
+    --x-color-intense: #ffd3dd;
+    /* light pink */
+    --x-color-tranquil: #ffcad6;
+    /* light pink */
+    --x-color-serene: #ffc1cf;
+    /* pink — darkest */
+}
+
+/* Winter - Dark Mode (Pinkish/Reddish) */
+.dark.winter {
+    --x-primary: #cf6a87;
+    /* lighter winter pink for dark mode */
+    --x-primary-rgb: 207 106 135;
+    --x-secondary: #d98ba0;
+    /* Even lighter winter pink */
+    --x-secondary-rgb: 217 139 160;
+    --x-danger: #C89BA3;
+    /* Soft pink (darker) */
+    --x-danger-rgb: 200 155 163;
+    --x-indigo-500: #cf6a87;
+    --x-indigo-500-rgb: 207 106 135;
+    --x-primary-500: #cf6a87;
+    /* primary-500 for animations */
+    --x-primary-500-rgb: 207 106 135;
+    --x-primary-50: rgba(207, 106, 135, 0.5);
+    /* Pink-Red Gradient Color Palette — dark mode versions (desaturated) */
+    --x-color-habit: #4a2d35;
+    /* dark pink — darkest */
+    --x-color-ambitious: #5a3d45;
+    /* dark pink-gray */
+    --x-color-balanced: #6a4d55;
+    /* medium pink-gray */
+    --x-color-intense: #7a5d65;
+    /* lighter pink-gray */
+    --x-color-tranquil: #8a6d75;
+    /* pink-gray */
+    --x-color-serene: #9a7d85;
+    /* light pink-gray — lightest */
+}
+
+/* Christmas - Light Mode (Sage Green) */
+.christmas {
+    --x-primary: #788475;
+    /* Christmas sage green */
+    --x-primary-rgb: 120 132 117;
+    --x-secondary: #8daa91;
+    /* Lighter sage green */
+    --x-secondary-rgb: 141 170 145;
+    --x-danger: #FCDCE1;
+    /* Soft pink */
+    --x-danger-rgb: 252 220 225;
+    --x-indigo-500: #788475;
+    /* indigo-500 for charts */
+    --x-indigo-500-rgb: 120 132 117;
+    --x-primary-500: #788475;
+    /* primary-500 for animations */
+    --x-primary-500-rgb: 120 132 117;
+    --x-primary-50: rgba(120, 132, 117, 0.5);
+    /* primary-500 with 50% opacity */
+    /* Sage Green Gradient Color Palette — for activity colors (desaturated and lighter) */
+    --x-color-habit: #f0f2f0;
+    /* light sage — lightest */
+    --x-color-ambitious: #e8ebe8;
+    /* lighter sage */
+    --x-color-balanced: #e0e4e0;
+    /* soft light sage */
+    --x-color-intense: #d8ddd8;
+    /* light sage */
+    --x-color-tranquil: #d0d6d0;
+    /* light sage */
+    --x-color-serene: #c8cfc8;
+    /* sage — darkest */
+}
+
+/* Christmas - Dark Mode (Sage Green) */
+.dark.christmas {
+    --x-primary: #8daa91;
+    /* lighter sage green for dark mode */
+    --x-primary-rgb: 141 170 145;
+    --x-secondary: #9db5a1;
+    /* Even lighter sage green */
+    --x-secondary-rgb: 157 181 161;
+    --x-danger: #C89BA3;
+    /* Soft pink (darker) */
+    --x-danger-rgb: 200 155 163;
+    --x-indigo-500: #8daa91;
+    --x-indigo-500-rgb: 141 170 145;
+    --x-primary-500: #8daa91;
+    /* primary-500 for animations */
+    --x-primary-500-rgb: 141 170 145;
+    --x-primary-50: rgba(141, 170, 145, 0.5);
+    /* Sage Green Gradient Color Palette — dark mode versions (desaturated) */
+    --x-color-habit: #2a2e2a;
+    /* dark sage — darkest */
+    --x-color-ambitious: #3a3f3a;
+    /* dark sage-gray */
+    --x-color-balanced: #4a504a;
+    /* medium sage-gray */
+    --x-color-intense: #5a615a;
+    /* lighter sage-gray */
+    --x-color-tranquil: #6a726a;
+    /* sage-gray */
+    --x-color-serene: #7a837a;
+    /* light sage-gray — lightest */
+}

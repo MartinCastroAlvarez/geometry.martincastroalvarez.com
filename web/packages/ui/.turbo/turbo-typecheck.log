@@ -1,0 +1,4 @@
+
+> @geom/ui@0.1.0 typecheck /Users/martincastrolaminrs/geometry.martincastroalvarez.com/web/packages/ui
+> tsc --noEmit
+

@@ -1,0 +1,41 @@
+{
+    "name": "@geometry/web",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc && vite build",
+        "preview": "vite preview",
+        "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "react-konva": "^18.2.10",
+        "konva": "^9.3.1",
+        "zustand": "^4.4.7",
+        "@tanstack/react-query": "^5.17.0",
+        "@use-gesture/react": "^10.3.0",
+        "d3-zoom": "^3.0.0",
+        "polygon-clipping": "^0.15.7",
+        "martinez-polygon-clipping": "^0.7.2",
+        "earcut": "^2.2.4",
+        "rbush": "^3.0.1",
+        "immer": "^10.0.3",
+        "sonner": "^1.4.0",
+        "@geometry/ui": "workspace:*",
+        "@geometry/data": "workspace:*",
+        "@geometry/editor": "workspace:*",
+        "@geometry/domain": "workspace:*"
+    },
+    "devDependencies": {
+        "@types/react": "^18.2.43",
+        "@types/react-dom": "^18.2.17",
+        "@types/d3-zoom": "^3.0.8",
+        "@vitejs/plugin-react": "^4.2.1",
+        "typescript": "^5.3.3",
+        "vite": "^5.0.8"
+    }
+}
