@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from exceptions import GuardInvalidPositionError
-from model import Model
+from model import Hash, Model
 from point import Point
 
 
@@ -15,6 +15,7 @@ class Guard(Model, ABC):
                 f"position must be a Point, got {type(position).__name__}"
             )
         self.position = position
+        self.id = Hash(self.position)
 
     @property
     @abstractmethod

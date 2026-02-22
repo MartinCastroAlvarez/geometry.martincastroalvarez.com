@@ -4,7 +4,6 @@ from collections import defaultdict
 from decimal import Decimal
 from functools import cached_property
 from typing import Any
-from uuid import UUID
 
 from convex import ConvexComponent
 from designer import Drawable
@@ -18,7 +17,7 @@ from exceptions import (BridgeFailureError,
                         PolygonNotSimpleError, PolygonTooFewPointsError,
                         StitchWinnerSubsequenceError)
 from guard import VertexGuard
-from model import ModelMap
+from model import Hash, ModelMap
 from path import Path
 from point import Point, PointSequence
 from polygon import Polygon
@@ -244,28 +243,38 @@ class ArtGallery(Element2D, Drawable):
             return all(self.sees(source, point) for point in target.polygon.points)
         if source == target:
             return True
-        segment: Segment = source.to(target)
-        if segment in self._visibility_cache:
-            return self._visibility_cache[segment]
-        if not self.contains(segment, inclusive=True):
-            self._visibility_cache[segment] = False
+        ray: Segment = source.to(target)
+        if ray in self._visibility_cache:
+            return self._visibility_cache[ray]
+        if not self.contains(ray, inclusive=True):
+            self._visibility_cache[ray] = False
             return False
 
-        obstacles: list[Segment] = list(self.boundary.edges)
         for obstacle in self.obstacles:
-            obstacles.extend(obstacle.edges)
-        for edge in obstacles:
-            if edge.connects(segment):
+            if any(
+                ray.contains(edge[0], inclusive=True) and ray.contains(edge[1], inclusive=True)
+                for edge in obstacle.edges
+            ):
+                self._visibility_cache[ray] = False
+                return False
+
+        all_edges: list[Segment] = list(self.boundary.edges)
+        for obstacle in self.obstacles:
+            all_edges.extend(obstacle.edges)
+
+        for edge in all_edges:
+            if edge.connects(ray):
                 continue
-            if not edge.intersects(segment, inclusive=False):
+            if not edge.intersects(ray, inclusive=False):
                 continue
-            path1 = Path(start=edge[0], center=edge[1], end=segment[0])
-            path2 = Path(start=edge[0], center=edge[1], end=segment[1])
+            path1 = Path(start=edge[0], center=edge[1], end=ray[0])
+            path2 = Path(start=edge[0], center=edge[1], end=ray[1])
             if path1.is_collinear() or path2.is_collinear():
                 continue
-            self._visibility_cache[segment] = False
+            self._visibility_cache[ray] = False
             return False
-        self._visibility_cache[segment] = True
+
+        self._visibility_cache[ray] = True
         return True
 
     @cached_property
@@ -327,7 +336,7 @@ class ArtGallery(Element2D, Drawable):
             items=[ConvexComponent(polygon=ear.polygon) for ear in self.ears]
         )
         while True:
-            components_by_edge: defaultdict[Segment, list[UUID]] = defaultdict(list)
+            components_by_edge: defaultdict[Segment, list[Hash]] = defaultdict(list)
             for component in components.values():
                 for edge in component.polygon.edges:
                     components_by_edge[edge].append(component.id)
@@ -383,14 +392,14 @@ class ArtGallery(Element2D, Drawable):
         )
         guards: ModelMap[VertexGuard] = ModelMap(items=[])
         while components:
-            visibility_by_guard: Visibility[UUID] = Visibility()
+            visibility_by_guard: Visibility[Hash] = Visibility()
             for guard in candidates.values():
                 visibility_by_guard[guard.id] = {
                     component.id
                     for component in components.values()
                     if self.sees(guard.position, component)
                 }
-            best_guard_id: UUID = visibility_by_guard.best
+            best_guard_id: Hash = visibility_by_guard.best
             best_guard: VertexGuard = candidates[best_guard_id]
             covered: int = len(visibility_by_guard[best_guard.id])
             guards.add(best_guard)
@@ -408,7 +417,7 @@ class ArtGallery(Element2D, Drawable):
         removed = True
         while removed:
             removed = False
-            visibility_by_guard: Visibility[UUID] = Visibility()
+            visibility_by_guard: Visibility[Hash] = Visibility()
             for guard in guards.values():
                 visibility_by_guard[guard.id] = {
                     point for point in self.points if self.sees(guard.position, point)

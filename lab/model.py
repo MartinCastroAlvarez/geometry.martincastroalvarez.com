@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 from abc import ABC
 from typing import Any, Generic, Iterator, TypeVar
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from exceptions import (HashInvalidValueError, ModelMapInvalidDataError,
                         ModelMapKeyError)
@@ -28,10 +28,10 @@ class Hash(int):
 
 class Model(ABC):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        self.id = uuid4()
+        self.id: Hash = Hash(uuid4())
 
-    def __hash__(self) -> Hash:
-        return Hash(str(self.id))
+    def __hash__(self) -> int:
+        return int(self.id)
 
     def __str__(self) -> str:
         return self.__repr__()
@@ -44,58 +44,58 @@ class ModelMap(Generic[T]):
     def __init__(
         self,
         *,
-        items: dict[UUID, T] | list[T] | None = None,
+        items: dict[Hash, T] | list[T] | None = None,
     ) -> None:
         if items is None:
-            self.data: dict[UUID, T] = {}
+            self.items: dict[Hash, T] = {}
         elif isinstance(items, dict):
-            self.data = items
+            self.items = items
         elif isinstance(items, list):
             for item in items:
                 if not isinstance(item, Model):
                     raise ModelMapInvalidDataError(
                         f"items list must contain Model instances, got {type(item).__name__}"
                     )
-            self.data = {item.id: item for item in items}
+            self.items = {item.id: item for item in items}
         else:
             raise ModelMapInvalidDataError(
                 f"items must be a dict, list, or None, got {type(items).__name__}"
             )
 
-    def __getitem__(self, key: UUID) -> T:
-        if key not in self.data:
+    def __getitem__(self, key: Hash) -> T:
+        if key not in self.items:
             raise ModelMapKeyError(f"key not in ModelMap: {key}")
-        return self.data[key]
+        return self.items[key]
 
-    def __setitem__(self, key: UUID, value: T) -> None:
-        self.data[key] = value
+    def __setitem__(self, key: Hash, value: T) -> None:
+        self.items[key] = value
 
     def __iadd__(self, item: T) -> ModelMap[T]:
-        self.data[item.id] = item
+        self.items[item.id] = item
         return self
 
     def __iter__(self) -> Iterator[T]:  # type: ignore[override]
-        return iter(self.data.values())
+        return iter(self.items.values())
 
-    def keys(self) -> Iterator[UUID]:
-        return iter(self.data.keys())
+    def keys(self) -> Iterator[Hash]:
+        return iter(self.items.keys())
 
     def values(self) -> Iterator[T]:
-        return iter(self.data.values())
+        return iter(self.items.values())
 
-    def items(self) -> Iterator[tuple[UUID, T]]:
-        return iter(self.data.items())
+    def entries(self) -> Iterator[tuple[Hash, T]]:
+        return iter(self.items.items())
 
     def __len__(self) -> int:
-        return len(self.data)
+        return len(self.items)
 
     def add(self, item: T) -> None:
-        self.data[item.id] = item
+        self.items[item.id] = item
 
-    def pop(self, key: UUID) -> None:
-        if key not in self.data:
+    def pop(self, key: Hash) -> None:
+        if key not in self.items:
             raise ModelMapKeyError(f"key not in ModelMap: {key}")
-        del self.data[key]
+        del self.items[key]
 
     def clone(self) -> ModelMap[T]:
-        return ModelMap(items=dict(self.data))
+        return ModelMap(items=dict(self.items))

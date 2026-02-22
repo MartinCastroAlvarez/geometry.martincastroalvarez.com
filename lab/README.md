@@ -42,7 +42,7 @@ A computational geometry library and playground for implementing art gallery alg
 | `interval.py` | `Interval` (1D), containment and overlap |
 | `matrix.py` | `Matrix` (2×2 determinant for orientation/area) |
 | `element.py` | `Element`, `ComplexElement`, `Element1D`, `Element2D` (contains, overlaps, size, signed_area) |
-| `model.py` | `Model` (UUID), `ModelMap[T]` (dict-like, `clone()`, add/pop) |
+| `model.py` | `Model` (Hash id), `Hash`, `ModelMap[T]` (dict-like, `clone()`, add/pop) |
 | `exceptions.py` | Art-gallery and geometry-specific exceptions |
 | `convex.py` | `ConvexComponent` (convex polygon, merge by shared edge, CCW) |
 | `guard.py` | `Guard`, `VertexGuard` (guard with `vertex` = position) |
