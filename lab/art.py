@@ -261,16 +261,6 @@ class ArtGallery(Element2D, Drawable):
         if not self.contains(ray, inclusive=True):
             self._visibility_cache[ray] = False
             return False
-
-        for obstacle in self.obstacles:
-            if any(
-                ray.contains(edge[0], inclusive=True)
-                and ray.contains(edge[1], inclusive=True)
-                for edge in obstacle.edges
-            ):
-                self._visibility_cache[ray] = False
-                return False
-
         all_edges: list[Segment] = list(self.boundary.edges)
         for obstacle in self.obstacles:
             all_edges.extend(obstacle.edges)
@@ -403,13 +393,20 @@ class ArtGallery(Element2D, Drawable):
         )
         guards: ModelMap[VertexGuard] = ModelMap(items=[])
         while components:
-            visibility_by_guard: Visibility[Hash] = Visibility()
-            for guard in candidates.values():
-                visibility_by_guard[guard.id] = {
-                    component.id
-                    for component in components.values()
-                    if self.sees(guard.position, component)
+            visibility_by_guard: Visibility[Hash] = Visibility(
+                {
+                    guard.id: {
+                        component.id
+                        for component in components.values()
+                        if self.sees(guard.position, component)
+                    }
+                    for guard in candidates.values()
                 }
+            )
+            print(f"  Visibility by guard: {visibility_by_guard.items}")
+            print(f"  Components remaining: {len(components)}:")
+            for component in components.values():
+                print(f"    {component.id}: {component.points}")
             best_guard_id: Hash = visibility_by_guard.best
             best_guard: VertexGuard = candidates[best_guard_id]
             covered: int = len(visibility_by_guard[best_guard.id])

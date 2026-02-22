@@ -156,3 +156,7 @@ class ComponentMergeError(ArtGalleryError):
  
 class PathInvalidPointsError(ArtGalleryError):
     pass
+
+
+class VisibilityInvalidItemsError(ArtGalleryError):
+    pass
