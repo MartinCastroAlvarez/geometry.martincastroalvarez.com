@@ -6,7 +6,7 @@ from typing import Any
 from art import ArtGallery
 from convex import ConvexComponent
 from designer import Drawable
-from exceptions import PolygonTooFewPointsError
+from exceptions import ConsortiumCapacityTooLowError, PolygonTooFewPointsError
 from guard import Guard
 from model import Hash, Model, ModelMap
 from obstacle import Obstacle
@@ -71,6 +71,12 @@ class Consortium(Model, Drawable):
         )
         if self.polygon is None:
             raise PolygonTooFewPointsError("Consortium requires polygon")
+        capacity: int = int(kwargs.get("capacity", 0))
+        if capacity < 10:
+            raise ConsortiumCapacityTooLowError(
+                f"Consortium capacity must be >= 10, got {capacity}"
+            )
+        self.capacity: int = capacity
         self.id = Hash(self)
 
         provisory_art_gallery = ArtGallery(polygon=self.polygon, holes=self.holes)

@@ -5,6 +5,7 @@ from exceptions import (ComponentMergeError, ComponentsNoSharedEdgeError,
                         ConvexComponentMergeTooManyPointsError,
                         ConvexComponentNotConvexError)
 from model import Hash, Model
+from path import Path
 from point import PointSequence
 from polygon import Polygon
 from segment import SegmentSequence
@@ -43,6 +44,7 @@ class ConvexComponent(Model):
         left = self.polygon.points
         right = other.polygon.points
         shared: PointSequence = left & right
+
         if len(shared) < 2:
             raise ComponentsNoSharedEdgeError("Components do not share a whole edge")
         if len(shared) > len(left):
@@ -65,6 +67,22 @@ class ConvexComponent(Model):
         right = right << right.index(shared[0])
 
         print(f"    Shifted: {left} and {right}, with shared: {shared}")
+
+        if any(
+            (
+                Path(
+                    start=left[left.index(shared[0]) - 1],
+                    center=shared[0],
+                    end=right[right.index(shared[0]) + 1],
+                ).is_cw(),
+                Path(
+                    start=right[right.index(shared[-1]) - 1],
+                    center=shared[-1],
+                    end=left[left.index(shared[-1]) + 1],
+                ).is_cw(),
+            )
+        ):
+            raise ConvexComponentNotConvexError("Convex component must be convex.")
 
         left = left[0 : len(left) - len(shared)]
         right = right[len(shared) :]

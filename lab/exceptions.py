@@ -158,5 +158,13 @@ class PathInvalidPointsError(ArtGalleryError):
     pass
 
 
+class ConsortiumCapacityTooLowError(ArtGalleryError):
+    pass
+
+
 class VisibilityInvalidItemsError(ArtGalleryError):
+    pass
+
+
+class VisibilityInvalidGuardError(ArtGalleryError):
     pass

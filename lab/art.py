@@ -416,10 +416,16 @@ class ArtGallery(Element2D, Drawable, Model):
                     for guard in candidates.values()
                 }
             )
-            print(f"  Visibility by guard: {visibility_by_guard.items}")
+
+            print("  Visibility by Guard:")
+            for guard_id in visibility_by_guard.items.keys():
+                visibility: set[Hash] = visibility_by_guard[guard_id]
+                print(f"    {candidates[guard_id]} can see: {visibility}")
+
             print(f"  Components remaining: {len(components)}:")
             for component in components.values():
                 print(f"    {component.id}: {component.points}")
+
             best_guard_id: Hash = visibility_by_guard.best
             best_guard: VertexGuard = candidates[best_guard_id]
             covered: int = len(visibility_by_guard[best_guard.id])
