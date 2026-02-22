@@ -163,7 +163,7 @@ class ArtGallery(Element2D, Drawable):
                 obstacle.points if obstacle.points.is_cw() else ~obstacle.points
             )
             anchor: Point = obstacle_points.rightmost
-            print(f"  Obstacle {obstacle.id}: Briding {obstacle.points} to {points}")
+            print(f"  Obstacle {obstacle.id}: Bridging {obstacle.points} to {points}")
             bridge: Segment | None = None
             for candidate in points:
                 if candidate == anchor:

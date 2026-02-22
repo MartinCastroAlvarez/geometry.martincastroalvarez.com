@@ -42,6 +42,16 @@ class Element2D(ComplexElement):
 class ElementSequence(ABC, Generic[T]):
     items: list[T]
 
+    @staticmethod
+    def remove_consecutive_duplicates(items: list[T]) -> list[T]:
+        if not items:
+            return []
+        result: list[T] = [items[0]]
+        for i in range(1, len(items)):
+            if items[i] != items[i - 1]:
+                result.append(items[i])
+        return result
+
     def __len__(self) -> int:
         return len(self.items)
 

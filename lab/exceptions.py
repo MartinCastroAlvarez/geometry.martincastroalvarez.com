@@ -152,3 +152,7 @@ class ConvexComponentMergeTooManyPointsError(ArtGalleryError):
 
 class ComponentMergeError(ArtGalleryError):
     pass
+
+ 
+class PathInvalidPointsError(ArtGalleryError):
+    pass

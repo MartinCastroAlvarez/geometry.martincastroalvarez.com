@@ -23,6 +23,8 @@ class Path:
 
     @cached_property
     def signed_area(self) -> Decimal:
+        if self[0] == self[1] or self[1] == self[2] or self[0] == self[2]:
+            return Decimal("0")
         u = self[1] - self[0]
         v = self[2] - self[0]
         return Matrix([u, v]).determinant / Decimal("2")

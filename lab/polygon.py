@@ -35,12 +35,7 @@ class Polygon(Bounded, Element2D):
         else:
             raise PolygonTooFewPointsError("Polygon requires points")
         items: list[Point] = points.items
-        deduplicated = [items[0]]
-        if items:
-            for i in range(1, len(items)):
-                if items[i] != items[i - 1]:
-                    deduplicated.append(items[i])
-        self.points = PointSequence(items=deduplicated)
+        self.points = PointSequence(items=items)
         if len(self.points) < 3:
             raise PolygonTooFewPointsError("Polygon must have at least 3 points")
         if not (abs(self)):
@@ -167,3 +162,16 @@ class Polygon(Bounded, Element2D):
             return False
 
         raise NotImplementedError(f"Polygon.overlaps not implemented for {type(obj)}")
+
+    def clip(self, box: Box) -> Polygon:
+        points = PointSequence(
+            [
+                Point(
+                    x=max(box.x[0], min(box.x[1], point[0])),
+                    y=max(box.y[0], min(box.y[1], point[1])),
+                )
+                for point in self.points
+            ]
+        )
+        polygon = Polygon(points=points)
+        return polygon

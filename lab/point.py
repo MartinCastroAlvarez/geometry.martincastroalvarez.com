@@ -145,10 +145,12 @@ class PointSequence(ElementSequence[Point]):
                         raise SequenceInvalidPointsError(
                             f"PointSequence item at index {index} could not be coerced to Point: {point!r}"
                         ) from e
-            self.items = coerced
+            self.items = PointSequence.remove_consecutive_duplicates(coerced)
             return
         if len(args) == 1 and isinstance(args[0], PointSequence):
-            self.items = list(args[0].items)
+            self.items = PointSequence.remove_consecutive_duplicates(
+                list(args[0].items)
+            )
             return
         if len(args) == 1 and isinstance(args[0], (list, tuple)):
             raw = list(args[0])
@@ -167,9 +169,9 @@ class PointSequence(ElementSequence[Point]):
                         raise SequenceInvalidPointsError(
                             f"PointSequence item at index {index} could not be coerced to Point: {point!r}"
                         ) from e
-            self.items = coerced
+            self.items = PointSequence.remove_consecutive_duplicates(coerced)
             return
-        self.items = []
+        self.items = PointSequence.remove_consecutive_duplicates([])
 
     def __repr__(self) -> str:
         return (

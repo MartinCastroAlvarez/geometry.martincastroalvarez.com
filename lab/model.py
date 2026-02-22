@@ -18,7 +18,7 @@ class Hash(int):
         if len(value) == 0:
             raise HashInvalidValueError("Hash value must be non-empty")
         raw: bytes = value.encode()
-        hashed: bytes = hashlib.sha256(raw).digest()[:8]
+        hashed: bytes = hashlib.sha256(raw).digest()[:16]
         int_value: int = int.from_bytes(hashed, "big")
         return super().__new__(cls, int_value)
 

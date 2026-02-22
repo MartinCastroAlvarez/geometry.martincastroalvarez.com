@@ -166,7 +166,7 @@ class SegmentSequence(ElementSequence[Segment]):
                 raise SegmentSequenceInvalidItemsError(
                     f"items[{i}] must be a Segment, got {type(seg).__name__}"
                 )
-        self.items = list(items)
+        self.items = SegmentSequence.remove_consecutive_duplicates(list(items))
 
     def __repr__(self) -> str:
         return (
