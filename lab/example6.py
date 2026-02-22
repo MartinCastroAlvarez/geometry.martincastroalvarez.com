@@ -174,4 +174,4 @@ if __name__ == "__main__":
     )
     print(gallery)
 
-    Designer(art_gallery=gallery).plot()
+    Designer(drawable=gallery).plot()

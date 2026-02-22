@@ -138,6 +138,10 @@ class DesignerInvalidArtGalleryError(ArtGalleryError):
     pass
 
 
+class DesignerInvalidDrawableError(ArtGalleryError):
+    pass
+
+
 class ConvexComponentMergeTooManyPointsError(ArtGalleryError):
     pass
 

@@ -38,4 +38,4 @@ if __name__ == "__main__":
 
     print(f"\nFound {len(gallery.convex_components)} convex components")
     print(f"Found {len(gallery.guards)} potential guard positions")
-    Designer(art_gallery=gallery).plot()
+    Designer(drawable=gallery).plot()

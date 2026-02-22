@@ -7,6 +7,7 @@ from typing import Any
 from uuid import UUID
 
 from convex import ConvexComponent
+from designer import Drawable
 from element import Element, Element2D
 from exceptions import (BridgeFailureError,
                         ComponentsEmptyOutsideBoundaryError,
@@ -26,7 +27,7 @@ from triangle import Triangle
 from visibility import Visibility
 
 
-class ArtGallery(Element2D):
+class ArtGallery(Element2D, Drawable):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         if len(args) == 1 and isinstance(args[0], dict) and not kwargs:
             kwargs = args[0]
