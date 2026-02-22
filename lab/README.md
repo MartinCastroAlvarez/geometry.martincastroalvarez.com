@@ -72,26 +72,10 @@ Use `example2.py`, `example3.py`, `example4.py`, `example5.py`, or `example6.py`
 
 ## Examples
 
-## Example 1 ([example1.py](example1.py))
+| | |
+|---|---|
+| ![Example 1](example1.png) | ![Example 2](example2.png) |
+| ![Example 3](example3.png) | ![Example 4](example4.png) |
+| ![Example 5](example5.png) | ![Example 6](example6.png) |
 
-![example1](example1.png)
-
-## Example 2 ([example2.py](example2.py))
-
-![example2](example2.png)
-
-## Example 3 ([example3.py](example3.py))
-
-![example3](example3.png)
-
-## Example 4 ([example4.py](example4.py))
-
-![example4](example4.png)
-
-## Example 5 ([example5.py](example5.py))
-
-![example5](example5.png)
-
-## Example 6 ([example6.py](example6.py))
-
-![example6](example6.png)
+Scripts: [example1.py](example1.py), [example2.py](example2.py), [example3.py](example3.py), [example4.py](example4.py), [example5.py](example5.py), [example6.py](example6.py).
