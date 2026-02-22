@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 from functools import cached_property
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
 
 from box import Bounded, Box
 from element import Element, Element2D
@@ -49,6 +49,9 @@ class Polygon(Bounded, Element2D):
 
     def __getitem__(self, index: int) -> Point:
         return self.points[index]
+
+    def count(self, condition: Callable[[Point], bool]) -> int:
+        return sum(1 for point in self.points if condition(point))
 
     def __repr__(self) -> str:
         return f"Polygon({self.points.items!r})"
