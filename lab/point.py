@@ -87,7 +87,7 @@ class Point(Element):
         return Segment(start=self, end=other)
 
     def __hash__(self) -> int:
-        return Hash(f"{self[0]},{self[1]}")
+        return Hash((self[0], self[1]))
 
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Point):

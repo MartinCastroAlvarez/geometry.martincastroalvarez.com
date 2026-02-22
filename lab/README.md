@@ -25,7 +25,7 @@ A computational geometry library and playground for implementing art gallery alg
 | Type | Files |
 |------|--------|
 | **Core** | `point.py`, `segment.py`, `sequence.py`, `path.py`, `polygon.py`, `triangle.py`, `box.py`, `interval.py`, `matrix.py`, `element.py`, `model.py`, `exceptions.py`, `convex.py`, `guard.py`, `visibility.py`, `art.py`, `consortium.py`, `designer.py` |
-| **Examples** | `example1.py`, `example2.py`, `example3.py`, `example4.py`, `example5.py`, `example6.py` (and corresponding `exampleN.png` screenshots) |
+| **Examples** | `example1.py`, `example2.py`, `example3.py`, `example4.py`, `example5.py`, `example6.py`, `example7.py` (and corresponding `exampleN.png` screenshots) |
 | **Other** | `README.md`, `run.sh`, `pyproject.toml`, `poetry.lock`, `.gitignore` |
 
 ## Modules
@@ -69,7 +69,7 @@ poetry install
 poetry run python lab/example1.py
 ```
 
-Use `example2.py`, `example3.py`, `example4.py`, `example5.py`, or `example6.py` in place of `example1.py` to run other examples. Each script prints perimeter vertices, convex component count, guard count, and uses `Designer(drawable=gallery).plot()` to open a matplotlib window (save as `exampleN.png` to capture the figure).
+Use `example2.py`, `example3.py`, `example4.py`, `example5.py`, `example6.py`, or `example7.py` in place of `example1.py` to run other examples. Each script prints perimeter vertices, convex component count, guard count, and uses `Designer(drawable=gallery).plot()` to open a matplotlib window (save as `exampleN.png` to capture the figure).
 
 ## Examples
 
@@ -78,5 +78,6 @@ Use `example2.py`, `example3.py`, `example4.py`, `example5.py`, or `example6.py`
 | ![Example 1](example1.png) | ![Example 2](example2.png) |
 | ![Example 3](example3.png) | ![Example 4](example4.png) |
 | ![Example 5](example5.png) | ![Example 6](example6.png) |
+| ![Example 7](example7.png) | |
 
-Scripts: [example1.py](example1.py), [example2.py](example2.py), [example3.py](example3.py), [example4.py](example4.py), [example5.py](example5.py), [example6.py](example6.py).
+Scripts: [example1.py](example1.py), [example2.py](example2.py), [example3.py](example3.py), [example4.py](example4.py), [example5.py](example5.py), [example6.py](example6.py), [example7.py](example7.py). Example7 is example5 with more holes so that some holes stitch to other holes, showing that bridging still works when a hole bridges to an already-stitched hole.

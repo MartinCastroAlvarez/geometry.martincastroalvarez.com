@@ -126,6 +126,10 @@ class MatrixInvalidPointsError(ArtGalleryError):
     pass
 
 
+class HashInvalidValueError(ArtGalleryError):
+    pass
+
+
 class ModelMapInvalidDataError(ArtGalleryError):
     pass
 

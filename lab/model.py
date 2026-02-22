@@ -5,15 +5,19 @@ from abc import ABC
 from typing import Any, Generic, Iterator, TypeVar
 from uuid import UUID, uuid4
 
-from exceptions import ModelMapInvalidDataError, ModelMapKeyError
+from exceptions import (HashInvalidValueError, ModelMapInvalidDataError,
+                        ModelMapKeyError)
 
 
 class Hash(int):
-    def __new__(cls, value: str | None = None) -> Hash:
+    def __new__(cls, value: Any) -> Hash:
         if value is None:
-            raw: bytes = uuid4().bytes
-        else:
-            raw = value.encode()
+            raise HashInvalidValueError("Hash value must not be None")
+        if not isinstance(value, str):
+            value = str(value)
+        if len(value) == 0:
+            raise HashInvalidValueError("Hash value must be non-empty")
+        raw: bytes = value.encode()
         hashed: bytes = hashlib.sha256(raw).digest()[:8]
         int_value: int = int.from_bytes(hashed, "big")
         return super().__new__(cls, int_value)
@@ -27,7 +31,7 @@ class Model(ABC):
         self.id = uuid4()
 
     def __hash__(self) -> Hash:
-        return Hash(self.id.bytes)
+        return Hash(str(self.id))
 
     def __str__(self) -> str:
         return self.__repr__()

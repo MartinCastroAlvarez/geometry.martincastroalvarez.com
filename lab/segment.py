@@ -29,9 +29,9 @@ class Segment(Bounded, Element1D):
         self.end = end
 
     def __hash__(self) -> int:
-        low: Hash = Hash(str(min(self[0], self[1])))
-        high: Hash = Hash(str(max(self[0], self[1])))
-        return Hash(f"{low},{high}")
+        low: Point = min(self[0], self[1])
+        high: Point = max(self[0], self[1])
+        return Hash((low, high))
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Segment):

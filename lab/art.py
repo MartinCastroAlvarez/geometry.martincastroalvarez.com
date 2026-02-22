@@ -83,7 +83,8 @@ class ArtGallery(Element2D, Drawable):
         boundary: SegmentSequence = self.boundary.edges
         for i, obstacle in enumerate(self.obstacles):
             if not all(
-                self.boundary.contains(point, inclusive=False) for point in obstacle.points
+                self.boundary.contains(point, inclusive=False)
+                for point in obstacle.points
             ):
                 raise PolygonNotSimpleError(
                     f"Obstacle {i} is not strictly inside the boundary (outside or touching boundary)."
@@ -147,7 +148,9 @@ class ArtGallery(Element2D, Drawable):
         )
         edges: SegmentSequence = points.edges
         for obstacle_idx, obstacle in enumerate(obstacles):
-            obstacle_points = obstacle.points if obstacle.points.is_cw() else ~obstacle.points
+            obstacle_points = (
+                obstacle.points if obstacle.points.is_cw() else ~obstacle.points
+            )
             anchor: Point = obstacle_points.rightmost
             print(f"  Obstacle {obstacle_idx}: Briding {obstacle.points} to {points}")
             bridge: Segment | None = None
@@ -186,7 +189,9 @@ class ArtGallery(Element2D, Drawable):
                     bridge = segment
 
             if bridge is None:
-                print(f"  Obstacle {obstacle_idx}: no valid bridge found for anchor {anchor}.")
+                print(
+                    f"  Obstacle {obstacle_idx}: no valid bridge found for anchor {anchor}."
+                )
                 raise BridgeFailureError(
                     f"No valid bridge found for obstacle: {obstacle.points}"
                 )
@@ -446,7 +451,9 @@ class ArtGallery(Element2D, Drawable):
         if isinstance(obj, Point):
             if not self.boundary.contains(obj, inclusive=inclusive):
                 return False
-            return not any(obstacle.contains(obj, inclusive=False) for obstacle in self.obstacles)
+            return not any(
+                obstacle.contains(obj, inclusive=False) for obstacle in self.obstacles
+            )
 
         if isinstance(obj, Segment):
             if not self.boundary.contains(obj, inclusive=inclusive):
@@ -457,7 +464,10 @@ class ArtGallery(Element2D, Drawable):
                 for obstacle in self.obstacles
             ):
                 return False
-            if any(obstacle.contains(obj.midpoint, inclusive=False) for obstacle in self.obstacles):
+            if any(
+                obstacle.contains(obj.midpoint, inclusive=False)
+                for obstacle in self.obstacles
+            ):
                 return False
             if not self.contains(obj.midpoint, inclusive=inclusive):
                 return False
@@ -501,6 +511,9 @@ class ArtGallery(Element2D, Drawable):
         return all(
             [
                 self.boundary.overlaps(obj, inclusive=inclusive),
-                not any(obstacle.contains(obj, inclusive=False) for obstacle in self.obstacles),
+                not any(
+                    obstacle.contains(obj, inclusive=False)
+                    for obstacle in self.obstacles
+                ),
             ]
         )
