@@ -338,8 +338,19 @@ class PointSequence(ElementSequence[Point]):
         edge = shared_edges.pop()
         return PointSequence([edge[0], edge[1]])
 
+    def __invert__(self) -> PointSequence:
+        return PointSequence(list(reversed(self.items)))
+
     def __hash__(self) -> Hash:
         if not self.items:
             return Hash("PointSequence(empty)")
-        canonical: PointSequence = self << self.leftmost
-        return Hash(tuple(canonical.items))
+        forward = self
+        backward = ~self
+
+        forward = forward << forward.leftmost
+        backward = backward << backward.leftmost
+
+        hash1 = Hash(forward)
+        hash2 = Hash(backward)
+
+        return Hash(tuple(sorted([hash1, hash2])))
