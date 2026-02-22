@@ -13,13 +13,8 @@ from visibility import Visibility
 
 
 class Consortium(Drawable):
-    @property
-    def points(self) -> PointSequence:
-        return PointSequence(items=[])
-
-    @property
-    def polygon(self) -> Polygon:
-        return Polygon(
+    def __init__(self) -> None:
+        self.polygon = Polygon(
             points=PointSequence(
                 items=[
                     Point(x=Decimal("0"), y=Decimal("0")),
@@ -28,10 +23,19 @@ class Consortium(Drawable):
                 ]
             )
         )
+        self.holes = []
 
     @property
-    def holes(self) -> list[Polygon]:
-        return []
+    def points(self) -> PointSequence:
+        return PointSequence(items=[])
+
+    @property
+    def boundary(self) -> Polygon:
+        return self.polygon
+
+    @property
+    def obstacles(self) -> list[Polygon]:
+        return self.holes
 
     @property
     def ears(self) -> list[Triangle]:

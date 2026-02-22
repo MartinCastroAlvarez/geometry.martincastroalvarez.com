@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from guard import Guard
     from model import ModelMap
     from point import Point, PointSequence
+    from polygon import Polygon
     from triangle import Triangle
     from visibility import Visibility
 
@@ -21,6 +22,14 @@ class Drawable(ABC):
     @property
     @abstractmethod
     def points(self) -> PointSequence: ...  # noqa
+
+    @property
+    @abstractmethod
+    def boundary(self) -> Polygon: ...  # noqa
+
+    @property
+    @abstractmethod
+    def obstacles(self) -> list[Polygon]: ...  # noqa
 
     @property
     @abstractmethod
@@ -66,14 +75,14 @@ class Designer:
                 zorder=0,
                 label="Stitched (bridges)",
             )
-        p_x = [int(point[0]) for point in self.drawable.polygon.points] + [
-            int(self.drawable.polygon.points[0][0])
+        p_x = [int(point[0]) for point in self.drawable.boundary.points] + [
+            int(self.drawable.boundary.points[0][0])
         ]
-        p_y = [int(point[1]) for point in self.drawable.polygon.points] + [
-            int(self.drawable.polygon.points[0][1])
+        p_y = [int(point[1]) for point in self.drawable.boundary.points] + [
+            int(self.drawable.boundary.points[0][1])
         ]
         plt.plot(p_x, p_y, "k-", linewidth=2, label="Boundary")
-        for i, hole in enumerate(self.drawable.holes):
+        for i, hole in enumerate(self.drawable.obstacles):
             h_x = [int(point[0]) for point in hole.points] + [int(hole.points[0][0])]
             h_y = [int(point[1]) for point in hole.points] + [int(hole.points[0][1])]
             plt.plot(h_x, h_y, "k-", linewidth=2)

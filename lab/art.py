@@ -75,61 +75,69 @@ class ArtGallery(Element2D, Drawable):
                         pts = []
                     holes_list.append(Polygon(points=PointSequence(pts)))
             kwargs["holes"] = holes_list
-        self.polygon = kwargs.get("polygon")
-        self.holes = kwargs.get("holes", [])
+        self.polygon = kwargs.get("polygon") or kwargs.get("boundary")
+        self.holes = kwargs.get("holes", []) or kwargs.get("obstacles", [])
         self._visibility_cache: dict[Segment, bool] = {}
         if self.polygon is None:
             raise PolygonTooFewPointsError("ArtGallery requires polygon")
-        boundary: SegmentSequence = self.polygon.edges
-        for i, hole in enumerate(self.holes):
+        boundary: SegmentSequence = self.boundary.edges
+        for i, obstacle in enumerate(self.obstacles):
             if not all(
-                self.polygon.contains(point, inclusive=False) for point in hole.points
+                self.boundary.contains(point, inclusive=False) for point in obstacle.points
             ):
                 raise PolygonNotSimpleError(
-                    f"Hole {i} is not strictly inside the boundary (outside or touching boundary)."
+                    f"Obstacle {i} is not strictly inside the boundary (outside or touching boundary)."
                 )
-            for edge in hole.edges:
+            for edge in obstacle.edges:
                 for boundary_edge in boundary:
                     if edge.intersects(
                         boundary_edge, inclusive=True
                     ) and not edge.connects(boundary_edge):
                         raise PolygonNotSimpleError(
-                            f"Hole {i} intersects/touches boundary."
+                            f"Obstacle {i} intersects/touches boundary."
                         )
-            for point in hole.points:
+            for point in obstacle.points:
                 for boundary_edge in boundary:
                     if boundary_edge.contains(point, inclusive=True):
                         raise PolygonNotSimpleError(
-                            f"Hole {i} has a vertex on the boundary."
+                            f"Obstacle {i} has a vertex on the boundary."
                         )
-        for i, hole in enumerate(self.holes):
-            for other in self.holes[i + 1 :]:
-                if hole.overlaps(other, inclusive=True):
-                    raise PolygonNotSimpleError("Holes intersect or touch.")
+        for i, obstacle in enumerate(self.obstacles):
+            for other in self.obstacles[i + 1 :]:
+                if obstacle.overlaps(other, inclusive=True):
+                    raise PolygonNotSimpleError("Obstacles intersect or touch.")
 
     def __repr__(self) -> str:
         lines: list[str] = ["Art Gallery perimeter:"]
-        for i, point in enumerate(self.polygon.points):
+        for i, point in enumerate(self.boundary.points):
             lines.append(f" Vertex {i}: {point}")
-        for hole_idx, hole in enumerate(self.holes):
-            lines.append(f"Hole {hole_idx}:")
-            for i, point in enumerate(hole.points):
+        for obstacle_idx, obstacle in enumerate(self.obstacles):
+            lines.append(f"Obstacle {obstacle_idx}:")
+            for i, point in enumerate(obstacle.points):
                 lines.append(f" Vertex {i}: {point}")
         return "\n".join(lines)
 
+    @property
+    def boundary(self) -> Polygon:
+        return self.polygon
+
+    @property
+    def obstacles(self) -> list[Polygon]:
+        return self.holes
+
     @cached_property
     def signed_area(self) -> Decimal:
-        return self.polygon.signed_area - sum(
+        return self.boundary.signed_area - sum(
             abs(hole.signed_area) for hole in self.holes
         )
 
     @cached_property
     def points(self) -> PointSequence:
-        points: PointSequence = self.polygon.points
+        points: PointSequence = self.boundary.points
         if not self.holes:
             return points
-        print(f"Stitching {len(self.holes)} holes to {len(points)} points.")
-        holes: list[Polygon] = sorted(
+        print(f"Stitching {len(self.obstacles)} obstacles to {len(points)} points.")
+        obstacles: list[Polygon] = sorted(
             self.holes,
             key=lambda hole: (
                 hole.points.rightmost[0],
@@ -138,10 +146,10 @@ class ArtGallery(Element2D, Drawable):
             reverse=True,
         )
         edges: SegmentSequence = points.edges
-        for hole_idx, hole in enumerate(holes):
-            hole_points = hole.points if hole.points.is_cw() else ~hole.points
-            anchor: Point = hole_points.rightmost
-            print(f"  Hole {hole_idx}: Briding {hole.points} to {points}")
+        for obstacle_idx, obstacle in enumerate(obstacles):
+            obstacle_points = obstacle.points if obstacle.points.is_cw() else ~obstacle.points
+            anchor: Point = obstacle_points.rightmost
+            print(f"  Obstacle {obstacle_idx}: Briding {obstacle.points} to {points}")
             bridge: Segment | None = None
             for candidate in points:
                 if candidate == anchor:
@@ -151,21 +159,21 @@ class ArtGallery(Element2D, Drawable):
                 if candidate[1] < anchor[1]:
                     continue
                 segment: Segment = candidate.to(anchor)
-                if not self.polygon.contains(segment, inclusive=True):
+                if not self.boundary.contains(segment, inclusive=True):
                     continue
                 if any(
                     Path(start=edge[0], center=edge[1], end=segment[0]).is_collinear()
                     and Path(
                         start=edge[0], center=edge[1], end=segment[1]
                     ).is_collinear()
-                    for edge in self.polygon.edges
+                    for edge in self.boundary.edges
                     if not edge.connects(segment)
                 ):
                     continue
                 if any(
-                    other_hole.overlaps(segment, inclusive=False)
-                    for other_hole in self.holes
-                    if other_hole is not hole
+                    other_obstacle.overlaps(segment, inclusive=False)
+                    for other_obstacle in self.obstacles
+                    if other_obstacle is not obstacle
                 ):
                     continue
                 if any(
@@ -178,16 +186,16 @@ class ArtGallery(Element2D, Drawable):
                     bridge = segment
 
             if bridge is None:
-                print(f"  Hole {hole_idx}: no valid bridge found for anchor {anchor}.")
+                print(f"  Obstacle {obstacle_idx}: no valid bridge found for anchor {anchor}.")
                 raise BridgeFailureError(
-                    f"No valid bridge found for hole: {hole.points}"
+                    f"No valid bridge found for obstacle: {obstacle.points}"
                 )
 
             winner: Segment = bridge
             vertex: Point = winner[0]
 
-            print(f"  Hole {hole_idx}: Stitching {bridge}")
-            print(f"    Hole {hole_points}")
+            print(f"  Obstacle {obstacle_idx}: Stitching {bridge}")
+            print(f"    Obstacle {obstacle_points}")
             print(f"    Anchor {anchor}")
             print(f"    Vertex {vertex}")
             print(f"    Points {points}")
@@ -197,13 +205,13 @@ class ArtGallery(Element2D, Drawable):
                     f"Winner {winner} is a subsequence of boundary points; cannot stitch"
                 )
 
-            if winner in hole_points:
+            if winner in obstacle_points:
                 raise StitchWinnerSubsequenceError(
-                    f"Winner {winner} is a subsequence of hole {hole_idx}; cannot stitch"
+                    f"Winner {winner} is a subsequence of obstacle {obstacle_idx}; cannot stitch"
                 )
 
             left = points >> vertex
-            right = hole_points << anchor
+            right = obstacle_points << anchor
 
             if not left.is_ccw():
                 raise Exception(f"Left {left} is not CCW; cannot stitch")
@@ -238,9 +246,9 @@ class ArtGallery(Element2D, Drawable):
             self._visibility_cache[segment] = False
             return False
 
-        obstacles: list[Segment] = list(self.polygon.edges)
-        for hole in self.holes:
-            obstacles.extend(hole.edges)
+        obstacles: list[Segment] = list(self.boundary.edges)
+        for obstacle in self.obstacles:
+            obstacles.extend(obstacle.edges)
         for edge in obstacles:
             if edge.connects(segment):
                 continue
@@ -436,27 +444,27 @@ class ArtGallery(Element2D, Drawable):
 
     def contains(self, obj: Element, inclusive: bool = True) -> bool:
         if isinstance(obj, Point):
-            if not self.polygon.contains(obj, inclusive=inclusive):
+            if not self.boundary.contains(obj, inclusive=inclusive):
                 return False
-            return not any(hole.contains(obj, inclusive=False) for hole in self.holes)
+            return not any(obstacle.contains(obj, inclusive=False) for obstacle in self.obstacles)
 
         if isinstance(obj, Segment):
-            if not self.polygon.contains(obj, inclusive=inclusive):
+            if not self.boundary.contains(obj, inclusive=inclusive):
                 return False
             if any(
-                hole.contains(obj[0], inclusive=False)
-                or hole.contains(obj[1], inclusive=False)
-                for hole in self.holes
+                obstacle.contains(obj[0], inclusive=False)
+                or obstacle.contains(obj[1], inclusive=False)
+                for obstacle in self.obstacles
             ):
                 return False
-            if any(hole.contains(obj.midpoint, inclusive=False) for hole in self.holes):
+            if any(obstacle.contains(obj.midpoint, inclusive=False) for obstacle in self.obstacles):
                 return False
             if not self.contains(obj.midpoint, inclusive=inclusive):
                 return False
 
             # gartlar
-            for hole in self.holes:
-                for edge in hole.edges:
+            for obstacle in self.obstacles:
+                for edge in obstacle.edges:
                     if edge.connects(obj):
                         continue
                     # strict intersection only (inclusive=False) so touching endpoints is allowed
@@ -492,7 +500,7 @@ class ArtGallery(Element2D, Drawable):
     def overlaps(self, obj: Element, inclusive: bool = True) -> bool:
         return all(
             [
-                self.polygon.overlaps(obj, inclusive=inclusive),
-                not any(hole.contains(obj, inclusive=False) for hole in self.holes),
+                self.boundary.overlaps(obj, inclusive=inclusive),
+                not any(obstacle.contains(obj, inclusive=False) for obstacle in self.obstacles),
             ]
         )

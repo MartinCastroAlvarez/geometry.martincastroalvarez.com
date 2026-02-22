@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 from decimal import Decimal
 from functools import cached_property
 from typing import TYPE_CHECKING, Any
@@ -9,6 +8,7 @@ from colorama import Fore
 
 from element import Element, ElementSequence
 from exceptions import PointInvalidCoordinatesError
+from model import Hash
 
 if TYPE_CHECKING:
     from segment import Segment, SegmentSequence
@@ -87,8 +87,7 @@ class Point(Element):
         return Segment(start=self, end=other)
 
     def __hash__(self) -> int:
-        data: bytes = f"{self[0]},{self[1]}".encode()
-        return int.from_bytes(hashlib.sha256(data).digest()[:8], "big")
+        return Hash(f"{self[0]},{self[1]}")
 
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Point):

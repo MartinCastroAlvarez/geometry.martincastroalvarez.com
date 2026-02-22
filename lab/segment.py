@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import math
 from decimal import Decimal
 from functools import cached_property
@@ -11,6 +10,7 @@ from box import Bounded, Box
 from element import Element, Element1D, ElementSequence
 from exceptions import (SegmentInvalidPointsError,
                         SegmentSequenceInvalidItemsError)
+from model import Hash
 from path import Path
 from point import Point, PointSequence
 
@@ -29,10 +29,9 @@ class Segment(Bounded, Element1D):
         self.end = end
 
     def __hash__(self) -> int:
-        low: Point = min(self[0], self[1])
-        high: Point = max(self[0], self[1])
-        data: bytes = f"{low[0]},{low[1]},{high[0]},{high[1]}".encode()
-        return int.from_bytes(hashlib.sha256(data).digest()[:8], "big")
+        low: Hash = Hash(str(min(self[0], self[1])))
+        high: Hash = Hash(str(max(self[0], self[1])))
+        return Hash(f"{low},{high}")
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Segment):

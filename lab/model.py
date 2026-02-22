@@ -8,12 +8,26 @@ from uuid import UUID, uuid4
 from exceptions import ModelMapInvalidDataError, ModelMapKeyError
 
 
+class Hash(int):
+    def __new__(cls, value: str | None = None) -> Hash:
+        if value is None:
+            raw: bytes = uuid4().bytes
+        else:
+            raw = value.encode()
+        hashed: bytes = hashlib.sha256(raw).digest()[:8]
+        int_value: int = int.from_bytes(hashed, "big")
+        return super().__new__(cls, int_value)
+
+    def __hash__(self) -> int:
+        return int(self)
+
+
 class Model(ABC):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.id = uuid4()
 
-    def __hash__(self) -> int:
-        return int.from_bytes(hashlib.sha256(self.id.bytes).digest()[:8], "big")
+    def __hash__(self) -> Hash:
+        return Hash(self.id.bytes)
 
     def __str__(self) -> str:
         return self.__repr__()
