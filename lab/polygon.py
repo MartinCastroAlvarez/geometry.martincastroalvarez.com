@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 from box import Bounded, Box
 from element import Element, Element2D
 from exceptions import PolygonDegenerateError, PolygonTooFewPointsError
+from model import Hash
 from path import Path
 from point import Point, PointSequence
 from segment import Segment, SegmentSequence
@@ -44,6 +45,9 @@ class Polygon(Bounded, Element2D):
             raise PolygonTooFewPointsError("Polygon must have at least 3 points")
         if not (abs(self)):
             raise PolygonDegenerateError("Polygon is degenerate: area is zero")
+
+    def __hash__(self) -> Hash:
+        return self.points.__hash__()
 
     def __len__(self) -> int:
         return len(self.points)

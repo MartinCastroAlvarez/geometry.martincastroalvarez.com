@@ -6,6 +6,7 @@ from convex import ConvexComponent
 from designer import Drawable
 from guard import Guard
 from model import ModelMap
+from obstacle import Obstacle
 from point import Point, PointSequence
 from polygon import Polygon
 from triangle import Triangle
@@ -23,7 +24,7 @@ class Consortium(Drawable):
                 ]
             )
         )
-        self.holes = []
+        self.holes: ModelMap[Obstacle] = ModelMap(items=[])
 
     @property
     def points(self) -> PointSequence:
@@ -34,7 +35,7 @@ class Consortium(Drawable):
         return self.polygon
 
     @property
-    def obstacles(self) -> list[Polygon]:
+    def obstacles(self) -> ModelMap[Obstacle]:
         return self.holes
 
     @property

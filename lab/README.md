@@ -79,5 +79,3 @@ Use `example2.py`, `example3.py`, `example4.py`, `example5.py`, `example6.py`, o
 | ![Example 3](example3.png) | ![Example 4](example4.png) |
 | ![Example 5](example5.png) | ![Example 6](example6.png) |
 | ![Example 7](example7.png) | |
-
-Scripts: [example1.py](example1.py), [example2.py](example2.py), [example3.py](example3.py), [example4.py](example4.py), [example5.py](example5.py), [example6.py](example6.py), [example7.py](example7.py). Example7 is example5 with more holes so that some holes stitch to other holes, showing that bridging still works when a hole bridges to an already-stitched hole.

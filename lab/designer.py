@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from convex import ConvexComponent
     from guard import Guard
     from model import ModelMap
+    from obstacle import Obstacle
     from point import Point, PointSequence
     from polygon import Polygon
     from triangle import Triangle
@@ -29,7 +30,7 @@ class Drawable(ABC):
 
     @property
     @abstractmethod
-    def obstacles(self) -> list[Polygon]: ...  # noqa
+    def obstacles(self) -> ModelMap[Obstacle]: ...  # noqa
 
     @property
     @abstractmethod

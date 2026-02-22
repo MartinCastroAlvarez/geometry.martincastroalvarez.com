@@ -7,6 +7,7 @@ from exceptions import (ComponentMergeError, ComponentsNoSharedEdgeError,
 from model import Hash, Model
 from point import PointSequence
 from polygon import Polygon
+from segment import SegmentSequence
 
 
 class ConvexComponent(Model):
@@ -26,6 +27,14 @@ class ConvexComponent(Model):
             return Hash("ConvexComponent(empty)")
         canonical: PointSequence = points << points.leftmost
         return Hash(tuple(canonical.items))
+
+    @property
+    def points(self) -> PointSequence:
+        return self.polygon.points
+
+    @property
+    def edges(self) -> SegmentSequence:
+        return self.polygon.points.edges
 
     def __repr__(self) -> str:
         return f"ConvexComponent({self.polygon!r})"

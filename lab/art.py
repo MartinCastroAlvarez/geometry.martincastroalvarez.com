@@ -18,6 +18,7 @@ from exceptions import (BridgeFailureError,
                         StitchWinnerSubsequenceError)
 from guard import VertexGuard
 from model import Hash, ModelMap
+from obstacle import Obstacle
 from path import Path
 from point import Point, PointSequence
 from polygon import Polygon
@@ -28,9 +29,9 @@ from visibility import Visibility
 
 class ArtGallery(Element2D, Drawable):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        if len(args) == 1 and isinstance(args[0], dict) and not kwargs:
+        if all([len(args) == 1, isinstance(args[0], dict), not kwargs]):
             kwargs = args[0]
-        if "polygon" in kwargs and not isinstance(kwargs["polygon"], Polygon):
+        if all(["polygon" in kwargs, not isinstance(kwargs["polygon"], Polygon)]):
             coords = kwargs["polygon"]
             if isinstance(coords, PointSequence):
                 points = list(coords.items)
@@ -51,7 +52,7 @@ class ArtGallery(Element2D, Drawable):
             kwargs["polygon"] = Polygon(points=PointSequence(points))
         if "holes" in kwargs:
             raw_holes = kwargs["holes"]
-            holes_list = []
+            holes_list: list[Polygon] = []
             for hole in raw_holes:
                 if isinstance(hole, Polygon):
                     holes_list.append(hole)
@@ -73,46 +74,57 @@ class ArtGallery(Element2D, Drawable):
                     else:
                         pts = []
                     holes_list.append(Polygon(points=PointSequence(pts)))
-            kwargs["holes"] = holes_list
+            kwargs["holes"] = ModelMap(items=[Obstacle(polygon=p) for p in holes_list])
         self.polygon = kwargs.get("polygon") or kwargs.get("boundary")
-        self.holes = kwargs.get("holes", []) or kwargs.get("obstacles", [])
+        self.holes: ModelMap[Obstacle] = (
+            kwargs.get("holes") or kwargs.get("obstacles") or ModelMap(items=[])
+        )
         self._visibility_cache: dict[Segment, bool] = {}
         if self.polygon is None:
             raise PolygonTooFewPointsError("ArtGallery requires polygon")
-        boundary: SegmentSequence = self.boundary.edges
-        for i, obstacle in enumerate(self.obstacles):
+        for obstacle in self.obstacles:
             if not all(
                 self.boundary.contains(point, inclusive=False)
                 for point in obstacle.points
             ):
                 raise PolygonNotSimpleError(
-                    f"Obstacle {i} is not strictly inside the boundary (outside or touching boundary)."
+                    f"Obstacle {obstacle.id} is not strictly inside the boundary (outside or touching boundary)."
                 )
-            for edge in obstacle.edges:
-                for boundary_edge in boundary:
-                    if edge.intersects(
-                        boundary_edge, inclusive=True
-                    ) and not edge.connects(boundary_edge):
-                        raise PolygonNotSimpleError(
-                            f"Obstacle {i} intersects/touches boundary."
-                        )
-            for point in obstacle.points:
-                for boundary_edge in boundary:
-                    if boundary_edge.contains(point, inclusive=True):
-                        raise PolygonNotSimpleError(
-                            f"Obstacle {i} has a vertex on the boundary."
-                        )
-        for i, obstacle in enumerate(self.obstacles):
-            for other in self.obstacles[i + 1 :]:
-                if obstacle.overlaps(other, inclusive=True):
-                    raise PolygonNotSimpleError("Obstacles intersect or touch.")
+            if any(
+                all(
+                    [
+                        edge.intersects(boundary_edge, inclusive=True),
+                        not edge.connects(boundary_edge),
+                    ]
+                )
+                for edge in obstacle.edges
+                for boundary_edge in self.boundary.edges
+            ):
+                raise PolygonNotSimpleError(
+                    f"Obstacle {obstacle.id} intersects/touches boundary."
+                )
+            if any(
+                boundary_edge.contains(point, inclusive=True)
+                for point in obstacle.points
+                for boundary_edge in self.boundary.edges
+            ):
+                raise PolygonNotSimpleError(
+                    f"Obstacle {obstacle.id} has a vertex on the boundary."
+                )
+        if any(
+            obstacle.overlaps(other, inclusive=True)
+            for obstacle in self.obstacles
+            for other in self.obstacles
+            if obstacle != other
+        ):
+            raise PolygonNotSimpleError("Obstacles intersect or touch.")
 
     def __repr__(self) -> str:
         lines: list[str] = ["Art Gallery perimeter:"]
         for i, point in enumerate(self.boundary.points):
             lines.append(f" Vertex {i}: {point}")
-        for obstacle_idx, obstacle in enumerate(self.obstacles):
-            lines.append(f"Obstacle {obstacle_idx}:")
+        for obstacle in self.obstacles:
+            lines.append(f"Obstacle {obstacle.id}:")
             for i, point in enumerate(obstacle.points):
                 lines.append(f" Vertex {i}: {point}")
         return "\n".join(lines)
@@ -128,7 +140,7 @@ class ArtGallery(Element2D, Drawable):
     @cached_property
     def signed_area(self) -> Decimal:
         return self.boundary.signed_area - sum(
-            abs(hole.signed_area) for hole in self.holes
+            abs(obstacle.signed_area) for obstacle in self.holes
         )
 
     @cached_property
@@ -137,21 +149,21 @@ class ArtGallery(Element2D, Drawable):
         if not self.holes:
             return points
         print(f"Stitching {len(self.obstacles)} obstacles to {len(points)} points.")
-        obstacles: list[Polygon] = sorted(
-            self.holes,
-            key=lambda hole: (
-                hole.points.rightmost[0],
-                hole.points.rightmost[1],
+        obstacles_sorted: list[Obstacle] = sorted(
+            self.holes.values(),
+            key=lambda o: (
+                o.points.rightmost[0],
+                o.points.rightmost[1],
             ),
             reverse=True,
         )
         edges: SegmentSequence = points.edges
-        for obstacle_idx, obstacle in enumerate(obstacles):
+        for obstacle in obstacles_sorted:
             obstacle_points = (
                 obstacle.points if obstacle.points.is_cw() else ~obstacle.points
             )
             anchor: Point = obstacle_points.rightmost
-            print(f"  Obstacle {obstacle_idx}: Briding {obstacle.points} to {points}")
+            print(f"  Obstacle {obstacle.id}: Briding {obstacle.points} to {points}")
             bridge: Segment | None = None
             for candidate in points:
                 if candidate == anchor:
@@ -175,7 +187,7 @@ class ArtGallery(Element2D, Drawable):
                 if any(
                     other_obstacle.overlaps(segment, inclusive=False)
                     for other_obstacle in self.obstacles
-                    if other_obstacle is not obstacle
+                    if other_obstacle.id != obstacle.id
                 ):
                     continue
                 if any(
@@ -189,7 +201,7 @@ class ArtGallery(Element2D, Drawable):
 
             if bridge is None:
                 print(
-                    f"  Obstacle {obstacle_idx}: no valid bridge found for anchor {anchor}."
+                    f"  Obstacle {obstacle.id}: no valid bridge found for anchor {anchor}."
                 )
                 raise BridgeFailureError(
                     f"No valid bridge found for obstacle: {obstacle.points}"
@@ -198,7 +210,7 @@ class ArtGallery(Element2D, Drawable):
             winner: Segment = bridge
             vertex: Point = winner[0]
 
-            print(f"  Obstacle {obstacle_idx}: Stitching {bridge}")
+            print(f"  Obstacle {obstacle.id}: Stitching {bridge}")
             print(f"    Obstacle {obstacle_points}")
             print(f"    Anchor {anchor}")
             print(f"    Vertex {vertex}")
@@ -211,7 +223,7 @@ class ArtGallery(Element2D, Drawable):
 
             if winner in obstacle_points:
                 raise StitchWinnerSubsequenceError(
-                    f"Winner {winner} is a subsequence of obstacle {obstacle_idx}; cannot stitch"
+                    f"Winner {winner} is a subsequence of obstacle {obstacle.id}; cannot stitch"
                 )
 
             left = points >> vertex
@@ -240,7 +252,7 @@ class ArtGallery(Element2D, Drawable):
 
     def sees(self, source: Point, target: Point | ConvexComponent) -> bool:
         if isinstance(target, ConvexComponent):
-            return all(self.sees(source, point) for point in target.polygon.points)
+            return all(self.sees(source, point) for point in target.points)
         if source == target:
             return True
         ray: Segment = source.to(target)
@@ -252,7 +264,8 @@ class ArtGallery(Element2D, Drawable):
 
         for obstacle in self.obstacles:
             if any(
-                ray.contains(edge[0], inclusive=True) and ray.contains(edge[1], inclusive=True)
+                ray.contains(edge[0], inclusive=True)
+                and ray.contains(edge[1], inclusive=True)
                 for edge in obstacle.edges
             ):
                 self._visibility_cache[ray] = False
@@ -338,7 +351,7 @@ class ArtGallery(Element2D, Drawable):
         while True:
             components_by_edge: defaultdict[Segment, list[Hash]] = defaultdict(list)
             for component in components.values():
-                for edge in component.polygon.edges:
+                for edge in component.edges:
                     components_by_edge[edge].append(component.id)
             best_area: Decimal | None = None
             best_component: ConvexComponent | None = None
@@ -346,7 +359,7 @@ class ArtGallery(Element2D, Drawable):
             for component in components.values():
                 adjacent = {
                     other_id
-                    for edge in component.polygon.edges
+                    for edge in component.edges
                     for other_id in components_by_edge[edge]
                     if other_id != component.id
                 }
@@ -383,9 +396,7 @@ class ArtGallery(Element2D, Drawable):
     def guards(self) -> ModelMap[VertexGuard]:
         components: ModelMap[ConvexComponent] = self.convex_components.clone()
         points: set[Point] = {
-            point
-            for component in components.values()
-            for point in component.polygon.points
+            point for component in components.values() for point in component.points
         }
         candidates: ModelMap[VertexGuard] = ModelMap(
             items=[VertexGuard(position=point) for point in points]
