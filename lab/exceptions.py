@@ -162,6 +162,10 @@ class ConsortiumCapacityTooLowError(ArtGalleryError):
     pass
 
 
+class ConsortiumCapacityTooHighError(ArtGalleryError):
+    pass
+
+
 class VisibilityInvalidItemsError(ArtGalleryError):
     pass
 

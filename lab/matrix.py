@@ -35,7 +35,7 @@ class Matrix:
     def determinant(self) -> Decimal:
         if not self.is_squared():
             raise MatrixNotSquareError(
-                "Matrix must be squared to calculate determinant"
+                f"Matrix must be squared to calculate determinant: {self.points}"
             )
 
         if self.dimensions == (2, 2):

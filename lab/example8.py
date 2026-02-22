@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from consortium import Consortium
+from art import ArtGallery
 from designer import Designer
 
 if __name__ == "__main__":
-    consortium = Consortium(
+    gallery = ArtGallery(
         {
-            "capacity": 10,
             "polygon": [
                 ["0.0", "0.0"],
                 ["12.0", "0.0"],
@@ -70,6 +69,6 @@ if __name__ == "__main__":
             ],
         }
     )
-    print(consortium)
+    print(gallery)
 
-    Designer(drawable=consortium).plot()
+    Designer(drawable=gallery).plot()

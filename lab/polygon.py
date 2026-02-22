@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from box import Bounded, Box
 from element import Element, Element2D
@@ -37,9 +37,9 @@ class Polygon(Bounded, Element2D):
         items: list[Point] = points.items
         self.points = PointSequence(items=items)
         if len(self.points) < 3:
-            raise PolygonTooFewPointsError("Polygon must have at least 3 points")
+            raise PolygonTooFewPointsError(f"Polygon must have at least 3 points: {self.points}")
         if not (abs(self)):
-            raise PolygonDegenerateError("Polygon is degenerate: area is zero")
+            raise PolygonDegenerateError(f"Polygon is degenerate: area is zero: {self.points}")
 
     def __hash__(self) -> Hash:
         return self.points.__hash__()
@@ -50,18 +50,19 @@ class Polygon(Bounded, Element2D):
     def __getitem__(self, index: int) -> Point:
         return self.points[index]
 
-    def count(self, condition: Callable[[Point], bool]) -> int:
-        return sum(1 for point in self.points if condition(point))
+    @cached_property
+    def centroid(self) -> Point:
+        xs: list[Decimal] = sorted(point[0] for point in self.points)
+        ys: list[Decimal] = sorted(point[1] for point in self.points)
+        n: int = len(xs)
+        return Point(x=xs[n // 2], y=ys[n // 2])
 
     def __repr__(self) -> str:
         return f"Polygon({self.points.items!r})"
 
-    @property
-    def perimeter(self) -> Decimal:
-        return sum((edge.size for edge in self.edges), start=Decimal("0"))
-
     @cached_property
     def signed_area(self) -> Decimal:
+        print(f"Polygon.signed_area: {self.points}")
         return self.points.signed_area
 
     @cached_property
@@ -165,16 +166,3 @@ class Polygon(Bounded, Element2D):
             return False
 
         raise NotImplementedError(f"Polygon.overlaps not implemented for {type(obj)}")
-
-    def clip(self, box: Box) -> Polygon:
-        points = PointSequence(
-            [
-                Point(
-                    x=max(box.x[0], min(box.x[1], point[0])),
-                    y=max(box.y[0], min(box.y[1], point[1])),
-                )
-                for point in self.points
-            ]
-        )
-        polygon = Polygon(points=points)
-        return polygon
