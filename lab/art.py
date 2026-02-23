@@ -364,11 +364,15 @@ class ArtGallery(Element2D, Drawable, Model):
         components: ModelMap[ConvexComponent] = self.convex_components.clone()
         guards: ModelMap[VertexGuard] = ModelMap(items=[])
 
-        remaining: set[Point] = {
-            point for component in components.values() for point in component.points
-        }
+        remaining: set[Point] = set()
+        for component in components.values():
+            for point in component.points:
+                remaining.add(point)
+        for edge in self.points.edges:
+            remaining.add(edge.midpoint)
+
         candidates: ModelMap[VertexGuard] = ModelMap(
-            items=[VertexGuard(position=point) for point in remaining]
+            items=[VertexGuard(position=point) for point in self.points]
         )
         while components:
             visibility_by_guard: Visibility[Hash] = Visibility(
@@ -410,13 +414,16 @@ class ArtGallery(Element2D, Drawable, Model):
 
             best_guard_id: Hash = visibility_by_best_guards.best[0]
             best_guard: VertexGuard = candidates[best_guard_id]
-            covered: int = len(visibility_by_guard[best_guard.id])
+
             guards.add(best_guard)
+
             candidates.pop(best_guard.id)
+            remaining -= visibility_by_best_guards[best_guard.id]
             for component_id in visibility_by_guard[best_guard.id]:
                 components.pop(component_id)
+
             print(
-                f"  {best_guard}: covers {covered} component(s), {len(components)} remaining.",
+                f"  {best_guard}: covers {len(visibility_by_best_guards[best_guard.id])} points, {len(components)} components remaining.",
             )
         if components:
             print("Guards: failed to cover all convex components.")

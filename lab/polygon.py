@@ -121,6 +121,8 @@ class Polygon(Bounded, Element2D):
                 return False
             if not self.contains(obj[1], inclusive=inclusive):
                 return False
+            if not self.contains(obj.midpoint, inclusive=inclusive):
+                return False
             for edge in self.edges:
                 if edge.connects(obj):
                     continue
