@@ -24,7 +24,7 @@ A computational geometry library and playground for implementing art gallery alg
 
 | Type | Files |
 |------|--------|
-| **Core** | `point.py`, `segment.py`, `sequence.py`, `path.py`, `polygon.py`, `triangle.py`, `box.py`, `interval.py`, `matrix.py`, `element.py`, `model.py`, `exceptions.py`, `convex.py`, `guard.py`, `visibility.py`, `art.py`, `drawable.py` |
+| **Core** | `art.py`, `box.py`, `convex.py`, `drawable.py`, `element.py`, `exceptions.py`, `guard.py`, `interval.py`, `matrix.py`, `model.py`, `path.py`, `point.py`, `polygon.py`, `segment.py`, `sequence.py`, `serializable.py`, `triangle.py`, `visibility.py` |
 | **Examples** | `example1.py`, `example2.py`, `example3.py`, `example4.py`, `example5.py`, `example6.py`, `example7.py`, `example8.py` (and corresponding `exampleN.png` screenshots) |
 | **Other** | `README.md`, `run.sh`, `pyproject.toml`, `poetry.lock`, `.gitignore` |
 
@@ -32,23 +32,24 @@ A computational geometry library and playground for implementing art gallery alg
 
 | Module | Contents |
 |--------|----------|
-| `point.py` | `Point`, `PointSequence` (vertices, signed area, CCW/CW, convexity, edges as `SegmentSequence`, unique, slice, append/insert/pop) |
-| `segment.py` | `Segment`, `SegmentSequence`, `SegmentSet` (size, midpoint, connects, intersects, immutable set with `smallest`/`largest` that raise when empty) |
-| `sequence.py` | Re-exports `PointSequence` from `point` |
-| `path.py` | `Path` (three points), `Orientation` (collinear/cw/ccw), signed area and orientation predicates |
-| `polygon.py` | `Polygon` (simple, no duplicate points, non-zero area), edges as `SegmentSequence` |
-| `triangle.py` | `Triangle`, `Ear` (convex ear for clipping), edges as `SegmentSequence` |
+| `art.py` | `ArtGallery` (Element2D, Drawable; holes, stitched boundary, ears, convex components, guards, post-process) |
 | `box.py` | `Box`, `Bounded`; axis-aligned bounds and containment |
+| `convex.py` | `ConvexComponent` (convex polygon, merge by shared edge, CCW) |
+| `drawable.py` | `Drawable` (abstract: points, boundary, obstacles, ears, convex_components, guards, visibility; `PLOT_SIZE`, `plot()` for matplotlib figure) |
+| `element.py` | `Element`, `ComplexElement`, `Element1D`, `Element2D` (contains, overlaps, size, signed_area) |
+| `exceptions.py` | Art-gallery and geometry-specific exceptions |
+| `guard.py` | `Guard`, `VertexGuard` (guard with `vertex` = position) |
 | `interval.py` | `Interval` (1D), containment and overlap |
 | `matrix.py` | `Matrix` (2×2 determinant for orientation/area) |
-| `element.py` | `Element`, `ComplexElement`, `Element1D`, `Element2D` (contains, overlaps, size, signed_area) |
 | `model.py` | `Model` (Hash id), `Hash`, `ModelMap[T]` (dict-like, `clone()`, add/pop) |
-| `exceptions.py` | Art-gallery and geometry-specific exceptions |
-| `convex.py` | `ConvexComponent` (convex polygon, merge by shared edge, CCW) |
-| `guard.py` | `Guard`, `VertexGuard` (guard with `vertex` = position) |
+| `path.py` | `Path` (three points), `Orientation` (collinear/cw/ccw), signed area and orientation predicates |
+| `point.py` | `Point`, `PointSequence` (vertices, signed area, CCW/CW, convexity, edges as `SegmentSequence`, unique, slice, append/insert/pop) |
+| `polygon.py` | `Polygon` (simple, no duplicate points, non-zero area), edges as `SegmentSequence` |
+| `segment.py` | `Segment`, `SegmentSequence`, `SegmentSet` (size, midpoint, connects, intersects, immutable set with `smallest`/`largest` that raise when empty) |
+| `sequence.py` | Re-exports `PointSequence` from `point` |
+| `serializable.py` | `Serializable` (abstract: `serialize()` → dict, `unserialize()` class method for API/JSON round-trip) |
+| `triangle.py` | `Triangle`, `Ear` (convex ear for clipping), edges as `SegmentSequence` |
 | `visibility.py` | `Visibility[T]` (guard → set of components or points, `sees`, `best`) |
-| `art.py` | `ArtGallery` (Element2D, Drawable; holes, stitched boundary, ears, convex components, guards, post-process) |
-| `drawable.py` | `Drawable` (abstract: points, boundary, obstacles, ears, convex_components, guards, visibility; `PLOT_SIZE`, `plot()` for matplotlib figure) |
 
 ## Art Gallery Pipeline
 
