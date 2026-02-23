@@ -18,7 +18,7 @@ class ComplexElement(Element):
         raise NotImplementedError()
 
     @abstractmethod
-    def overlaps(self, obj: Element, inclusive: bool = True) -> bool:
+    def intersects(self, obj: Element, inclusive: bool = True) -> bool:
         raise NotImplementedError()
 
 
@@ -43,7 +43,7 @@ class ElementSequence(ABC, Generic[T]):
     items: list[T]
 
     @staticmethod
-    def remove_consecutive_duplicates(items: list[T]) -> list[T]:
+    def clean(items: list[T]) -> list[T]:
         if not items:
             return []
         result: list[T] = [items[0]]
@@ -58,11 +58,13 @@ class ElementSequence(ABC, Generic[T]):
     def __iter__(self) -> Iterator[T]:
         return iter(self.items)
 
-    def contains(self, obj: T | ElementSequence[T]) -> bool:
+    def __contains__(self, obj: T | ElementSequence[T]) -> bool:
         if isinstance(obj, ElementSequence):
             if len(obj) == 0:
                 return True
             if len(obj) > len(self.items):
+                return False
+            if obj.items[0] not in self.items:
                 return False
             i: int = self.index(obj.items[0])
             subsequence: ElementSequence[T] = self[i : i + len(obj)]

@@ -102,6 +102,10 @@ class SegmentSequenceInvalidItemsError(ArtGalleryError):
     pass
 
 
+class SegmentNoIntersectionError(ArtGalleryError):
+    pass
+
+
 class EarClippingFailureError(ArtGalleryError):
     pass
 

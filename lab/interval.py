@@ -38,12 +38,14 @@ class Interval(Element1D):
 
         raise NotImplementedError(f"Interval.contains not implemented for {type(obj)}")
 
-    def overlaps(self, obj: Element, inclusive: bool = True) -> bool:
+    def intersects(self, obj: Element, inclusive: bool = True) -> bool:
         if isinstance(obj, Interval):
             if inclusive:
                 return self[0] <= obj[1] and obj[0] <= self[1]
             return self[0] < obj[1] and obj[0] < self[1]
-        return False
+        raise NotImplementedError(
+            f"Interval.intersects not implemented for {type(obj)}"
+        )
 
     def __getitem__(self, index: int) -> Decimal:
         if index == 0:

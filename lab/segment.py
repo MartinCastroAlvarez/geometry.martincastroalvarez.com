@@ -32,7 +32,7 @@ class Segment(Bounded, Element1D):
     def __hash__(self) -> Hash:
         low: Point = min(self[0], self[1])
         high: Point = max(self[0], self[1])
-        return Hash((low, high))
+        return Hash(f"segment:{low.__hash__()}:{high.__hash__()}")
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Segment):
@@ -90,9 +90,6 @@ class Segment(Bounded, Element1D):
             )
         raise NotImplementedError(f"Segment.contains not implemented for {type(obj)}")
 
-    def overlaps(self, obj: Element, inclusive: bool = True) -> bool:
-        raise NotImplementedError(f"Segment.overlaps not implemented for {type(obj)}")
-
     @cached_property
     def box(self) -> Box:
         min_x = min(self[0][0], self[1][0])
@@ -117,42 +114,44 @@ class Segment(Bounded, Element1D):
         )
 
     def intersects(self, other: Segment, inclusive: bool = True) -> bool:
-        if not self.box.overlaps(other.box, inclusive=inclusive):
+        if any(
+            [
+                self.box.x[1] < other.box.x[0],
+                other.box.x[1] < self.box.x[0],
+                self.box.y[1] < other.box.y[0],
+                other.box.y[1] < self.box.y[0],
+            ]
+        ):
             return False
-        self_start: Point = self[0]
-        self_end: Point = self[1]
-        other_start: Point = other[0]
-        other_end: Point = other[1]
-        path1: Path = Path(start=self_start, center=self_end, end=other_start)
-        path2: Path = Path(start=self_start, center=self_end, end=other_end)
-        path3: Path = Path(start=other_start, center=other_end, end=self_start)
-        path4: Path = Path(start=other_start, center=other_end, end=self_end)
-        return any(
+        path1: Path = Path(start=self[0], center=self[1], end=other[0])
+        path2: Path = Path(start=self[0], center=self[1], end=other[1])
+        path3: Path = Path(start=other[0], center=other[1], end=self[0])
+        path4: Path = Path(start=other[0], center=other[1], end=self[1])
+        if all(
             [
                 all(
                     [
-                        any(
-                            [
-                                path1.is_cw() and path2.is_ccw(),
-                                path1.is_ccw() and path2.is_cw(),
-                            ]
-                        ),
-                        any(
-                            [
-                                path3.is_cw() and path4.is_ccw(),
-                                path3.is_ccw() and path4.is_cw(),
-                            ]
-                        ),
+                        not path1.is_collinear(),
+                        not path2.is_collinear(),
+                        not path3.is_collinear(),
+                        not path4.is_collinear(),
                     ]
                 ),
-                path1.is_collinear()
-                and self.contains(other_start, inclusive=inclusive),
-                path2.is_collinear() and self.contains(other_end, inclusive=inclusive),
-                path3.is_collinear()
-                and other.contains(self_start, inclusive=inclusive),
-                path4.is_collinear() and other.contains(self_end, inclusive=inclusive),
+                path1.orientation != path2.orientation,
+                path3.orientation != path4.orientation,
             ]
-        )
+        ):
+            return True
+        if any(
+            [
+                path1.is_collinear() and self.contains(other[0], inclusive=inclusive),
+                path2.is_collinear() and self.contains(other[1], inclusive=inclusive),
+                path3.is_collinear() and other.contains(self[0], inclusive=inclusive),
+                path4.is_collinear() and other.contains(self[1], inclusive=inclusive),
+            ]
+        ):
+            return True
+        return False
 
 
 class SegmentSequence(ElementSequence[Segment]):
@@ -161,12 +160,12 @@ class SegmentSequence(ElementSequence[Segment]):
             raise SegmentSequenceInvalidItemsError(
                 f"items must be a list, got {type(items).__name__}"
             )
-        for i, seg in enumerate(items):
-            if not isinstance(seg, Segment):
+        for i, segment in enumerate(items):
+            if not isinstance(segment, Segment):
                 raise SegmentSequenceInvalidItemsError(
-                    f"items[{i}] must be a Segment, got {type(seg).__name__}"
+                    f"items[{i}] must be a Segment, got {type(segment).__name__}"
                 )
-        self.items = SegmentSequence.remove_consecutive_duplicates(list(items))
+        self.items = SegmentSequence.clean(list(items))
 
     def __repr__(self) -> str:
         return (
@@ -196,18 +195,17 @@ class SegmentSequence(ElementSequence[Segment]):
             i = other % n
             return SegmentSequence(items=self.items[i:] + self.items[:i])
         if isinstance(other, Segment):
-            for idx, seg in enumerate(self.items):
-                if seg == other:
-                    return SegmentSequence(items=self.items[idx:] + self.items[:idx])
+            for i, segment in enumerate(self.items):
+                if segment == other:
+                    return SegmentSequence(items=self.items[i:] + self.items[:i])
             raise ValueError(f"Segment {other!r} not in sequence")
-        # Point: shift underlying points to that point, then return edges
         try:
-            shifted_points: PointSequence = self.points << other
-        except SequencePointNotFoundError as e:
+            shifted = self.points << other
+        except SequencePointNotFoundError as error:
             raise SequencePointNotFoundError(
                 f"Point {other!r} not in segment sequence"
-            ) from e
-        return shifted_points.edges
+            ) from error
+        return shifted.edges
 
     def __rshift__(self, other: int | Segment | Point) -> SegmentSequence:
         n: int = len(self.items)
@@ -215,24 +213,23 @@ class SegmentSequence(ElementSequence[Segment]):
             return SegmentSequence(items=[])
         if isinstance(other, int):
             i = other % n
-            new_items = self.items[i + 1 :] + self.items[: i + 1]
-            return SegmentSequence(items=new_items)
+            return SegmentSequence(items=self.items[i + 1 :] + self.items[: i + 1])
         if isinstance(other, Segment):
-            for idx, seg in enumerate(self.items):
-                if seg == other:
-                    new_items = self.items[idx + 1 :] + self.items[: idx + 1]
-                    return SegmentSequence(items=new_items)
+            for i, segment in enumerate(self.items):
+                if segment == other:
+                    return SegmentSequence(
+                        items=self.items[i + 1 :] + self.items[: i + 1]
+                    )
             raise ValueError(f"Segment {other!r} not in sequence")
         try:
-            shifted_points = self.points >> other
-        except SequencePointNotFoundError as e:
+            shifted = self.points >> other
+        except SequencePointNotFoundError as error:
             raise SequencePointNotFoundError(
                 f"Point {other!r} not in segment sequence"
-            ) from e
-        return shifted_points.edges
+            ) from error
+        return shifted.edges
 
     def __hash__(self) -> Hash:
         if not self.items:
-            return Hash("SegmentSequence(empty)")
-        canonical: SegmentSequence = (self.points << self.points.leftmost).edges
-        return Hash(tuple(canonical.items))
+            return Hash("segment_sequence:empty")
+        return Hash(f"segment_sequence:{self.points.__hash__()}")

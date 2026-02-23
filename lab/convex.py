@@ -5,7 +5,6 @@ from exceptions import (ComponentMergeError, ComponentsNoSharedEdgeError,
                         ConvexComponentMergeTooManyPointsError,
                         ConvexComponentNotConvexError)
 from model import Hash, Model
-from path import Path
 from point import PointSequence
 from polygon import Polygon
 from segment import SegmentSequence
@@ -21,13 +20,7 @@ class ConvexComponent(Model):
         self.polygon = polygon
         if not self.polygon.points.is_convex():
             raise ConvexComponentNotConvexError("Convex component must be convex.")
-
-    def __hash__(self) -> Hash:
-        points = self.polygon.points
-        if not points.items:
-            return Hash("ConvexComponent(empty)")
-        canonical: PointSequence = points << points.leftmost
-        return Hash(tuple(canonical.items))
+        self.id = Hash(f"convex:{self.polygon.__hash__()}")
 
     @property
     def points(self) -> PointSequence:
@@ -55,10 +48,10 @@ class ConvexComponent(Model):
         print("  Merging Convex Components:")
         print(f"    Raw: {left} and {right}, with shared: {shared}")
 
-        if not right.contains(shared):
+        if shared not in right:
             right = ~right
 
-        if not left.contains(shared):
+        if shared not in left:
             left = ~left
 
         print(f"    Inverted: {left} and {right}, with shared: {shared}")

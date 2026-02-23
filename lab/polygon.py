@@ -8,7 +8,6 @@ from box import Bounded, Box
 from element import Element, Element2D
 from exceptions import PolygonDegenerateError, PolygonTooFewPointsError
 from model import Hash
-from path import Path
 from point import Point, PointSequence
 from segment import Segment, SegmentSequence
 
@@ -63,7 +62,6 @@ class Polygon(Bounded, Element2D):
 
     @cached_property
     def signed_area(self) -> Decimal:
-        print(f"Polygon.signed_area: {self.points}")
         return self.points.signed_area
 
     @cached_property
@@ -84,30 +82,32 @@ class Polygon(Bounded, Element2D):
         )
 
     def contains(self, obj: Element, inclusive: bool = True) -> bool:
-        if isinstance(obj, (tuple, list)) and len(obj) == 2:
-            obj = Point(x=Decimal(str(obj[0])), y=Decimal(str(obj[1])))
 
         if isinstance(obj, Point):
             if not self.box.contains(obj, inclusive=inclusive):
                 return False
 
-            if inclusive:
-                for edge in self.edges:
-                    if edge.contains(obj, inclusive=True):
-                        return True
+            if any(edge.contains(obj, inclusive=True) for edge in self.edges):
+                return inclusive
 
             inside: bool = False
             for edge in self.edges:
                 if edge.box.y[0] == edge.box.y[1]:
                     continue
-                if not edge.box.y.contains(obj[1], inclusive=True):
-                    continue
+
                 if edge[0][1] > edge[1][1]:
                     edge = ~edge
-                path: Path = Path(start=edge[0], center=edge[1], end=obj)
-                if path.is_collinear():
-                    return inclusive
-                if path.is_ccw():
+
+                if not (edge[0][1] <= obj[1] < edge[1][1]):
+                    continue
+
+                if (
+                    edge[0][0]
+                    + (obj[1] - edge[0][1])
+                    * (edge[1][0] - edge[0][0])
+                    / (edge[1][1] - edge[0][1])
+                    > obj[0]
+                ):
                     inside = not inside
 
             return inside
@@ -115,55 +115,68 @@ class Polygon(Bounded, Element2D):
         if isinstance(obj, Segment):
             if not self.box.contains(obj, inclusive=inclusive):
                 return False
-
+            if inclusive and obj in self.edges:
+                return True
             if not self.contains(obj[0], inclusive=inclusive):
                 return False
-
             if not self.contains(obj[1], inclusive=inclusive):
                 return False
-
             for edge in self.edges:
-                if edge.intersects(obj):
-                    if any(
-                        (
-                            obj[0] == edge[0],
-                            obj[0] == edge[1],
-                            obj[1] == edge[0],
-                            obj[1] == edge[1],
-                        )
-                    ):
-                        continue
+                if edge.connects(obj):
+                    continue
+                if edge.intersects(obj, inclusive=True):
                     return False
 
             return True
 
         raise NotImplementedError(f"Polygon.contains not implemented for {type(obj)}")
 
-    def overlaps(self, obj: Element, inclusive: bool = True) -> bool:
-        if isinstance(obj, Box):
-            return obj.overlaps(self, inclusive=inclusive)
-
-        if isinstance(obj, Segment):
-            if any(edge.intersects(obj) for edge in self.edges):
-                return True
-            if self.contains(obj, inclusive=inclusive):
-                return True
-            return False
+    def intersects(self, obj: Element, inclusive: bool = True) -> bool:
 
         if isinstance(obj, Polygon):
-            if not self.box.overlaps(obj.box, inclusive=inclusive):
+            if not self.box.intersects(obj.box, inclusive=inclusive):
                 return False
-
             for e1 in self.edges:
                 for e2 in obj.edges:
                     if e1.intersects(e2, inclusive=inclusive):
                         return True
-
             if self.contains(obj.points[0], inclusive=inclusive):
                 return True
             if obj.contains(self.points[0], inclusive=inclusive):
                 return True
-
             return False
 
-        raise NotImplementedError(f"Polygon.overlaps not implemented for {type(obj)}")
+        if self.contains(obj, inclusive=inclusive):
+            return True
+
+        if isinstance(obj, Box):
+            return self.box.intersects(obj, inclusive=inclusive)
+
+        if isinstance(obj, Segment):
+            if inclusive and any(
+                (
+                    any(
+                        (
+                            edge.contains(obj[0], inclusive=True),
+                            edge.contains(obj[1], inclusive=True),
+                        )
+                    )
+                    for edge in self.edges
+                )
+            ):
+                return True
+            if any(
+                edge.intersects(obj, inclusive=inclusive)
+                for edge in self.edges
+                if not edge.connects(obj)
+            ):
+                return True
+            return any(
+                (
+                    self.contains(obj[0], inclusive=inclusive),
+                    self.contains(obj[1], inclusive=inclusive),
+                    self.contains(obj.midpoint, inclusive=inclusive),
+                )
+            )
+
+        raise NotImplementedError(f"Polygon.intersects not implemented for {type(obj)}")

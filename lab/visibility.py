@@ -49,9 +49,7 @@ class Visibility(Generic[T]):
             raise GuardCoverageFailureError("No guard can see any remaining component.")
         coverage: dict[Hash, int] = {key: len(self.items[key]) for key in keys}
         max_coverage: int = max(coverage.values())
-        winners: list[Hash] = [
-            key for key in keys if coverage[key] == max_coverage
-        ]
+        winners: list[Hash] = [key for key in keys if coverage[key] == max_coverage]
         if not winners:
             raise GuardCoverageFailureError("No guard can see any remaining component.")
         return winners

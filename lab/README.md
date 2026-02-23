@@ -48,7 +48,7 @@ A computational geometry library and playground for implementing art gallery alg
 | `guard.py` | `Guard`, `VertexGuard` (guard with `vertex` = position) |
 | `visibility.py` | `Visibility[T]` (guard → set of components or points, `sees`, `best`) |
 | `art.py` | `ArtGallery` (Element2D, Drawable; holes, stitched boundary, ears, convex components, guards, post-process) |
-| `designer.py` | `Drawable` (abstract: points, polygon, holes, ears, convex_components, guards, visibility), `Designer` (takes `drawable`, `plot()` for matplotlib figure) |
+| `designer.py` | `Drawable` (abstract: points, boundary, obstacles, ears, convex_components, guards, visibility; `PLOT_SIZE`, `plot()` for matplotlib figure) |
 
 ## Art Gallery Pipeline
 
@@ -68,7 +68,7 @@ poetry install
 poetry run python lab/example1.py
 ```
 
-Use `example2.py`, `example3.py`, `example4.py`, `example5.py`, `example6.py`, `example7.py`, or `example8.py` in place of `example1.py` to run other examples. Each script prints perimeter vertices, convex component count, guard count, and uses `Designer(drawable=gallery).plot()` to open a matplotlib window (save as `exampleN.png` to capture the figure).
+Use `example2.py`, `example3.py`, `example4.py`, `example5.py`, `example6.py`, `example7.py`, or `example8.py` in place of `example1.py` to run other examples. Each script prints perimeter vertices, convex component count, guard count, and calls `gallery.plot()` to open a matplotlib window (save as `exampleN.png` to capture the figure). No need to import the designer; `ArtGallery` implements `Drawable` and provides `plot()`.
 
 ## Examples
 

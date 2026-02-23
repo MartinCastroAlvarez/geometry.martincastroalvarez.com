@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from art import ArtGallery
-from designer import Designer
 
 if __name__ == "__main__":
     gallery = ArtGallery(
@@ -51,5 +50,4 @@ if __name__ == "__main__":
         }
     )
     print(gallery)
-
-    Designer(drawable=gallery).plot()
+    gallery.plot()

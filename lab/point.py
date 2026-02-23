@@ -87,7 +87,7 @@ class Point(Element):
         return Segment(start=self, end=other)
 
     def __hash__(self) -> Hash:
-        return Hash((self[0], self[1]))
+        return Hash(f"point:{self[0]}:{self[1]}")
 
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Point):
@@ -141,16 +141,14 @@ class PointSequence(ElementSequence[Point]):
                             if not isinstance(point, dict)
                             else Point(**point)
                         )
-                    except Exception as e:
+                    except Exception as error:
                         raise SequenceInvalidPointsError(
                             f"PointSequence item at index {index} could not be coerced to Point: {point!r}"
-                        ) from e
-            self.items = PointSequence.remove_consecutive_duplicates(coerced)
+                        ) from error
+            self.items = PointSequence.clean(coerced)
             return
         if len(args) == 1 and isinstance(args[0], PointSequence):
-            self.items = PointSequence.remove_consecutive_duplicates(
-                list(args[0].items)
-            )
+            self.items = PointSequence.clean(list(args[0].items))
             return
         if len(args) == 1 and isinstance(args[0], (list, tuple)):
             raw = list(args[0])
@@ -165,13 +163,13 @@ class PointSequence(ElementSequence[Point]):
                             if not isinstance(point, dict)
                             else Point(**point)
                         )
-                    except Exception as e:
+                    except Exception as error:
                         raise SequenceInvalidPointsError(
                             f"PointSequence item at index {index} could not be coerced to Point: {point!r}"
-                        ) from e
-            self.items = PointSequence.remove_consecutive_duplicates(coerced)
+                        ) from error
+            self.items = PointSequence.clean(coerced)
             return
-        self.items = PointSequence.remove_consecutive_duplicates([])
+        self.items = PointSequence.clean([])
 
     def __repr__(self) -> str:
         return (
@@ -256,20 +254,19 @@ class PointSequence(ElementSequence[Point]):
         )
 
     def __lshift__(self, other: int | Point) -> PointSequence:
-        if isinstance(other, int):
-            i = other % len(self.items)
-        else:
-            try:
-                i = self.index(other)
-            except ValueError as e:
-                raise SequencePointNotFoundError(
-                    f"Point {other!r} not in sequence"
-                ) from e
         n = len(self.items)
         if n == 0:
             return PointSequence()
-        new_items = self.items[i:] + self.items[:i]
-        shifted = PointSequence(new_items)
+        if isinstance(other, int):
+            i = other % n
+        else:
+            try:
+                i = self.index(other)
+            except ValueError as error:
+                raise SequencePointNotFoundError(
+                    f"Point {other!r} not in sequence"
+                ) from error
+        shifted = PointSequence(self.items[i:] + self.items[:i])
         if self != shifted:
             raise SequenceShiftValidationError(
                 "Shift result is not equal to original sequence (circular)"
@@ -277,20 +274,19 @@ class PointSequence(ElementSequence[Point]):
         return shifted
 
     def __rshift__(self, other: int | Point) -> PointSequence:
-        if isinstance(other, int):
-            i = other % len(self.items)
-        else:
-            try:
-                i = self.index(other)
-            except ValueError as e:
-                raise SequencePointNotFoundError(
-                    f"Point {other!r} not in sequence"
-                ) from e
         n = len(self.items)
         if n == 0:
             return PointSequence()
-        new_items = self.items[i + 1 :] + self.items[: i + 1]
-        shifted = PointSequence(new_items)
+        if isinstance(other, int):
+            i = other % n
+        else:
+            try:
+                i = self.index(other)
+            except ValueError as error:
+                raise SequencePointNotFoundError(
+                    f"Point {other!r} not in sequence"
+                ) from error
+        shifted = PointSequence(self.items[i + 1 :] + self.items[: i + 1])
         if self != shifted:
             raise SequenceShiftValidationError(
                 "Shift result is not equal to original sequence (circular)"
@@ -343,14 +339,12 @@ class PointSequence(ElementSequence[Point]):
 
     def __hash__(self) -> Hash:
         if not self.items:
-            return Hash("PointSequence(empty)")
-        forward = self
-        backward = ~self
+            return Hash("point_sequence:empty")
 
-        forward = forward << forward.leftmost
-        backward = backward << backward.leftmost
+        def canonical_key(seq: PointSequence) -> tuple[tuple[Decimal, Decimal], ...]:
+            rotated = seq << seq.leftmost
+            return tuple((p[0], p[1]) for p in rotated.items)
 
-        hash1 = Hash(forward)
-        hash2 = Hash(backward)
-
-        return Hash(tuple(sorted([hash1, hash2])))
+        forward_key = canonical_key(self)
+        backward_key = canonical_key(~self)
+        return Hash(f"point_sequence:{min(forward_key, backward_key)}")

@@ -62,16 +62,16 @@ class Box(ComplexElement):
             start=min(self[0][1], self[1][1]), end=max(self[0][1], self[1][1])
         )
 
-    def overlaps(self, obj: Element, inclusive: bool = True) -> bool:
+    def intersects(self, obj: Element, inclusive: bool = True) -> bool:
         if isinstance(obj, Box):
             return all(
                 (
-                    self.x.overlaps(obj.x, inclusive=inclusive),
-                    self.y.overlaps(obj.y, inclusive=inclusive),
+                    self.x.intersects(obj.x, inclusive=inclusive),
+                    self.y.intersects(obj.y, inclusive=inclusive),
                 )
             )
 
-        raise NotImplementedError(f"Box.overlaps not implemented for {type(obj)}")
+        raise NotImplementedError(f"Box.intersects not implemented for {type(obj)}")
 
     def contains(self, obj: Element, inclusive: bool = True) -> bool:
         if isinstance(obj, Point):

@@ -3,7 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from element import Element
-from model import Model
+from model import Hash, Model
 from point import PointSequence
 from polygon import Polygon
 from segment import SegmentSequence
@@ -15,7 +15,7 @@ class Obstacle(Model):
         if not isinstance(polygon, Polygon):
             raise TypeError(f"polygon must be a Polygon, got {type(polygon).__name__}")
         self.polygon = polygon
-        self.id = self.polygon.__hash__()
+        self.id = Hash(f"obstacle:{self.polygon.__hash__()}")
 
     @property
     def points(self) -> PointSequence:
@@ -32,10 +32,10 @@ class Obstacle(Model):
     def contains(self, obj: Element, inclusive: bool = True) -> bool:
         return self.polygon.contains(obj, inclusive=inclusive)
 
-    def overlaps(self, obj: Element, inclusive: bool = True) -> bool:
+    def intersects(self, obj: Element, inclusive: bool = True) -> bool:
         if isinstance(obj, Obstacle):
-            return self.polygon.overlaps(obj.polygon, inclusive=inclusive)
-        return self.polygon.overlaps(obj, inclusive=inclusive)
+            return self.polygon.intersects(obj.polygon, inclusive=inclusive)
+        return self.polygon.intersects(obj, inclusive=inclusive)
 
     def __repr__(self) -> str:
         return f"Obstacle({self.polygon!r})"

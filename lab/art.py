@@ -81,7 +81,7 @@ class ArtGallery(Element2D, Drawable, Model):
                             pts = []
                         holes_list.append(Polygon(points=PointSequence(pts)))
                 kwargs["holes"] = ModelMap(
-                    items=[Obstacle(polygon=p) for p in holes_list]
+                    items=[Obstacle(polygon=polygon) for polygon in holes_list]
                 )
         self.polygon = kwargs.get("polygon") or kwargs.get("boundary")
         self.holes: ModelMap[Obstacle] = (
@@ -96,7 +96,7 @@ class ArtGallery(Element2D, Drawable, Model):
                 for point in obstacle.points
             ):
                 raise PolygonNotSimpleError(
-                    f"Obstacle {obstacle.id} is not strictly inside the boundary (outside or touching boundary)."
+                    f"Obstacle {obstacle} is not strictly inside the boundary ({self.boundary})."
                 )
             if any(
                 all(
@@ -120,16 +120,13 @@ class ArtGallery(Element2D, Drawable, Model):
                     f"Obstacle {obstacle.id} has a vertex on the boundary."
                 )
         if any(
-            obstacle.overlaps(other, inclusive=True)
+            obstacle.intersects(other, inclusive=True)
             for obstacle in self.obstacles
             for other in self.obstacles
             if obstacle != other
         ):
             raise PolygonNotSimpleError("Obstacles intersect or touch.")
-        self.id = Hash(self)
-
-    def __hash__(self) -> Hash:
-        return Hash(f"{Hash(self.polygon)}:{Hash(self.holes)}")
+        self.id = Hash(f"art:{self.polygon.__hash__()}:{self.holes.__hash__()}")
 
     def __repr__(self) -> str:
         lines: list[str] = ["Art Gallery perimeter:"]
@@ -146,7 +143,7 @@ class ArtGallery(Element2D, Drawable, Model):
         return self.polygon
 
     @property
-    def obstacles(self) -> list[Polygon]:
+    def obstacles(self) -> ModelMap[Obstacle]:
         return self.holes
 
     @cached_property
@@ -197,7 +194,7 @@ class ArtGallery(Element2D, Drawable, Model):
                 ):
                     continue
                 if any(
-                    other_obstacle.overlaps(segment, inclusive=False)
+                    other_obstacle.intersects(segment, inclusive=False)
                     for other_obstacle in self.obstacles
                     if other_obstacle.id != obstacle.id
                 ):
@@ -262,27 +259,6 @@ class ArtGallery(Element2D, Drawable, Model):
             print("  Stitched polygon was CW; reversed to CCW.")
         return points
 
-    def sees(self, source: Point, target: Point | ConvexComponent) -> bool:
-        if isinstance(target, ConvexComponent):
-            if source in target.points:
-                return True
-            return all((
-                all(self.sees(source, point) for point in target.points),
-                # all(self.sees(source, edge.midpoint) for edge in target.edges),
-                # self.sees(source, target.points.centroid)
-            ))
-
-        if source == target:
-            return True
-        ray: Segment = source.to(target)
-        if ray in self._visibility_cache:
-            return self._visibility_cache[ray]
-        if self.contains(ray, inclusive=True):
-            self._visibility_cache[ray] = True
-            return True
-        self._visibility_cache[ray] = False
-        return False
-
     @cached_property
     def ears(self) -> list[Triangle]:
         points: PointSequence = self.points
@@ -318,9 +294,7 @@ class ArtGallery(Element2D, Drawable, Model):
                 ears.append(ear)
                 break
             if i is None:
-                raise EarClippingFailureError(
-                    f"Ear clipping failed: No ear found for: {points}"
-                )
+                raise EarClippingFailureError(f"No ear found for: {points}")
             points = points.pop(i)
         if len(points) < 3:
             raise PolygonTooFewPointsError("ArtGallery must have at least 3 points")
@@ -411,21 +385,28 @@ class ArtGallery(Element2D, Drawable, Model):
             print("  Visibility by Guard:")
             for guard_id in visibility_by_guard.items.keys():
                 visibility: set[Hash] = visibility_by_guard[guard_id]
-                print(f"    {candidates[guard_id]} can see: {visibility}")
+                print(f"    {candidates[guard_id]} can see:")
+                for component_id in visibility:
+                    print(
+                        f"      {components[component_id].id}: {components[component_id].points}"
+                    )
 
             print(f"  Components remaining: {len(components)}:")
             for component in components.values():
                 print(f"    {component.id}: {component.points}")
 
             best_guard_ids: list[Hash] = visibility_by_guard.best
-            best_guards: list[VertexGuard] = [candidates[guard_id] for guard_id in best_guard_ids]
-            visibility_by_best_guards: Visibility[Point] = Visibility({
-                guard.id: {
-                    point
-                    for point in remaining if self.sees(guard.position, point)
+            best_guards: list[VertexGuard] = [
+                candidates[guard_id] for guard_id in best_guard_ids
+            ]
+            visibility_by_best_guards: Visibility[Point] = Visibility(
+                {
+                    guard.id: {
+                        point for point in remaining if self.sees(guard.position, point)
+                    }
+                    for guard in best_guards
                 }
-                for guard in best_guards
-            })
+            )
 
             best_guard_id: Hash = visibility_by_best_guards.best[0]
             best_guard: VertexGuard = candidates[best_guard_id]
@@ -446,98 +427,74 @@ class ArtGallery(Element2D, Drawable, Model):
         while removed:
             removed = False
 
-            visibility_by_guard: Visibility[Hash] = Visibility({
-                guard.id: {
-                    point for point in self.points if self.sees(guard.position, point)
+            visibility_by_guard: Visibility[Hash] = Visibility(
+                {
+                    guard.id: {
+                        point
+                        for point in self.points
+                        if self.sees(guard.position, point)
+                    }
+                    for guard in guards.values()
                 }
-                for guard in guards.values()
-            })
+            )
 
             uncovereed: set[Point] = {
                 point for point in self.points if not visibility_by_guard.sees(point)
             }
             if uncovereed:
-                raise GuardCoverageFailureError(f"Failed to cover points: {uncovereed}.")
+                raise GuardCoverageFailureError(
+                    f"Failed to cover points: {uncovereed}."
+                )
 
         return guards
 
     @cached_property
     def visibility(self) -> Visibility[Point]:
-        vis: Visibility[Point] = Visibility()
-        for guard in self.guards.values():
-            vis[guard.id] = {
-                point for point in self.points if self.sees(guard.position, point)
+        return Visibility(
+            {
+                guard.id: {
+                    point for point in self.points if self.sees(guard.position, point)
+                }
+                for guard in self.guards.values()
             }
-        return vis
-
-    def contains(self, obj: Element, inclusive: bool = True) -> bool:
-        if isinstance(obj, Point):
-            if not self.boundary.contains(obj, inclusive=inclusive):
-                return False
-            return not any(
-                obstacle.contains(obj, inclusive=False) for obstacle in self.obstacles
-            )
-
-        if isinstance(obj, Segment):
-            if not self.boundary.contains(obj, inclusive=inclusive):
-                return False
-            if any(
-                obstacle.contains(obj[0], inclusive=False)
-                or obstacle.contains(obj[1], inclusive=False)
-                for obstacle in self.obstacles
-            ):
-                return False
-            if any(
-                obstacle.contains(obj.midpoint, inclusive=False)
-                for obstacle in self.obstacles
-            ):
-                return False
-            if not self.contains(obj.midpoint, inclusive=inclusive):
-                return False
-
-            for obstacle in self.obstacles:
-                for edge in obstacle.edges:
-                    if edge.connects(obj):
-                        continue
-                    if not edge.intersects(obj, inclusive=False):
-                        continue
-                    if any(
-                        (
-                            Path(
-                                start=edge[0], center=edge[1], end=obj[0]
-                            ).is_collinear(),
-                            Path(
-                                start=edge[0], center=edge[1], end=obj[1]
-                            ).is_collinear(),
-                        )
-                    ):
-                        continue
-                    return False
-
-            return True
-
-        if isinstance(obj, Polygon):
-            return all(
-                (
-                    all(self.contains(edge, inclusive=inclusive) for edge in obj.edges),
-                    all(
-                        self.contains(point, inclusive=inclusive)
-                        for point in obj.points
-                    ),
-                )
-            )
-
-        raise NotImplementedError(
-            f"ArtGallery.contains not implemented for {type(obj)}"
         )
 
-    def overlaps(self, obj: Element, inclusive: bool = True) -> bool:
+    def sees(self, source: Point, target: Point | ConvexComponent) -> bool:
+        if isinstance(target, ConvexComponent):
+            if source in target.points:
+                return True
+            return all(
+                (
+                    all(self.sees(source, point) for point in target.points),
+                    # all(self.sees(source, edge.midpoint) for edge in target.edges),
+                    # self.sees(source, target.points.centroid)
+                )
+            )
+        if source == target:
+            return True
+        ray: Segment = source.to(target)
+        if ray in self._visibility_cache:
+            return self._visibility_cache[ray]
+        if self.contains(ray, inclusive=True):
+            self._visibility_cache[ray] = True
+            return True
+        self._visibility_cache[ray] = False
+        return False
+
+    def contains(self, obj: Element, inclusive: bool = True) -> bool:
         return all(
-            [
-                self.boundary.overlaps(obj, inclusive=inclusive),
+            (
+                self.boundary.contains(obj, inclusive=inclusive),
                 not any(
                     obstacle.contains(obj, inclusive=False)
                     for obstacle in self.obstacles
                 ),
-            ]
+                not any(
+                    obstacle.intersects(obj, inclusive=False)
+                    for obstacle in self.obstacles
+                ),
+            )
         )
+
+    def intersects(self, obj: Element, inclusive: bool = True) -> bool:
+        raise NotImplementedError("ArtGallery.intersects not implemented")

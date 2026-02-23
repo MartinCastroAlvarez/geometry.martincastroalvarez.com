@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from art import ArtGallery
-from designer import Designer
 
 if __name__ == "__main__":
     gallery = ArtGallery(
@@ -35,7 +34,4 @@ if __name__ == "__main__":
         }
     )
     print(gallery)
-
-    print(f"\nFound {len(gallery.convex_components)} convex components")
-    print(f"Found {len(gallery.guards)} potential guard positions")
-    Designer(drawable=gallery).plot()
+    gallery.plot()

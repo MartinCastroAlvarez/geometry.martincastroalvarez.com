@@ -59,8 +59,8 @@ class Triangle(Bounded, Element2D):
     def contains(self, obj: Element, inclusive: bool = True) -> bool:
         return self.polygon.contains(obj, inclusive=inclusive)
 
-    def overlaps(self, obj: Element, inclusive: bool = True) -> bool:
-        return self.polygon.overlaps(obj, inclusive=inclusive)
+    def intersects(self, obj: Element, inclusive: bool = True) -> bool:
+        return self.polygon.intersects(obj, inclusive=inclusive)
 
     @cached_property
     def box(self) -> Box:
