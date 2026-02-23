@@ -1,31 +1,58 @@
 from __future__ import annotations
 
-from typing import Generic, Iterator, TypeVar
+from typing import Any, Generic, Iterator, TypeVar
 
 from exceptions import GuardCoverageFailureError, VisibilityInvalidItemsError
 from model import Hash
 from point import Point
+from serializable import Serializable
 
 T = TypeVar("T", Hash, Point)
 
 
-class Visibility(Generic[T]):
+class Visibility(Generic[T], Serializable):
+    def serialize(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        for key, value in self.items.items():
+            k = str(int(key))
+            out[k] = [
+                item.serialize() if isinstance(item, Point) else int(item)
+                for item in value
+            ]
+        return out
+
+    @classmethod
+    def unserialize(cls, data: dict[str, Any]) -> Visibility[Point]:
+        if not isinstance(data, dict):
+            raise VisibilityInvalidItemsError(
+                f"Visibility.unserialize expects a dict, got {type(data).__name__}"
+            )
+        items: dict[Hash, set[Point]] = {}
+        for key, value in data.items():
+            if not isinstance(value, list):
+                raise VisibilityInvalidItemsError(
+                    "Visibility.unserialize values must be lists"
+                )
+            items[Hash(key)] = {Point.unserialize(item) for item in value}
+        return cls(items=items)
+
     def __init__(self, items: dict[Hash, set[T]] | None = None) -> None:
-        self.items: dict[Hash, set[T]] = {}
-        if items is not None:
-            if not isinstance(items, dict):
-                raise VisibilityInvalidItemsError(
-                    f"Visibility items must be a dictionary: {items!r}"
-                )
-            if not all(isinstance(key, Hash) for key in items.keys()):
-                raise VisibilityInvalidItemsError(
-                    f"Visibility items must have Hash keys: {items!r}"
-                )
-            if not all(isinstance(value, set) for value in items.values()):
-                raise VisibilityInvalidItemsError(
-                    f"Visibility items must have set values: {items!r}"
-                )
-            self.items = items
+        self.items: dict[Hash, set[T]] = {} if items is None else items
+        self.validate()
+
+    def validate(self) -> None:
+        if not isinstance(self.items, dict):
+            raise VisibilityInvalidItemsError(
+                f"Visibility items must be a dictionary: {self.items!r}"
+            )
+        if not all(isinstance(key, Hash) for key in self.items.keys()):
+            raise VisibilityInvalidItemsError(
+                f"Visibility items must have Hash keys: {self.items!r}"
+            )
+        if not all(isinstance(value, set) for value in self.items.values()):
+            raise VisibilityInvalidItemsError(
+                f"Visibility items must have set values: {self.items!r}"
+            )
 
     def __setitem__(self, key: Hash, value: set[T]) -> None:
         self.items[key] = value

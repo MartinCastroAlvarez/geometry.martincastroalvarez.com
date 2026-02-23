@@ -7,8 +7,11 @@ from typing import TYPE_CHECKING, Any
 from colorama import Fore
 
 from element import Element, ElementSequence
-from exceptions import PointInvalidCoordinatesError
+from exceptions import (PointInvalidCoordinatesError,
+                        SerializedInvalidDictError,
+                        SerializedInvalidValueError, SerializedMissingKeyError)
 from model import Hash
+from serializable import Serializable
 
 if TYPE_CHECKING:
     from segment import Segment, SegmentSequence
@@ -21,12 +24,62 @@ from exceptions import (CentroidEmptySequenceError,
                         SequenceShiftValidationError)
 
 
-class Point(Element):
+def _coerce_to_points(raw: list[Any]) -> list[Point]:
+    out: list[Point] = []
+    for index, item in enumerate(raw):
+        if isinstance(item, Point):
+            out.append(item)
+        else:
+            try:
+                out.append(Point(item) if not isinstance(item, dict) else Point(**item))
+            except Exception as error:
+                raise SequenceInvalidPointsError(
+                    f"PointSequence item at index {index} could not be coerced to Point: {item!r}"
+                ) from error
+    return out
+
+
+class Point(Element, Serializable):
+    def serialize(self) -> dict[str, Any]:
+        return {"x": self.x, "y": self.y}
+
+    @classmethod
+    def unserialize(cls, data: dict[str, Any]) -> Point:
+        if not isinstance(data, dict):
+            raise SerializedInvalidDictError(
+                f"Point.unserialize expects a dict, got {type(data).__name__}"
+            )
+        if "x" not in data:
+            raise SerializedMissingKeyError("Point.unserialize missing key 'x'")
+        if "y" not in data:
+            raise SerializedMissingKeyError("Point.unserialize missing key 'y'")
+        try:
+            x = (
+                data["x"]
+                if isinstance(data["x"], Decimal)
+                else Decimal(str(float(data["x"])))
+            )
+            y = (
+                data["y"]
+                if isinstance(data["y"], Decimal)
+                else Decimal(str(float(data["y"])))
+            )
+        except (TypeError, ValueError) as error:
+            raise PointInvalidCoordinatesError(
+                f"Point.unserialize invalid x/y: {error}"
+            ) from error
+        return cls(x=x, y=y)
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        if len(args) == 1 and isinstance(args[0], dict):
-            kwargs = args[0]
-            args = ()
-        if kwargs and "x" in kwargs and "y" in kwargs:
+        if len(args) == 1 and not kwargs:
+            one = args[0]
+            if isinstance(one, Point):
+                self.x, self.y = one.x, one.y
+                return
+            parsed = self.__class__.unserialize(one)
+            self.x, self.y = parsed.x, parsed.y
+            return
+        if "x" in kwargs and "y" in kwargs:
             self.x = (
                 kwargs["x"]
                 if isinstance(kwargs["x"], Decimal)
@@ -38,47 +91,8 @@ class Point(Element):
                 else Decimal(str(float(kwargs["y"])))
             )
             return
-        if len(args) == 1 and isinstance(args[0], Point):
-            self.x = args[0].x
-            self.y = args[0].y
-            return
-        if len(args) == 2:
-            self.x = (
-                args[0]
-                if isinstance(args[0], Decimal)
-                else Decimal(str(float(args[0])))
-            )
-            self.y = (
-                args[1]
-                if isinstance(args[1], Decimal)
-                else Decimal(str(float(args[1])))
-            )
-            return
-        if len(args) == 1 and isinstance(args[0], (tuple, list)) and len(args[0]) == 2:
-            a, b = args[0][0], args[0][1]
-            self.x = a if isinstance(a, Decimal) else Decimal(str(float(a)))
-            self.y = b if isinstance(b, Decimal) else Decimal(str(float(b)))
-            return
-        if kwargs and "x" in kwargs:
-            val = kwargs["x"]
-            if isinstance(val, Point):
-                self.x = val.x
-                self.y = val.y
-                return
-            if isinstance(val, (tuple, list)) and len(val) == 2:
-                self.x = (
-                    val[0]
-                    if isinstance(val[0], Decimal)
-                    else Decimal(str(float(val[0])))
-                )
-                self.y = (
-                    val[1]
-                    if isinstance(val[1], Decimal)
-                    else Decimal(str(float(val[1])))
-                )
-                return
         raise PointInvalidCoordinatesError(
-            "Point expects kwargs x and y, one dict, one Point, two coords, or [x,y]"
+            "Point expects (x=..., y=...) or a single Point/dict"
         )
 
     def to(self, other: Point) -> Segment:
@@ -119,55 +133,65 @@ class Point(Element):
         return f"{Fore.CYAN}({int(self[0])}, {int(self[1])}){Fore.RESET}"
 
 
-class PointSequence(ElementSequence[Point]):
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        if len(args) == 1 and isinstance(args[0], dict):
-            kwargs = args[0]
-            args = ()
-        if kwargs and ("items" in kwargs or "points" in kwargs):
-            raw = kwargs.get("points", kwargs.get("items"))
-            if isinstance(raw, PointSequence):
-                raw = list(raw.items)
+class PointSequence(ElementSequence[Point], Serializable):
+    def serialize(self) -> dict[str, Any]:
+        return {"points": [point.serialize() for point in self.items]}
+
+    @classmethod
+    def unserialize(cls, data: dict[str, Any] | list[Any]) -> PointSequence:
+        if isinstance(data, dict):
+            if "points" not in data:
+                raise SerializedMissingKeyError(
+                    "PointSequence.unserialize missing key 'points'"
+                )
+            raw = data["points"]
+        elif isinstance(data, list):
+            raw = data
+        else:
+            raise SerializedInvalidDictError(
+                f"PointSequence.unserialize expects a dict or list, got {type(data).__name__}"
+            )
+        if not isinstance(raw, list):
+            raise SerializedInvalidValueError(
+                f"PointSequence.unserialize 'points' must be a list, got {type(raw).__name__}"
+            )
+        points: list[Point] = []
+        for item in raw:
+            if isinstance(item, Point):
+                points.append(item)
+            elif isinstance(item, dict):
+                points.append(Point.unserialize(item))
+            elif isinstance(item, (list, tuple)) and len(item) >= 2:
+                points.append(Point.unserialize({"x": item[0], "y": item[1]}))
             else:
-                raw = list(raw) if raw is not None else []
-            coerced: list[Point] = []
-            for index, point in enumerate(raw):
-                if isinstance(point, Point):
-                    coerced.append(point)
-                else:
-                    try:
-                        coerced.append(
-                            Point(point)
-                            if not isinstance(point, dict)
-                            else Point(**point)
-                        )
-                    except Exception as error:
-                        raise SequenceInvalidPointsError(
-                            f"PointSequence item at index {index} could not be coerced to Point: {point!r}"
-                        ) from error
-            self.items = PointSequence.clean(coerced)
-            return
-        if len(args) == 1 and isinstance(args[0], PointSequence):
-            self.items = PointSequence.clean(list(args[0].items))
-            return
-        if len(args) == 1 and isinstance(args[0], (list, tuple)):
-            raw = list(args[0])
-            coerced = []
-            for index, point in enumerate(raw):
-                if isinstance(point, Point):
-                    coerced.append(point)
-                else:
-                    try:
-                        coerced.append(
-                            Point(point)
-                            if not isinstance(point, dict)
-                            else Point(**point)
-                        )
-                    except Exception as error:
-                        raise SequenceInvalidPointsError(
-                            f"PointSequence item at index {index} could not be coerced to Point: {point!r}"
-                        ) from error
-            self.items = PointSequence.clean(coerced)
+                raise SerializedInvalidValueError(
+                    f"PointSequence.unserialize point must be dict or [x,y], got {type(item).__name__}"
+                )
+        return cls(points=points)
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        if len(args) == 1 and not kwargs:
+            one = args[0]
+            if isinstance(one, PointSequence):
+                self.items = PointSequence.clean(list(one.items))
+                return
+            if isinstance(one, dict):
+                try:
+                    parsed = self.__class__.unserialize(one)
+                    self.items = parsed.items
+                    return
+                except Exception:
+                    pass
+            if isinstance(one, (list, tuple)):
+                self.items = PointSequence.clean(_coerce_to_points(list(one)))
+                return
+            raise SequenceInvalidPointsError(
+                f"PointSequence expects a PointSequence, a dict, or a list; got {type(one).__name__}"
+            )
+        raw = kwargs.get("points", kwargs.get("items"))
+        if raw is not None:
+            sequence = list(raw.items) if isinstance(raw, PointSequence) else list(raw)
+            self.items = PointSequence.clean(_coerce_to_points(sequence))
             return
         self.items = PointSequence.clean([])
 
@@ -343,7 +367,7 @@ class PointSequence(ElementSequence[Point]):
 
         def canonical_key(seq: PointSequence) -> tuple[tuple[Decimal, Decimal], ...]:
             rotated = seq << seq.leftmost
-            return tuple((p[0], p[1]) for p in rotated.items)
+            return tuple((point[0], point[1]) for point in rotated.items)
 
         forward_key = canonical_key(self)
         backward_key = canonical_key(~self)

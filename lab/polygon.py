@@ -10,12 +10,26 @@ from exceptions import PolygonDegenerateError, PolygonTooFewPointsError
 from model import Hash
 from point import Point, PointSequence
 from segment import Segment, SegmentSequence
+from serializable import Serializable
 
 if TYPE_CHECKING:
     pass
 
 
-class Polygon(Bounded, Element2D):
+class Polygon(Bounded, Element2D, Serializable):
+    def serialize(self) -> dict[str, Any]:
+        return {"points": self.points.serialize(), "box": self.box.serialize()}
+
+    @classmethod
+    def unserialize(cls, data: dict[str, Any] | list[Any]) -> Polygon:
+        if isinstance(data, dict) and "points" in data:
+            points_data: Any = data["points"]
+        elif isinstance(data, dict):
+            raise PolygonTooFewPointsError("Polygon.unserialize missing key 'points'")
+        else:
+            points_data = data
+        return cls(points=PointSequence.unserialize(points_data))
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         if len(args) == 1 and isinstance(args[0], dict):
             kwargs = args[0]
@@ -35,6 +49,9 @@ class Polygon(Bounded, Element2D):
             raise PolygonTooFewPointsError("Polygon requires points")
         items: list[Point] = points.items
         self.points = PointSequence(items=items)
+        self.validate()
+
+    def validate(self) -> None:
         if len(self.points) < 3:
             raise PolygonTooFewPointsError(
                 f"Polygon must have at least 3 points: {self.points}"

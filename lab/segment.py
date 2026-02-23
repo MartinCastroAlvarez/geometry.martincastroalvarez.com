@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 from decimal import Decimal
 from functools import cached_property
+from typing import Any
 
 from colorama import Fore
 
@@ -14,20 +15,38 @@ from exceptions import (SegmentInvalidPointsError,
 from model import Hash
 from path import Path
 from point import Point, PointSequence
+from serializable import Serializable
 
 
-class Segment(Bounded, Element1D):
+class Segment(Bounded, Element1D, Serializable):
+    def serialize(self) -> dict[str, Any]:
+        return {"start": self.start.serialize(), "end": self.end.serialize()}
+
+    @classmethod
+    def unserialize(cls, data: dict[str, Any]) -> Segment:
+        if "start" not in data or "end" not in data:
+            raise SegmentInvalidPointsError(
+                "Segment.unserialize requires 'start' and 'end'"
+            )
+        return cls(
+            start=Point.unserialize(data["start"]),
+            end=Point.unserialize(data["end"]),
+        )
+
     def __init__(self, *, start: Point, end: Point) -> None:
-        if not isinstance(start, Point):
-            raise SegmentInvalidPointsError(
-                f"start must be a Point, got {type(start).__name__}"
-            )
-        if not isinstance(end, Point):
-            raise SegmentInvalidPointsError(
-                f"end must be a Point, got {type(end).__name__}"
-            )
         self.start = start
         self.end = end
+        self.validate()
+
+    def validate(self) -> None:
+        if not isinstance(self.start, Point):
+            raise SegmentInvalidPointsError(
+                f"start must be a Point, got {type(self.start).__name__}"
+            )
+        if not isinstance(self.end, Point):
+            raise SegmentInvalidPointsError(
+                f"end must be a Point, got {type(self.end).__name__}"
+            )
 
     def __hash__(self) -> Hash:
         low: Point = min(self[0], self[1])
@@ -154,18 +173,45 @@ class Segment(Bounded, Element1D):
         return False
 
 
-class SegmentSequence(ElementSequence[Segment]):
-    def __init__(self, items: list[Segment]) -> None:
-        if not isinstance(items, list):
+class SegmentSequence(ElementSequence[Segment], Serializable):
+    def serialize(self) -> dict[str, Any]:
+        return {"segments": [segment.serialize() for segment in self.items]}
+
+    @classmethod
+    def unserialize(cls, data: dict[str, Any] | list[Any]) -> SegmentSequence:
+        if isinstance(data, dict):
+            if "segments" not in data:
+                raise SegmentSequenceInvalidItemsError(
+                    "SegmentSequence.unserialize requires 'segments' key when data is dict"
+                )
+            raw = data["segments"]
+        elif isinstance(data, list):
+            raw = data
+        else:
             raise SegmentSequenceInvalidItemsError(
-                f"items must be a list, got {type(items).__name__}"
+                f"SegmentSequence.unserialize expects a dict or list, got {type(data).__name__}"
             )
-        for i, segment in enumerate(items):
+        if not isinstance(raw, list):
+            raise SegmentSequenceInvalidItemsError(
+                f"SegmentSequence.unserialize 'segments' must be a list, got {type(raw).__name__}"
+            )
+        return cls(items=[Segment.unserialize(segment) for segment in raw])
+
+    def __init__(self, items: list[Segment]) -> None:
+        self.items = list(items) if items is not None else []
+        self.validate()
+        self.items = SegmentSequence.clean(self.items)
+
+    def validate(self) -> None:
+        if not isinstance(self.items, list):
+            raise SegmentSequenceInvalidItemsError(
+                f"items must be a list, got {type(self.items).__name__}"
+            )
+        for i, segment in enumerate(self.items):
             if not isinstance(segment, Segment):
                 raise SegmentSequenceInvalidItemsError(
                     f"items[{i}] must be a Segment, got {type(segment).__name__}"
                 )
-        self.items = SegmentSequence.clean(list(items))
 
     def __repr__(self) -> str:
         return (

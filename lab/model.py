@@ -7,6 +7,7 @@ from uuid import uuid4
 
 from exceptions import (HashInvalidValueError, ModelMapInvalidDataError,
                         ModelMapKeyError)
+from serializable import Serializable
 
 
 class Hash(int):
@@ -40,7 +41,55 @@ class Model(ABC):
 T = TypeVar("T", bound=Model)
 
 
-class ModelMap(Generic[T]):
+class ModelMap(Generic[T], Serializable):
+    def serialize(self) -> dict[int, dict[str, Any]]:
+        return {int(key): item.serialize() for key, item in self.items.items()}
+
+    @classmethod
+    def unserialize(
+        cls,
+        data: dict[str, Any] | list[Any],
+        item_class: type[T],
+    ) -> ModelMap[T]:
+        if data is None:
+            data = []
+        if isinstance(data, dict):
+            if "items" in data:
+                raw_list = data["items"]
+                if not isinstance(raw_list, list):
+                    raise ModelMapInvalidDataError(
+                        "ModelMap.unserialize 'items' must be a list"
+                    )
+                items_list: list[T] = []
+                for item in raw_list:
+                    if isinstance(item, Model):
+                        items_list.append(item)
+                    else:
+                        items_list.append(item_class.unserialize(item))
+                return cls(items=items_list)
+            # dict key -> payload; key must equal instance.id after deserialization
+            result: dict[Hash, T] = {}
+            for key, val in data.items():
+                instance = item_class.unserialize(val)
+                key_int = int(key) if not isinstance(key, Hash) else int(key)
+                if int(instance.id) != key_int:
+                    raise ModelMapInvalidDataError(
+                        f"ModelMap key {key!r} does not match item id {instance.id!r}"
+                    )
+                result[instance.id] = instance
+            return cls(items=result)
+        if isinstance(data, list):
+            items_list = []
+            for item in data:
+                if isinstance(item, Model):
+                    items_list.append(item)
+                else:
+                    items_list.append(item_class.unserialize(item))
+            return cls(items=items_list)
+        raise ModelMapInvalidDataError(
+            f"ModelMap.unserialize expects a dict or list, got {type(data).__name__}"
+        )
+
     def __init__(
         self,
         *,

@@ -4,9 +4,10 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from element import ComplexElement, Element
-from exceptions import BoxInvalidEdgeError
+from exceptions import BoxInvalidEdgeError, SerializedInvalidDictError
 from interval import Interval
 from point import Point
+from serializable import Serializable
 
 
 class Bounded(ABC):
@@ -16,7 +17,33 @@ class Bounded(ABC):
         raise NotImplementedError()
 
 
-class Box(ComplexElement):
+class Box(ComplexElement, Serializable):
+    def serialize(self) -> dict[str, Any]:
+        return {
+            "bottom_left": self.bottom_left.serialize(),
+            "top_left": self.top_left.serialize(),
+            "bottom_right": self.bottom_right.serialize(),
+            "top_right": self.top_right.serialize(),
+            "x": self.x.serialize(),
+            "y": self.y.serialize(),
+        }
+
+    @classmethod
+    def unserialize(cls, data: dict[str, Any]) -> Box:
+        if not isinstance(data, dict):
+            raise SerializedInvalidDictError(
+                f"Box.unserialize expects a dict, got {type(data).__name__}"
+            )
+        for key in ("bottom_left", "top_left", "bottom_right", "top_right"):
+            if key not in data:
+                raise BoxInvalidEdgeError(f"Box.unserialize missing key {key!r}")
+        return cls(
+            bottom_left=Point.unserialize(data["bottom_left"]),
+            top_left=Point.unserialize(data["top_left"]),
+            bottom_right=Point.unserialize(data["bottom_right"]),
+            top_right=Point.unserialize(data["top_right"]),
+        )
+
     def __init__(
         self,
         *,
@@ -33,6 +60,9 @@ class Box(ComplexElement):
             bottom_right if isinstance(bottom_right, Point) else Point(bottom_right)
         )
         self.top_right = top_right if isinstance(top_right, Point) else Point(top_right)
+        self.validate()
+
+    def validate(self) -> None:
         if self.bottom_left[0] != self.top_left[0]:
             raise BoxInvalidEdgeError(
                 f"Box must have vertical left edge: {self.bottom_left[0]} != {self.top_left[0]}"

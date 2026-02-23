@@ -176,3 +176,15 @@ class VisibilityInvalidItemsError(ArtGalleryError):
 
 class VisibilityInvalidGuardError(ArtGalleryError):
     pass
+
+
+class SerializedInvalidDictError(ArtGalleryError):
+    pass
+
+
+class SerializedMissingKeyError(ArtGalleryError):
+    pass
+
+
+class SerializedInvalidValueError(ArtGalleryError):
+    pass

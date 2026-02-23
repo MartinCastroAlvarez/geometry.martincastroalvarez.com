@@ -6,7 +6,7 @@ from functools import cached_property
 from typing import Any
 
 from convex import ConvexComponent
-from designer import Drawable
+from drawable import Drawable
 from element import Element, Element2D
 from exceptions import (BridgeFailureError,
                         ComponentsEmptyOutsideBoundaryError,
@@ -23,71 +23,35 @@ from path import Path
 from point import Point, PointSequence
 from polygon import Polygon
 from segment import Segment, SegmentSequence
+from serializable import Serializable
 from triangle import Triangle
 from visibility import Visibility
 
 
-class ArtGallery(Element2D, Drawable, Model):
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__()
-        if len(args) == 1 and isinstance(args[0], dict) and not kwargs:
-            kwargs = args[0]
-        if all(["polygon" in kwargs, not isinstance(kwargs["polygon"], Polygon)]):
-            coords = kwargs["polygon"]
-            if isinstance(coords, PointSequence):
-                points = list(coords.items)
-            elif isinstance(coords, list):
-                points = [
-                    (
-                        point
-                        if isinstance(point, Point)
-                        else Point(
-                            x=Decimal(str(float(point[0]))),
-                            y=Decimal(str(float(point[1]))),
-                        )
-                    )
-                    for point in coords
-                ]
-            else:
-                points = []
-            kwargs["polygon"] = Polygon(points=PointSequence(points))
-        if "holes" in kwargs:
-            raw_holes = kwargs["holes"]
-            if isinstance(raw_holes, ModelMap) and all(
-                isinstance(v, Obstacle) for v in raw_holes.values()
-            ):
-                pass
-            else:
-                holes_list: list[Polygon] = []
-                for hole in raw_holes:
-                    if isinstance(hole, Polygon):
-                        holes_list.append(hole)
-                    else:
-                        if isinstance(hole, PointSequence):
-                            pts = list(hole.items)
-                        elif isinstance(hole, list):
-                            pts = [
-                                (
-                                    point
-                                    if isinstance(point, Point)
-                                    else Point(
-                                        x=Decimal(str(float(point[0]))),
-                                        y=Decimal(str(float(point[1]))),
-                                    )
-                                )
-                                for point in hole
-                            ]
-                        else:
-                            pts = []
-                        holes_list.append(Polygon(points=PointSequence(pts)))
-                kwargs["holes"] = ModelMap(
-                    items=[Obstacle(polygon=polygon) for polygon in holes_list]
-                )
-        self.polygon = kwargs.get("polygon") or kwargs.get("boundary")
-        self.holes: ModelMap[Obstacle] = (
-            kwargs.get("holes") or kwargs.get("obstacles") or ModelMap(items=[])
-        )
-        self._visibility_cache: dict[Segment, bool] = {}
+class ArtGallery(Element2D, Drawable, Model, Serializable):
+    def serialize(self) -> dict[str, Any]:
+        return {
+            "boundary": self.boundary.serialize(),
+            "obstacles": self.obstacles.serialize(),
+            "ears": [ear.points.serialize() for ear in self.ears],
+            "visibility": self.visibility.serialize(),
+            "convex_components": self.convex_components.serialize(),
+            "guards": self.guards.serialize(),
+        }
+
+    @classmethod
+    def unserialize(cls, data: dict[str, Any]) -> ArtGallery:
+        boundary_data = data.get("boundary") or data.get("polygon")
+        obstacles_data = data.get("obstacles", data.get("holes", []))
+        if boundary_data is None:
+            raise PolygonTooFewPointsError(
+                "ArtGallery.unserialize missing key 'boundary' or 'polygon'"
+            )
+        boundary = Polygon.unserialize(boundary_data)
+        obstacles = ModelMap.unserialize(obstacles_data, Obstacle)
+        return cls(boundary=boundary, obstacles=obstacles)
+
+    def validate(self) -> None:
         if self.polygon is None:
             raise PolygonTooFewPointsError("ArtGallery requires polygon")
         for obstacle in self.obstacles:
@@ -126,6 +90,47 @@ class ArtGallery(Element2D, Drawable, Model):
             if obstacle != other
         ):
             raise PolygonNotSimpleError("Obstacles intersect or touch.")
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__()
+        if len(args) == 1 and not kwargs:
+            one = args[0]
+            if isinstance(one, ArtGallery):
+                self.polygon = one.polygon
+                self.holes = one.holes
+                self._visibility_cache = {}
+                self.id = one.id
+                return
+            if isinstance(one, dict):
+                parsed = self.__class__.unserialize(one)
+                self.polygon = parsed.polygon
+                self.holes = parsed.holes
+                self._visibility_cache = {}
+                self.id = parsed.id
+                return
+            raise TypeError(
+                f"ArtGallery single arg must be ArtGallery or dict, got {type(one).__name__}"
+            )
+        boundary = kwargs.get("boundary") or kwargs.get("polygon")
+        obstacles = kwargs.get("obstacles") or kwargs.get("holes")
+        if boundary is None:
+            raise PolygonTooFewPointsError(
+                "ArtGallery requires boundary or polygon in kwargs"
+            )
+        self.polygon = boundary
+        if isinstance(obstacles, ModelMap):
+            self.holes = obstacles
+        elif isinstance(obstacles, list):
+            self.holes = ModelMap(
+                items=[
+                    item if isinstance(item, Obstacle) else Obstacle(polygon=item)
+                    for item in obstacles
+                ]
+            )
+        else:
+            self.holes = ModelMap(items=[])
+        self._visibility_cache = {}
+        self.validate()
         self.id = Hash(f"art:{self.polygon.__hash__()}:{self.holes.__hash__()}")
 
     def __repr__(self) -> str:
