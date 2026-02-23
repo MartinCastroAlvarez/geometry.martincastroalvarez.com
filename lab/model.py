@@ -138,13 +138,12 @@ class ModelMap(Generic[T], Serializable):
     def __len__(self) -> int:
         return len(self.items)
 
-    def add(self, item: T) -> None:
-        self.items[item.id] = item
-
-    def pop(self, key: Hash) -> None:
+    def __isub__(self, key_or_model: Hash | T) -> ModelMap[T]:
+        key = key_or_model.id if isinstance(key_or_model, Model) else key_or_model
         if key not in self.items:
             raise ModelMapKeyError(f"key not in ModelMap: {key}")
         del self.items[key]
+        return self
 
     def clone(self) -> ModelMap[T]:
         return ModelMap(items=dict(self.items))

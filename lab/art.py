@@ -357,9 +357,9 @@ class ArtGallery(Element2D, Drawable, Model, Serializable):
                         best_pair = (component, components[other_id])
             if best_pair is None:
                 break
-            components.pop(best_pair[0].id)
-            components.pop(best_pair[1].id)
-            components.add(best_component)
+            components -= best_pair[0].id
+            components -= best_pair[1].id
+            components += best_component
             print(f"  Merged two components -> {len(components)} remaining.")
         print(f"Convex components: {len(components)}.")
         return components
@@ -420,12 +420,12 @@ class ArtGallery(Element2D, Drawable, Model, Serializable):
             best_guard_id: Hash = visibility_by_best_guards.best[0]
             best_guard: VertexGuard = candidates[best_guard_id]
 
-            guards.add(best_guard)
+            guards += best_guard
 
-            candidates.pop(best_guard.id)
+            candidates -= best_guard.id
             remaining -= visibility_by_best_guards[best_guard.id]
             for component_id in visibility_by_guard[best_guard.id]:
-                components.pop(component_id)
+                components -= component_id
 
             print(
                 f"  {best_guard}: covers {len(visibility_by_best_guards[best_guard.id])} points, {len(components)} components remaining.",
@@ -449,7 +449,6 @@ class ArtGallery(Element2D, Drawable, Model, Serializable):
                     for guard in guards.values()
                 }
             )
-
             uncovereed: set[Point] = {
                 point for point in self.points if not visibility_by_guard.sees(point)
             }
@@ -457,6 +456,19 @@ class ArtGallery(Element2D, Drawable, Model, Serializable):
                 raise GuardCoverageFailureError(
                     f"Failed to cover points: {uncovereed}."
                 )
+
+            for guard in guards.values():
+                guard_visibility: set[Point] = visibility_by_guard[guard.id]
+                other_visibility: set[Point] = {
+                    point
+                    for other in guards.values()
+                    if other.id != guard.id
+                    for point in visibility_by_guard[other.id]
+                }
+                if guard_visibility.issubset(other_visibility):
+                    guards -= guard.id
+                    removed = True
+                    break
 
         return guards
 

@@ -60,6 +60,10 @@ class Visibility(Generic[T], Serializable):
     def __getitem__(self, key: Hash) -> set[T]:
         return self.items[key]
 
+    def __isub__(self, key: Hash) -> Visibility[T]:
+        del self.items[key]
+        return self
+
     def keys(self) -> Iterator[Hash]:
         return self.items.keys()
 
