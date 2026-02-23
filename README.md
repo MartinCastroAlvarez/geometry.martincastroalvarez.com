@@ -9,7 +9,7 @@ The [lab](lab/) directory contains a Python prototype and example galleries. Eac
 | | |
 |---|---|
 | ![Example 1](lab/example1.png) | ![Example 2](lab/example2.png) |
-| ![Example 3](lab/example3.png) | ![Example 5](lab/example5.png) |
-| ![Example 7](lab/example7.png) | |
+| ![Example 3](lab/example3.png) | ![Example 4](lab/example4.png) |
+| ![Example 5](lab/example5.png) | ![Example 6](lab/example6.png) |
 
 See [lab/README.md](lab/README.md) for how to run the examples.

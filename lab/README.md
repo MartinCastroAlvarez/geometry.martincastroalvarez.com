@@ -77,4 +77,3 @@ Use `example2.py`, `example3.py`, `example4.py`, `example5.py`, `example6.py`, `
 | ![Example 1](example1.png) | ![Example 2](example2.png) |
 | ![Example 3](example3.png) | ![Example 4](example4.png) |
 | ![Example 5](example5.png) | ![Example 6](example6.png) |
-| ![Example 7](example7.png) | ![Example 8](example8.png) |
