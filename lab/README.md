@@ -25,7 +25,7 @@ A computational geometry library and playground for implementing art gallery alg
 | Type | Files |
 |------|--------|
 | **Core** | `art.py`, `box.py`, `convex.py`, `drawable.py`, `element.py`, `exceptions.py`, `guard.py`, `interval.py`, `matrix.py`, `model.py`, `path.py`, `point.py`, `polygon.py`, `segment.py`, `sequence.py`, `serializable.py`, `triangle.py`, `visibility.py` |
-| **Examples** | `example1.py`, `example2.py`, `example3.py`, `example4.py`, `example5.py`, `example6.py`, `example7.py`, `example8.py` (and corresponding `exampleN.png` screenshots) |
+| **Examples** | `example1.py`, `example2.py`, `example3.py`, `example4.py`, `example5.py`, `example6.py`, `example7.py`, `example8.py`, `example9.py`, `example10.py` (and corresponding `exampleN.png` screenshots) |
 | **Other** | `README.md`, `run.sh`, `pyproject.toml`, `poetry.lock`, `.gitignore` |
 
 ## Modules
@@ -69,7 +69,7 @@ poetry install
 poetry run python lab/example1.py
 ```
 
-Use `example2.py`, `example3.py`, `example4.py`, `example5.py`, `example6.py`, `example7.py`, or `example8.py` in place of `example1.py` to run other examples. Each script prints perimeter vertices, convex component count, guard count, and calls `gallery.plot()` to open a matplotlib window (save as `exampleN.png` to capture the figure). No need to import the drawable module; `ArtGallery` implements `Drawable` and provides `plot()`.
+Use `example2.py`, `example3.py`, `example4.py`, `example5.py`, `example6.py`, `example7.py`, `example8.py`, `example9.py`, or `example10.py` in place of `example1.py` to run other examples. Each script prints perimeter vertices, convex component count, guard count, and calls `gallery.plot()` to open a matplotlib window (save as `exampleN.png` to capture the figure). No need to import the drawable module; `ArtGallery` implements `Drawable` and provides `plot()`.
 
 ## Examples
 
@@ -79,3 +79,4 @@ Use `example2.py`, `example3.py`, `example4.py`, `example5.py`, `example6.py`, `
 | ![Example 3](example3.png) | ![Example 4](example4.png) |
 | ![Example 5](example5.png) | ![Example 6](example6.png) |
 | ![Example 7](example7.png) | ![Example 8](example8.png) |
+| ![Example 9](example9.png) | ![Example 10](example10.png) |

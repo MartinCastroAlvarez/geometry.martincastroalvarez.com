@@ -160,8 +160,8 @@ class ArtGallery(Element2D, Drawable, Model, Serializable):
     @cached_property
     def points(self) -> PointSequence:
         points: PointSequence = self.boundary.points
-        if not self.holes:
-            return points
+        # if not self.holes:
+        #     return points
         print(f"Stitching {len(self.obstacles)} obstacles to {len(points)} points.")
         obstacles_sorted: list[Obstacle] = sorted(
             self.holes.values(),
