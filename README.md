@@ -14,4 +14,14 @@ The [lab](lab/) directory contains a Python prototype and example galleries. Eac
 | ![Example 7](lab/example7.png) | ![Example 8](lab/example8.png) |
 | ![Example 9](lab/example9.png) | ![Example 10](lab/example10.png) |
 
-See [lab/README.md](lab/README.md) for how to run the examples.
+## Build, deploy, and test
+
+Use **Node.js 25** for npm and CDK (e.g. run `nvm use 25` if using nvm).
+
+From the project root:
+
+- **Install and bootstrap:** `npm run init` (uses AWS profile `martin`; run `npm run update` to only install dependencies).
+- **Build:** `npm run build` (runs `build:api` and `build:cdk`). Use `npm run build:api` or `npm run build:cdk` for specific parts.
+- **Deploy:** `npm run deploy` (update, build, CDK deploy, then CloudFront invalidation via `npm run publish`).
+- **Publish (invalidation only):** `npm run publish` (invalidates the geometry CloudFront distribution using `GeometryStack` / `GeometryDistributionId` from `outputs.json`).
+- **Test:** `npm run test` (runs `test:lab`). Use `npm run test:lab:1` … `npm run test:lab:10` to run `lab/example1.py` … `lab/example10.py`.

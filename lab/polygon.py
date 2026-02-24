@@ -17,6 +17,8 @@ if TYPE_CHECKING:
 
 
 class Polygon(Bounded, Element2D, Serializable):
+    points: PointSequence
+
     def serialize(self) -> dict[str, Any]:
         return {"points": self.points.serialize(), "box": self.box.serialize()}
 
@@ -38,7 +40,7 @@ class Polygon(Bounded, Element2D, Serializable):
             val = kwargs["points"]
             points = val if isinstance(val, PointSequence) else PointSequence(val)
         elif len(args) == 1 and isinstance(args[0], Polygon):
-            points = args[0].points
+            points: PointSequence = args[0].points
         elif len(args) == 1:
             points = (
                 args[0]

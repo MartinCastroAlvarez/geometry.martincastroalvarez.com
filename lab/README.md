@@ -18,7 +18,6 @@ A computational geometry library and playground for implementing art gallery alg
 ## Requirements
 
 - Python ≥ 3.13
-- Dependencies managed with Poetry at the project root
 
 ## Folder contents
 
@@ -26,7 +25,7 @@ A computational geometry library and playground for implementing art gallery alg
 |------|--------|
 | **Core** | `art.py`, `box.py`, `convex.py`, `drawable.py`, `element.py`, `exceptions.py`, `guard.py`, `interval.py`, `matrix.py`, `model.py`, `path.py`, `point.py`, `polygon.py`, `segment.py`, `sequence.py`, `serializable.py`, `triangle.py`, `visibility.py` |
 | **Examples** | `example1.py`, `example2.py`, `example3.py`, `example4.py`, `example5.py`, `example6.py`, `example7.py`, `example8.py`, `example9.py`, `example10.py` (and corresponding `exampleN.png` screenshots) |
-| **Other** | `README.md`, `run.sh`, `pyproject.toml`, `poetry.lock`, `.gitignore` |
+| **Other** | `README.md`, `run.sh`, `.gitignore` |
 
 ## Modules
 
@@ -62,14 +61,16 @@ A computational geometry library and playground for implementing art gallery alg
 
 ## Running
 
-From the project root:
+From the **project root** (not from `lab/`), use the npm scripts defined in `package.json`:
 
 ```bash
-poetry install
-poetry run python lab/example1.py
+npm run test:lab:1
+npm run test:lab:2
+…
+npm run test:lab:10
 ```
 
-Use `example2.py`, `example3.py`, `example4.py`, `example5.py`, `example6.py`, `example7.py`, `example8.py`, `example9.py`, or `example10.py` in place of `example1.py` to run other examples. Each script prints perimeter vertices, convex component count, guard count, and calls `gallery.plot()` to open a matplotlib window (save as `exampleN.png` to capture the figure). No need to import the drawable module; `ArtGallery` implements `Drawable` and provides `plot()`.
+Or run all lab tests with `npm run test` (which runs `test:lab`, i.e. `test:lab:1`). Each script runs the corresponding `lab/exampleN.py`: it prints perimeter vertices, convex component count, guard count, and calls `gallery.plot()` to open a matplotlib window (save as `exampleN.png` to capture the figure). No need to import the drawable module; `ArtGallery` implements `Drawable` and provides `plot()`.
 
 ## Examples
 

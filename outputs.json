@@ -1,0 +1,15 @@
+{
+  "GeometryStack": {
+    "GeometryQueueName": "geometry-queue",
+    "WorkerFunctionName": "geometry-worker-handler",
+    "GeometryApiEndpointC45856CC": "https://1ftsdtf6q9.execute-api.us-west-2.amazonaws.com/prod/",
+    "GeometryApiUrl": "https://1ftsdtf6q9.execute-api.us-west-2.amazonaws.com/prod/",
+    "GeometryDistributionDomainName": "d2r4aushnshi6e.cloudfront.net",
+    "WebBucketName": "com.martincastroalvarez.geometry",
+    "GeometryApiDomainName": "d-j3kxwvxbjg.execute-api.us-west-2.amazonaws.com",
+    "LambdaFunctionName": "geometry-api-handler",
+    "GeometryDistributionId": "E1WAXVH3N3WAGC",
+    "ApiBucketName": "com.martincastroalvarez.api.geometry",
+    "GeometryQueueUrl": "https://sqs.us-west-2.amazonaws.com/217471729873/geometry-queue"
+  }
+}

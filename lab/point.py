@@ -40,6 +40,9 @@ def _coerce_to_points(raw: list[Any]) -> list[Point]:
 
 
 class Point(Element, Serializable):
+    x: Decimal
+    y: Decimal
+
     def serialize(self) -> dict[str, Any]:
         return {"x": self.x, "y": self.y}
 

@@ -42,6 +42,9 @@ class Element2D(ComplexElement):
 class ElementSequence(ABC, Generic[T]):
     items: list[T]
 
+    def __init__(self, items: list[T]) -> None:
+        self.items = items
+
     @staticmethod
     def clean(items: list[T]) -> list[T]:
         if not items:

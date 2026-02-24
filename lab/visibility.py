@@ -65,10 +65,10 @@ class Visibility(Generic[T], Serializable):
         return self
 
     def keys(self) -> Iterator[Hash]:
-        return self.items.keys()
+        return iter(self.items.keys())
 
     def values(self) -> Iterator[set[T]]:
-        return self.items.values()
+        return iter(self.items.values())
 
     def sees(self, value: T) -> set[Hash]:
         return {key for key in self.items.keys() if value in self.items[key]}
