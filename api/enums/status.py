@@ -25,6 +25,4 @@ class Status(str, Enum):
         try:
             return cls(raw)
         except ValueError:
-            raise ValidationError(
-                f"status must be one of [{cls.PENDING.value!r}, {cls.FAILED.value!r}, {cls.SUCCESS.value!r}], got {raw!r}"
-            )
+            raise ValidationError(f"status must be one of [{cls.PENDING.value!r}, {cls.FAILED.value!r}, {cls.SUCCESS.value!r}], got {raw!r}")

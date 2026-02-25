@@ -11,12 +11,12 @@ from dataclasses import field
 from typing import Any
 
 import boto3
+from attributes import ReceiptHandle
 from botocore.exceptions import ClientError
-
 from exceptions import ConfigurationError
 from exceptions import ServiceUnavailableError
+from exceptions import ValidationError
 
-from attributes import ReceiptHandle
 from .message import Message
 
 QUEUE_NAME: str | None = os.getenv("QUEUE_NAME")

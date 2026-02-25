@@ -1,18 +1,22 @@
 """
-URL mapping: path prefix -> method -> Query or Mutation class.
+URL mapping: Path -> method -> Query or Mutation class.
 """
 
+from typing import Type
+
+from attributes import Path
+from enums import Method
 from mutations import JobMutation
+from mutations.base import Mutation
 from queries import ArtGalleryDetailsQuery
 from queries import ArtGalleryListQuery
 from queries import JobDetailsQuery
 from queries import JobListQuery
+from queries.base import Query
 
-from enums import Method
-
-URLS: dict[str, dict[Method, type]] = {
-    "v1/galleries/": {Method.GET: ArtGalleryDetailsQuery},
-    "v1/galleries": {Method.GET: ArtGalleryListQuery},
-    "v1/jobs/": {Method.GET: JobDetailsQuery},
-    "v1/jobs": {Method.GET: JobListQuery, Method.POST: JobMutation},
+URLS: dict[Path, dict[Method, Type[Query | Mutation]]] = {
+    Path("v1/galleries/"): {Method.GET: ArtGalleryDetailsQuery},
+    Path("v1/galleries"): {Method.GET: ArtGalleryListQuery},
+    Path("v1/jobs/"): {Method.GET: JobDetailsQuery},
+    Path("v1/jobs"): {Method.GET: JobListQuery, Method.POST: JobMutation},
 }

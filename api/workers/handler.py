@@ -8,11 +8,11 @@ import logging
 import traceback
 from typing import Any
 
+from enums import Action
+from enums import Status
 from exceptions import InvalidActionError
 from exceptions import ValidationError
 from messages import Queue
-from enums import Action
-from enums import Status
 from tasks.response import TaskResponse
 from workers.request import WorkerRequest
 from workers.response import WorkerResponse
@@ -62,11 +62,13 @@ def handler(event: dict[str, Any], context: Any) -> WorkerResponse:
                 results.append(out)
             except Exception as err:
                 logger.exception("Task failed: %s", err)
-                results.append({
-                    "status": Status.FAILED,
-                    "error": f"{type(err).__name__}: {err}",
-                    "traceback": traceback.format_exception(type(err), err, err.__traceback__),
-                })
+                results.append(
+                    {
+                        "status": Status.FAILED,
+                        "error": f"{type(err).__name__}: {err}",
+                        "traceback": traceback.format_exception(type(err), err, err.__traceback__),
+                    }
+                )
 
         try:
             queue.commit(request.message)

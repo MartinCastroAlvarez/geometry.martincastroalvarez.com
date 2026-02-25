@@ -9,7 +9,6 @@ from typing import ClassVar
 
 from models import ArtGallery
 from models import Model
-
 from repositories.base import Repository
 
 

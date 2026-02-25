@@ -9,19 +9,17 @@ import json
 from decimal import Decimal
 from typing import Any
 
+from enums.orientation import Orientation
 from exceptions import ValidationError
-
-from structs import Sequence
 from geometry.box import Box
 from geometry.point import Point
 from geometry.segment import Segment
-from enums.orientation import Orientation
+from geometry.walk import Walk
 from interfaces import Serializable
 from interfaces.bounded import Bounded
 from interfaces.spatial import Spatial
 from interfaces.volume import Volume
-
-from geometry.path import Path
+from structs import Sequence
 
 
 class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[list[Any]]):
@@ -39,9 +37,7 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[list[Any]]
             value = list(value) if value is not None else []
         for i, item in enumerate(value):
             if not isinstance(item, Point):
-                raise ValidationError(
-                    f"Polygon item at index {i} must be a Point, got {type(item).__name__}"
-                )
+                raise ValidationError(f"Polygon item at index {i} must be a Point, got {type(item).__name__}")
         super().__init__(value)
 
     @property
@@ -98,12 +94,8 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[list[Any]]
             return True
 
         if isinstance(obj, Polygon):
-            return all(
-                self.contains(Point((p.x, p.y)), inclusive=inclusive) for p in obj
-            )
-        raise NotImplementedError(
-            f"Polygon.contains only supports Point, Segment, Polygon; got {type(obj).__name__}"
-        )
+            return all(self.contains(Point((p.x, p.y)), inclusive=inclusive) for p in obj)
+        raise NotImplementedError(f"Polygon.contains only supports Point, Segment, Polygon; got {type(obj).__name__}")
 
     def _point_in_polygon_ray(self, point: Point) -> bool:
         """Ray casting: horizontal ray to the right; odd crossings = inside."""
@@ -130,10 +122,7 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[list[Any]]
         if isinstance(obj, Point):
             return self.contains(obj, inclusive=inclusive)
         if isinstance(obj, Segment):
-            if inclusive and any(
-                edge.contains(obj[0], inclusive=True) or edge.contains(obj[1], inclusive=True)
-                for edge in self.edges
-            ):
+            if inclusive and any(edge.contains(obj[0], inclusive=True) or edge.contains(obj[1], inclusive=True) for edge in self.edges):
                 return True
             for edge in self.edges:
                 if edge.connects(obj):
@@ -157,7 +146,12 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[list[Any]]
                 Segment([obj.top_right, obj.top_left]),
                 Segment([obj.top_left, obj.bottom_left]),
             ]
-            for corner in (obj.bottom_left, obj.top_left, obj.bottom_right, obj.top_right):
+            for corner in (
+                obj.bottom_left,
+                obj.top_left,
+                obj.bottom_right,
+                obj.top_right,
+            ):
                 if self.contains(corner, inclusive=inclusive):
                     return True
             for edge in self.edges:
@@ -179,9 +173,7 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[list[Any]]
                     if e1.intersects(e2, inclusive=inclusive):
                         return True
             return False
-        raise NotImplementedError(
-            f"Polygon.intersects only supports Point, Segment, Box, Polygon; got {type(obj).__name__}"
-        )
+        raise NotImplementedError(f"Polygon.intersects only supports Point, Segment, Box, Polygon; got {type(obj).__name__}")
 
     def serialize(self) -> list[list[Any]]:
         """Return list of point coords (each point as list [x, y])."""
@@ -202,12 +194,8 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[list[Any]]
         m: int = len(other)
         if n < 2 or m < 2:
             raise ValidationError("Polygons do not share an edge")
-        self_edges: set[frozenset] = {
-            frozenset({self[i], self[(i + 1) % n]}) for i in range(n)
-        }
-        other_edges: set[frozenset] = {
-            frozenset({other[j], other[(j + 1) % m]}) for j in range(m)
-        }
+        self_edges: set[frozenset] = {frozenset({self[i], self[(i + 1) % n]}) for i in range(n)}
+        other_edges: set[frozenset] = {frozenset({other[j], other[(j + 1) % m]}) for j in range(m)}
         shared: set[frozenset] = self_edges & other_edges
         if not shared:
             raise ValidationError("Polygons do not share an edge")
@@ -222,10 +210,7 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[list[Any]]
         if n < 3:
             return Decimal("0")
         area2: Decimal = sum(
-            (
-                self[i].x * self[(i + 1) % n].y - self[i].y * self[(i + 1) % n].x
-                for i in range(n)
-            ),
+            (self[i].x * self[(i + 1) % n].y - self[i].y * self[(i + 1) % n].x for i in range(n)),
             start=Decimal("0"),
         )
         return area2 / Decimal("2")
@@ -242,15 +227,15 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[list[Any]]
             return False
         orientation: Orientation | None = None
         for i in range(n):
-            path: Path = Path(
+            walk: Walk = Walk(
                 start=self[i - 1],
                 center=self[i],
                 end=self[(i + 1) % n],
             )
-            if path.is_collinear():
+            if walk.is_collinear():
                 continue
             if orientation is None:
-                orientation = path.orientation
-            elif path.orientation != orientation:
+                orientation = walk.orientation
+            elif walk.orientation != orientation:
                 return False
         return orientation is not None

@@ -9,8 +9,6 @@ from typing import ClassVar
 
 from models import Job
 from models import Model
-from models import User
-
 from repositories.private import PrivateRepository
 
 

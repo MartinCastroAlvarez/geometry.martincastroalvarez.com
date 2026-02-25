@@ -10,13 +10,10 @@ from typing import ClassVar
 
 import boto3
 from botocore.exceptions import ClientError
-
-from exceptions import (
-    ConfigurationError,
-    NotFoundError,
-    ServiceUnavailableError,
-    ValidationError,
-)
+from exceptions import ConfigurationError
+from exceptions import NotFoundError
+from exceptions import ServiceUnavailableError
+from exceptions import ValidationError
 
 SECRETS_BUCKET_NAME: str | None = os.getenv("SECRETS_BUCKET_NAME")
 

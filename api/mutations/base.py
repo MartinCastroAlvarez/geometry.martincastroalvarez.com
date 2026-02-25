@@ -13,24 +13,21 @@ from typing import TypeVar
 from mutations.request import MutationRequest
 from mutations.response import MutationResponse
 
-I = TypeVar("I", bound=MutationRequest)
-O = TypeVar("O", bound=MutationResponse)
+T = TypeVar("T", bound=MutationRequest)
+R = TypeVar("R", bound=MutationResponse)
 
 
-class Mutation(ABC, Generic[I, O]):
+class Mutation(ABC, Generic[T, R]):
     """Base mutation: validate, mutate, handle. No user; use PrivateMutation for auth."""
 
-    def __init__(self, **kwargs: Any) -> None:
+    @abstractmethod
+    def validate(self, body: dict[str, Any]) -> T:
         pass
 
     @abstractmethod
-    def validate(self, body: dict[str, Any]) -> I:
+    def mutate(self, validated_input: T) -> R:
         pass
 
-    @abstractmethod
-    def mutate(self, validated_input: I) -> O:
-        pass
-
-    def handle(self, body: dict[str, Any]) -> O:
+    def handle(self, body: dict[str, Any]) -> R:
         validated_input = self.validate(body)
         return self.mutate(validated_input)

@@ -7,14 +7,12 @@ from __future__ import annotations
 from abc import ABC
 from dataclasses import dataclass
 from typing import ClassVar
-from typing import Generic
 from typing import TypeVar
 
 from exceptions import ConfigurationError
 from exceptions import UnauthorizedError
 from models import Model
 from models import User
-
 from repositories.base import Repository
 
 T = TypeVar("T", bound=Model)

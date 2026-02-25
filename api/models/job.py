@@ -12,12 +12,11 @@ from attributes import Identifier
 from attributes import Timestamp
 from enums import Stage
 from enums import Status
-
 from models.base import Model
 from models.base import ModelDict
 
 
-class JobDict(ModelDict, total=False):
+class JobDict(ModelDict):
     """Serialized form of Job (serialize/unserialize)."""
 
     parent_id: str | None

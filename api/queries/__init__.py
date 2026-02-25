@@ -2,10 +2,10 @@
 Query handlers for art galleries and jobs.
 """
 
-from queries.gallery_details import ArtGalleryDetailsQuery
-from queries.gallery_list import ArtGalleryListQuery
-from queries.job_details import JobDetailsQuery
-from queries.job_list import JobListQuery
+from queries.galleries import ArtGalleryDetailsQuery
+from queries.galleries import ArtGalleryListQuery
+from queries.jobs import JobDetailsQuery
+from queries.jobs import JobListQuery
 
 __all__ = [
     "ArtGalleryDetailsQuery",

@@ -21,13 +21,13 @@ class TaskResponse(TypedDict):
     traceback: NotRequired[list[str]]
 
 
-class StartTaskResponse(TaskResponse, total=False):
+class StartTaskResponse(TaskResponse):
     """Start task response: status, job_id; optional reason when job failed."""
 
     reason: str
 
 
-class ReportTaskResponse(TaskResponse, total=False):
+class ReportTaskResponse(TaskResponse):
     """Report task response: status, job_id; optional reason when failed; optional job when found."""
 
     reason: str

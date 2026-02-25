@@ -7,10 +7,9 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from exceptions import ValidationError
-
 from attributes.signature import Signature
 from attributes.slug import Slug
+from exceptions import ValidationError
 
 
 class Email(str):

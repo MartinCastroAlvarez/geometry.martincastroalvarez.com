@@ -26,12 +26,10 @@ import json
 from typing import Any
 from typing import Generic
 from typing import Iterator
-from typing import overload
 from typing import TypeVar
 
-from exceptions import SequenceMultipleOverlapsError
-
 from attributes.signature import Signature
+from exceptions import SequenceMultipleOverlapsError
 
 T = TypeVar("T")
 
@@ -79,12 +77,6 @@ class Sequence(list, Generic[T]):
         if not isinstance(value, list):
             value = list(value) if value is not None else []
         super().__init__(value)
-
-    @overload
-    def __getitem__(self, key: int) -> T: ...
-
-    @overload
-    def __getitem__(self, key: slice) -> Sequence[T]: ...
 
     def __getitem__(self, key: int | slice) -> T | Sequence[T]:
         n: int = len(self)
@@ -216,9 +208,7 @@ class Sequence(list, Generic[T]):
         if len(maximal_runs) == 0:
             return Sequence([])
         if len(maximal_runs) > 1:
-            raise SequenceMultipleOverlapsError(
-                "Sequences overlap in multiple places"
-            )
+            raise SequenceMultipleOverlapsError("Sequences overlap in multiple places")
         return Sequence(list(maximal_runs[0]))
 
     def __invert__(self) -> Sequence[T]:

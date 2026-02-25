@@ -1,5 +1,5 @@
 """
-Task request: base with job_id; subclasses add user_email for StartTask / ReportTask.
+Task request: job_id and user_email for all tasks.
 """
 
 from __future__ import annotations
@@ -11,18 +11,7 @@ from attributes import Identifier
 
 
 class TaskRequest(TypedDict):
-    """Base task request: job_id (Identifier)."""
+    """Task request: job_id and user_email."""
 
     job_id: Identifier
-
-
-class StartTaskRequest(TaskRequest):
-    """Start task: job_id and user_email."""
-
-    user_email: Email
-
-
-class ReportTaskRequest(TaskRequest):
-    """Report task: job_id and user_email."""
-
     user_email: Email

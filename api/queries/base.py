@@ -8,14 +8,19 @@ from typing import Any
 from typing import Generic
 from typing import TypeVar
 
+from attributes import Identifier
+from attributes import Limit
+from attributes import Offset
+from queries.request import DetailsQueryRequest
+from queries.request import ListQueryRequest
 from queries.request import QueryRequest
 from queries.response import QueryResponse
 
-I = TypeVar("I", bound=QueryRequest)
-O = TypeVar("O", bound=QueryResponse)
+T = TypeVar("T", bound=QueryRequest)
+R = TypeVar("R", bound=QueryResponse)
 
 
-class Query(Generic[I, O]):
+class Query(Generic[T, R]):
     """
     Base query: validate, query, handle. No user; use PrivateQuery for auth.
 
@@ -24,15 +29,29 @@ class Query(Generic[I, O]):
     >>> query.handle(body={"next_token": "", "limit": 20})
     """
 
-    def __init__(self, **kwargs: Any) -> None:
-        pass
-
-    def validate(self, body: dict[str, Any]) -> I:
+    def validate(self, body: dict[str, Any]) -> T:
         raise NotImplementedError
 
-    def query(self, validated_input: I) -> O:
+    def query(self, validated_input: T) -> R:
         raise NotImplementedError
 
-    def handle(self, body: dict[str, Any]) -> O:
+    def handle(self, body: dict[str, Any]) -> R:
         validated_input = self.validate(body)
         return self.query(validated_input)
+
+
+class ListQuery(Query[ListQueryRequest, R], Generic[R]):
+    """Base for list queries. Validates ListQueryRequest (next_token, limit)."""
+
+    def validate(self, body: dict[str, Any]) -> ListQueryRequest:
+        return {
+            "next_token": (Offset(body.get("next_token")) if body.get("next_token") is not None else None),
+            "limit": (Limit(body.get("limit")) if body.get("limit") is not None else Limit(20)),
+        }
+
+
+class DetailsQuery(Query[DetailsQueryRequest, R], Generic[R]):
+    """Base for details-by-id queries. Validates DetailsQueryRequest (id)."""
+
+    def validate(self, body: dict[str, Any]) -> DetailsQueryRequest:
+        return DetailsQueryRequest(id=Identifier(body.get("id")))

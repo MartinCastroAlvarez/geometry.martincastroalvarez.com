@@ -5,7 +5,6 @@ ConvexComponent: Polygon that is convex (validated in constructor). __and__ retu
 from __future__ import annotations
 
 from exceptions import ValidationError
-
 from geometry.point import Point
 from geometry.polygon import Polygon
 

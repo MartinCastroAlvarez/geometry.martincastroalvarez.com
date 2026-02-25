@@ -10,6 +10,7 @@ from typing import Any
 from attributes import Identifier
 from attributes import Signature
 from attributes import Timestamp
+from interfaces import ModelDict
 from interfaces import Serializable
 
 

@@ -4,8 +4,6 @@ Background tasks invoked by the worker Lambda.
 
 from tasks.base import Task
 from tasks.report import ReportTask
-from tasks.request import ReportTaskRequest
-from tasks.request import StartTaskRequest
 from tasks.request import TaskRequest
 from tasks.response import ReportTaskResponse
 from tasks.response import StartTaskResponse

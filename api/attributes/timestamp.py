@@ -42,9 +42,7 @@ class Timestamp(str):
             return cls.from_datetime(value)
         if isinstance(value, str):
             return cls.from_iso(value)
-        raise ValidationError(
-            f"Timestamp must be None, Timestamp, str, date, or datetime, got {type(value).__name__}"
-        )
+        raise ValidationError(f"Timestamp must be None, Timestamp, str, date, or datetime, got {type(value).__name__}")
 
     @classmethod
     def now(cls) -> Timestamp:
@@ -58,9 +56,7 @@ class Timestamp(str):
         Raises ValidationError if value is not a string or is invalid.
         """
         if not isinstance(value, str):
-            raise ValidationError(
-                f"Timestamp.from_iso expects a string, got {type(value).__name__}"
-            )
+            raise ValidationError(f"Timestamp.from_iso expects a string, got {type(value).__name__}")
         raw: str = value.strip()
         if not raw:
             return super().__new__(cls, datetime.utcnow().strftime(cls.ISO_FORMAT))

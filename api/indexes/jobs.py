@@ -8,9 +8,8 @@ from dataclasses import dataclass
 from typing import Any
 from typing import ClassVar
 
-from repositories.jobs import JobsRepository
-
 from indexes.base import PrivateIndex
+from repositories.jobs import JobsRepository
 
 
 @dataclass

@@ -8,9 +8,8 @@ from dataclasses import dataclass
 from typing import Any
 from typing import ClassVar
 
-from repositories.gallery import ArtGalleryRepository
-
 from indexes.base import Index
+from repositories.gallery import ArtGalleryRepository
 
 
 @dataclass

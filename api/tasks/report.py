@@ -16,9 +16,8 @@ from messages import Queue
 from models import Job
 from models import User
 from repositories.jobs import JobsRepository
-
 from tasks.base import Task
-from tasks.request import ReportTaskRequest
+from tasks.request import TaskRequest
 from tasks.response import ReportTaskResponse
 
 logger = logging.getLogger()
@@ -27,7 +26,7 @@ logger.setLevel(logging.INFO)
 queue: Queue = Queue()
 
 
-class ReportTask(Task[ReportTaskRequest, ReportTaskResponse]):
+class ReportTask(Task[TaskRequest, ReportTaskResponse]):
     """
     Load job by id. If job is failed, notify parent and return.
     Load all children (no try/except). Merge children stdout into job.stdout (dict update; keys override).
@@ -44,16 +43,16 @@ class ReportTask(Task[ReportTaskRequest, ReportTaskResponse]):
         message: Message = Message(action=Action.REPORT, job_id=job.parent_id, user_email=user_email)
         queue.put(message)
 
-    def validate(self, body: dict[str, Any]) -> ReportTaskRequest:
-        return ReportTaskRequest(
+    def validate(self, body: dict[str, Any]) -> TaskRequest:
+        return TaskRequest(
             job_id=Identifier(body.get("job_id")),
             user_email=Email(body.get("user_email")),
         )
 
-    def execute(self, validated_input: ReportTaskRequest) -> ReportTaskResponse:
+    def execute(self, validated_input: TaskRequest) -> ReportTaskResponse:
         job_id: Identifier = validated_input["job_id"]
         user_email: Email = validated_input["user_email"]
-        user: User = User(id=str(user_email), email=user_email)
+        user: User = User(email=user_email)
         repository: JobsRepository = JobsRepository(user=user)
         job: Job = repository.get(job_id)
 

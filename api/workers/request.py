@@ -9,13 +9,12 @@ import logging
 from typing import Any
 from typing import Iterator
 
-from exceptions import InvalidActionError
-from interfaces import Serializable
-from messages import Message
 from attributes import Email
 from attributes import Identifier
 from attributes import ReceiptHandle
 from enums import Action
+from interfaces import Serializable
+from messages import Message
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)

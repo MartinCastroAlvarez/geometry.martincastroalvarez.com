@@ -9,7 +9,6 @@ from typing import Any
 
 from exceptions import BoxInvalidEdgeError
 from exceptions import SerializedInvalidDictError
-
 from geometry.interval import Interval
 from geometry.point import Point
 from interfaces.bounded import Bounded
@@ -29,9 +28,7 @@ class Box(Spatial, Serializable[dict[str, Any]]):
     @classmethod
     def unserialize(cls, data: dict[str, Any]) -> Box:
         if not isinstance(data, dict):
-            raise SerializedInvalidDictError(
-                f"Box.unserialize expects a dict, got {type(data).__name__}"
-            )
+            raise SerializedInvalidDictError(f"Box.unserialize expects a dict, got {type(data).__name__}")
         for key in ("bottom_left", "top_left", "bottom_right", "top_right"):
             if key not in data:
                 raise BoxInvalidEdgeError(f"Box.unserialize missing key {key!r}")
@@ -50,73 +47,52 @@ class Box(Spatial, Serializable[dict[str, Any]]):
         bottom_right: Any,
         top_right: Any,
     ) -> None:
-        self.bottom_left = (
-            bottom_left if isinstance(bottom_left, Point) else Point(bottom_left)
-        )
+        self.bottom_left = bottom_left if isinstance(bottom_left, Point) else Point(bottom_left)
         self.top_left = top_left if isinstance(top_left, Point) else Point(top_left)
-        self.bottom_right = (
-            bottom_right if isinstance(bottom_right, Point) else Point(bottom_right)
-        )
+        self.bottom_right = bottom_right if isinstance(bottom_right, Point) else Point(bottom_right)
         self.top_right = top_right if isinstance(top_right, Point) else Point(top_right)
         if self.bottom_left.x != self.top_left.x:
-            raise BoxInvalidEdgeError(
-                f"Box must have vertical left edge: {self.bottom_left.x} != {self.top_left.x}"
-            )
+            raise BoxInvalidEdgeError(f"Box must have vertical left edge: {self.bottom_left.x} != {self.top_left.x}")
         if self.bottom_right.x != self.top_right.x:
-            raise BoxInvalidEdgeError(
-                f"Box must have vertical right edge: {self.bottom_right.x} != {self.top_right.x}"
-            )
+            raise BoxInvalidEdgeError(f"Box must have vertical right edge: {self.bottom_right.x} != {self.top_right.x}")
         if self.bottom_left.y != self.bottom_right.y:
-            raise BoxInvalidEdgeError(
-                f"Box must have horizontal bottom edge: {self.bottom_left.y} != {self.bottom_right.y}"
-            )
+            raise BoxInvalidEdgeError(f"Box must have horizontal bottom edge: {self.bottom_left.y} != {self.bottom_right.y}")
         if self.top_left.y != self.top_right.y:
-            raise BoxInvalidEdgeError(
-                f"Box must have horizontal top edge: {self.top_left.y} != {self.top_right.y}"
-            )
+            raise BoxInvalidEdgeError(f"Box must have horizontal top edge: {self.top_left.y} != {self.top_right.y}")
 
     @property
     def x(self) -> Interval:
-        return Interval([
-            min(self[0].x, self[2].x),
-            max(self[0].x, self[2].x),
-        ])
+        return Interval(
+            [
+                min(self[0].x, self[2].x),
+                max(self[0].x, self[2].x),
+            ]
+        )
 
     @property
     def y(self) -> Interval:
-        return Interval([
-            min(self[0].y, self[1].y),
-            max(self[0].y, self[1].y),
-        ])
+        return Interval(
+            [
+                min(self[0].y, self[1].y),
+                max(self[0].y, self[1].y),
+            ]
+        )
 
     def intersects(self, obj: Any, inclusive: bool = True) -> bool:
         if isinstance(obj, Box):
-            return (
-                self.x.intersects(obj.x, inclusive=inclusive)
-                and self.y.intersects(obj.y, inclusive=inclusive)
-            )
+            return self.x.intersects(obj.x, inclusive=inclusive) and self.y.intersects(obj.y, inclusive=inclusive)
         if isinstance(obj, Bounded):
             return self.intersects(obj.box, inclusive=inclusive)
-        raise NotImplementedError(
-            f"Box.intersects not implemented for {type(obj).__name__}"
-        )
+        raise NotImplementedError(f"Box.intersects not implemented for {type(obj).__name__}")
 
     def contains(self, obj: Any, inclusive: bool = True) -> bool:
         if isinstance(obj, Point):
-            return (
-                self.x.contains(obj.x, inclusive=inclusive)
-                and self.y.contains(obj.y, inclusive=inclusive)
-            )
+            return self.x.contains(obj.x, inclusive=inclusive) and self.y.contains(obj.y, inclusive=inclusive)
         if isinstance(obj, Box):
-            return (
-                self.x.contains(obj.x, inclusive=inclusive)
-                and self.y.contains(obj.y, inclusive=inclusive)
-            )
+            return self.x.contains(obj.x, inclusive=inclusive) and self.y.contains(obj.y, inclusive=inclusive)
         if isinstance(obj, Bounded):
             return self.contains(obj.box, inclusive=inclusive)
-        raise NotImplementedError(
-            f"Box.contains not implemented for {type(obj).__name__}"
-        )
+        raise NotImplementedError(f"Box.contains not implemented for {type(obj).__name__}")
 
     def __getitem__(self, index: int) -> Point:
         if index == 0:

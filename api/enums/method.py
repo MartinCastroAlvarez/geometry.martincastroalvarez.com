@@ -26,6 +26,4 @@ class Method(str, Enum):
         try:
             return cls(raw)
         except ValueError:
-            raise MethodNotAllowedError(
-                f"method must be one of [{', '.join(m.value for m in cls)}], got {raw!r}"
-            )
+            raise MethodNotAllowedError(f"method must be one of [{', '.join(m.value for m in cls)}], got {raw!r}")

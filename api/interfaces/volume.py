@@ -10,7 +10,7 @@ from decimal import Decimal
 
 
 class Volume(ABC):
-    """Abstract base for types that have a signed area (e.g. Path, Polygon)."""
+    """Abstract base for types that have a signed area (e.g. Walk, Polygon)."""
 
     @property
     @abstractmethod

@@ -35,7 +35,5 @@ class Identifier(str):
         if not raw:
             raise ValidationError("Identifier must be a non-empty string")
         if not cls.PATTERN.match(raw):
-            raise ValidationError(
-                "Identifier may only contain letters, digits, underscore (_), and dash (-)"
-            )
+            raise ValidationError("Identifier may only contain letters, digits, underscore (_), and dash (-)")
         return super().__new__(cls, raw)

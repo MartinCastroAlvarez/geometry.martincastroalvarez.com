@@ -10,16 +10,13 @@ from typing import Any
 from typing import Callable
 
 import jwt
-
 from attributes import Email
-from attributes import Identifier
-from attributes import Signature
 from data import Secret
+from enums import Method
 from exceptions import UnauthorizedError
 from models import User
 
 from api.api.request import ApiRequest
-from enums import Method
 
 
 def private(func: Callable) -> Callable:
@@ -37,13 +34,7 @@ def private(func: Callable) -> Callable:
             if not token:
                 raise UnauthorizedError("X-Auth header is required")
             if secrets.compare_digest(token, jwt_test):
-                test_email = Email(User.TEST_EMAIL)
-                request.user = User(
-                    id=Identifier(test_email.slug),
-                    email=test_email,
-                    name=User.TEST_NAME,
-                    avatar_url=User.TEST_AVATAR_URL,
-                )
+                request.user = User.test()
             else:
                 try:
                     payload = jwt.decode(token, jwt_secret, algorithms=["HS256"])
@@ -56,7 +47,6 @@ def private(func: Callable) -> Callable:
                     raise UnauthorizedError("Token missing email claim")
                 email = Email(email_raw)
                 request.user = User(
-                    id=Identifier(email.slug),
                     email=email,
                     name=payload.get("name", ""),
                     avatar_url=payload.get("avatarUrl"),

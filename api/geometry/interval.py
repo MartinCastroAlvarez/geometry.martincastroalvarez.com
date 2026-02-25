@@ -9,7 +9,6 @@ from decimal import InvalidOperation
 from typing import Any
 
 from exceptions import ValidationError
-
 from interfaces import Serializable
 from interfaces.measurable import Measurable
 from interfaces.spatial import Spatial
@@ -41,14 +40,10 @@ class Interval(list, Measurable, Spatial, Serializable[list[Any]]):
             raise ValidationError("Interval values must be Decimal")
         if index == 0:
             if value > self[1]:
-                raise ValidationError(
-                    f"Interval start must be <= end, got start={value} end={self[1]}"
-                )
+                raise ValidationError(f"Interval start must be <= end, got start={value} end={self[1]}")
         elif index == 1:
             if self[0] > value:
-                raise ValidationError(
-                    f"Interval start must be <= end, got start={self[0]} end={value}"
-                )
+                raise ValidationError(f"Interval start must be <= end, got start={self[0]} end={value}")
         else:
             raise IndexError("Interval index out of range")
         super().__setitem__(index, value)
@@ -81,15 +76,11 @@ class Interval(list, Measurable, Spatial, Serializable[list[Any]]):
             if inclusive:
                 return self[0] <= obj[0] and obj[1] <= self[1]
             return self[0] < obj[0] and obj[1] < self[1]
-        raise ValidationError(
-            f"Interval.contains expects Decimal or Interval, got {type(obj).__name__}"
-        )
+        raise ValidationError(f"Interval.contains expects Decimal or Interval, got {type(obj).__name__}")
 
     def intersects(self, obj: Interval, inclusive: bool = True) -> bool:
         if not isinstance(obj, Interval):
-            raise ValidationError(
-                f"Interval.intersects expects Interval, got {type(obj).__name__}"
-            )
+            raise ValidationError(f"Interval.intersects expects Interval, got {type(obj).__name__}")
         if inclusive:
             return self[0] <= obj[1] and obj[0] <= self[1]
         return self[0] < obj[1] and obj[0] < self[1]
@@ -100,9 +91,7 @@ class Interval(list, Measurable, Spatial, Serializable[list[Any]]):
     @classmethod
     def unserialize(cls, data: list[Any]) -> Interval:
         if not isinstance(data, (list, tuple)) or len(data) < 2:
-            raise ValidationError(
-                "Interval.unserialize expects a list of at least 2 values"
-            )
+            raise ValidationError("Interval.unserialize expects a list of at least 2 values")
         try:
             a: Decimal = data[0] if isinstance(data[0], Decimal) else Decimal(str(data[0]))
             b: Decimal = data[1] if isinstance(data[1], Decimal) else Decimal(str(data[1]))

@@ -9,9 +9,8 @@ from datetime import datetime
 from datetime import timedelta
 from typing import Any
 
-from exceptions import ValidationError
-
 from attributes.timestamp import Timestamp
+from exceptions import ValidationError
 
 
 class Countdown(int):
@@ -41,7 +40,7 @@ class Countdown(int):
     def from_datetime(cls, value: datetime) -> Countdown:
         """Build Countdown from a datetime."""
         delta: timedelta = cls.FAR_FUTURE - value
-        multiplier: int = 10 ** cls.PRECISION
+        multiplier: int = 10**cls.PRECISION
         result: int = int(delta.total_seconds() * multiplier)
         return cls(result)
 

@@ -4,8 +4,9 @@ Query response: base TypedDict and reusable list/details response types.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Generic
 from typing import TypedDict
+from typing import TypeVar
 
 
 class QueryResponse(TypedDict):
@@ -14,14 +15,18 @@ class QueryResponse(TypedDict):
     pass
 
 
-class ListQueryResponse(QueryResponse):
-    """Response for list queries: records and next_token."""
+R = TypeVar("R", bound=QueryResponse)
+T = TypeVar("T")
 
-    records: list[dict[str, Any]]
+
+class ListQueryResponse(QueryResponse, Generic[T]):
+    """Generic list response: records and next_token. T is the entity dict type (e.g. JobDict, ArtGalleryDict)."""
+
+    records: list[T]
     next_token: str
 
 
-class DetailsQueryResponse(QueryResponse):
-    """Base for details responses; entity-specific subclasses add fields."""
+class DetailsQueryResponse(QueryResponse, Generic[R]):
+    """Generic details response; R is the entity dict type (e.g. JobDict, ArtGalleryDict)."""
 
     pass

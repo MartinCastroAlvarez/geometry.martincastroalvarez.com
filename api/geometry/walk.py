@@ -1,5 +1,5 @@
 """
-Path type: three Points (start, center, end) with signed_area and orientation (collinear / clockwise / counter-clockwise).
+Walk type: three Points (start, center, end) with signed_area and orientation (collinear / clockwise / counter-clockwise).
 """
 
 from __future__ import annotations
@@ -8,11 +8,11 @@ from decimal import Decimal
 from functools import cached_property
 from typing import Any
 
-from geometry.point import Point
 from enums.orientation import Orientation
+from geometry.point import Point
 
 
-class Path:
+class Walk:
     def __init__(self, *, start: Any, center: Any, end: Any) -> None:
         self.start = start if isinstance(start, Point) else Point(start)
         self.center = center if isinstance(center, Point) else Point(center)
@@ -51,4 +51,4 @@ class Path:
             return self.center
         elif index == 2:
             return self.end
-        raise IndexError("Path index out of range")
+        raise IndexError("Walk index out of range")

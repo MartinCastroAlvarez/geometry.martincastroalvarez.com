@@ -11,19 +11,15 @@ from dataclasses import field
 from typing import Any
 
 import boto3
-from botocore.exceptions import ClientError
-
 from attributes import Limit
 from attributes import Offset
-from exceptions import (
-    ConfigurationError,
-    StorageError,
-    ServiceUnavailableError,
-    ValidationError,
-)
-
+from botocore.exceptions import ClientError
 from data.page import Page
 from data.response import ListObjectsV2Response
+from exceptions import ConfigurationError
+from exceptions import ServiceUnavailableError
+from exceptions import StorageError
+from exceptions import ValidationError
 
 DATA_BUCKET_NAME: str | None = os.getenv("DATA_BUCKET_NAME")
 

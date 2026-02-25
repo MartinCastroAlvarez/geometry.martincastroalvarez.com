@@ -8,12 +8,11 @@ import json
 from decimal import Decimal
 from typing import Any
 
-from exceptions import ValidationError
-
 from attributes.signature import Signature
+from exceptions import ValidationError
 from geometry.box import Box
-from geometry.path import Path
 from geometry.point import Point
+from geometry.walk import Walk
 from interfaces import Serializable
 from interfaces.bounded import Bounded
 from interfaces.spatial import Spatial
@@ -31,24 +30,16 @@ class Segment(list, Spatial, Bounded, Serializable[list[Any]]):
         if value is None:
             raise ValidationError("Segment requires a list of exactly 2 Point, got None")
         if not isinstance(value, list):
-            raise ValidationError(
-                f"Segment must be a list of exactly 2 Point, got {type(value).__name__}"
-            )
+            raise ValidationError(f"Segment must be a list of exactly 2 Point, got {type(value).__name__}")
         if len(value) == 0:
             raise ValidationError("Segment requires a list of exactly 2 Point, got empty list")
         if len(value) != 2:
-            raise ValidationError(
-                f"Segment must be a list of exactly 2 Point, got length {len(value)}"
-            )
+            raise ValidationError(f"Segment must be a list of exactly 2 Point, got length {len(value)}")
         start, end = value[0], value[1]
         if not isinstance(start, Point):
-            raise ValidationError(
-                f"Segment start must be a Point, got {type(start).__name__}"
-            )
+            raise ValidationError(f"Segment start must be a Point, got {type(start).__name__}")
         if not isinstance(end, Point):
-            raise ValidationError(
-                f"Segment end must be a Point, got {type(end).__name__}"
-            )
+            raise ValidationError(f"Segment end must be a Point, got {type(end).__name__}")
         super().__init__([start, end])
 
     @property
@@ -93,10 +84,12 @@ class Segment(list, Spatial, Bounded, Serializable[list[Any]]):
 
     @property
     def midpoint(self) -> Point:
-        return Point((
-            (self[0].x + self[1].x) / 2,
-            (self[0].y + self[1].y) / 2,
-        ))
+        return Point(
+            (
+                (self[0].x + self[1].x) / 2,
+                (self[0].y + self[1].y) / 2,
+            )
+        )
 
     @property
     def box(self) -> Box:
@@ -115,7 +108,7 @@ class Segment(list, Spatial, Bounded, Serializable[list[Any]]):
         if isinstance(obj, Point):
             return all(
                 (
-                    Path(start=self[0], center=self[1], end=obj).is_collinear(),
+                    Walk(start=self[0], center=self[1], end=obj).is_collinear(),
                     self.box.contains(obj, inclusive=inclusive),
                 )
             )
@@ -126,15 +119,11 @@ class Segment(list, Spatial, Bounded, Serializable[list[Any]]):
                     self.contains(obj[1], inclusive=inclusive),
                 )
             )
-        raise NotImplementedError(
-            f"Segment.contains only supports Point or Segment, got {type(obj).__name__}"
-        )
+        raise NotImplementedError(f"Segment.contains only supports Point or Segment, got {type(obj).__name__}")
 
     def intersects(self, obj: Any, inclusive: bool = True) -> bool:
         if not isinstance(obj, Segment):
-            raise NotImplementedError(
-                f"Segment.intersects only supports Segment, got {type(obj).__name__}"
-            )
+            raise NotImplementedError(f"Segment.intersects only supports Segment, got {type(obj).__name__}")
         other = obj
         if any(
             (
@@ -145,10 +134,10 @@ class Segment(list, Spatial, Bounded, Serializable[list[Any]]):
             )
         ):
             return False
-        path1 = Path(start=self[0], center=self[1], end=other[0])
-        path2 = Path(start=self[0], center=self[1], end=other[1])
-        path3 = Path(start=other[0], center=other[1], end=self[0])
-        path4 = Path(start=other[0], center=other[1], end=self[1])
+        path1 = Walk(start=self[0], center=self[1], end=other[0])
+        path2 = Walk(start=self[0], center=self[1], end=other[1])
+        path3 = Walk(start=other[0], center=other[1], end=self[0])
+        path4 = Walk(start=other[0], center=other[1], end=self[1])
         if all(
             (
                 all(

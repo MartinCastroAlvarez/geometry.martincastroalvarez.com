@@ -13,19 +13,16 @@ from typing import Generic
 from typing import TypeVar
 from typing import cast
 
-from data import Bucket
-from data import Page
-from exceptions import (
-    ConfigurationError,
-    CorruptionError,
-    RecordNotFoundError,
-    ValidationError,
-)
-from models import Model
-
 from attributes import Identifier
 from attributes import Limit
 from attributes import Offset
+from data import Bucket
+from data import Page
+from exceptions import ConfigurationError
+from exceptions import CorruptionError
+from exceptions import RecordNotFoundError
+from exceptions import ValidationError
+from models import Model
 from repositories.results import Results
 
 bucket = Bucket()

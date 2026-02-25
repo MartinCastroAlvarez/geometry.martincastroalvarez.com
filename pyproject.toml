@@ -24,11 +24,19 @@ dependencies = [
 [tool.poetry]
 package-mode = false
 
+[tool.black]
+line-length = 150
+target-version = ["py313"]
+
+[tool.isort]
+profile = "black"
+force_single_line = true
 
 [tool.mypy]
 python_version = "3.13"
-mypy_path = "lab"
+mypy_path = "lab:api"
 explicit_package_bases = true
+files = ["api"]
 
 [[tool.mypy.overrides]]
 module = "colorama"

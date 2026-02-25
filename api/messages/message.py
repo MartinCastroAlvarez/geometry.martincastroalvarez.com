@@ -7,12 +7,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from exceptions import ValidationError
-from interfaces import Serializable
 from attributes import Email
 from attributes import Identifier
 from attributes import ReceiptHandle
 from enums import Action
+from exceptions import ValidationError
+from interfaces import Serializable
 
 
 @dataclass
@@ -57,5 +57,5 @@ class Message(Serializable[dict[str, Any]]):
             action=Action.parse(data.get("action")),
             job_id=Identifier(data.get("job_id")),
             user_email=Email(str(data.get("user_email", "")).strip()),
-            receipt_handle=ReceiptHandle(r) if (r := data.get("receipt_handle")) else None,
+            receipt_handle=(ReceiptHandle(r) if (r := data.get("receipt_handle")) else None),
         )

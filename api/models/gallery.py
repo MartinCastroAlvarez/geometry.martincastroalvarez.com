@@ -11,18 +11,17 @@ from typing import Any
 from attributes import Email
 from attributes import Identifier
 from attributes import Point
-from structs import Sequence
-from structs import Table
 from attributes import Timestamp
 from geometry import ConvexComponent
 from geometry import Ear
 from geometry import Polygon
-
 from models.base import Model
 from models.base import ModelDict
+from structs import Sequence
+from structs import Table
 
 
-class ArtGalleryDict(ModelDict, total=False):
+class ArtGalleryDict(ModelDict):
     """Serialized form of ArtGallery (serialize/unserialize)."""
 
     boundary: list[Any]
@@ -66,30 +65,18 @@ class ArtGallery(Model):
 
     @classmethod
     def unserialize(cls, data: Any) -> ArtGallery:
-        """Expect obstacles, ears, convex_components, guards as dicts (key -> serialized value)."""
-        boundary: Polygon = Polygon.unserialize(data.get("boundary") or [])
-        obstacles = Table.unserialize({int(k): Polygon.unserialize(v) for k, v in data.get("obstacles", {}).items()})
-        ears = Table.unserialize({int(k): Ear.unserialize(v) for k, v in data.get("ears", {}).items()})
-        convex_components = Table.unserialize({int(k): ConvexComponent.unserialize(v) for k, v in data.get("convex_components", {}).items()})
-        guards = Table.unserialize({int(k): Point.unserialize(v) for k, v in data.get("guards", {}).items()})
-
-        visibility: dict[Point, list[Point]] = {}
-        for k, points in data.get("visibility", {}).items():
-            key_pt = Point.unserialize(k)
-            visibility[key_pt] = [Point.unserialize(p) for p in points]
-
         return cls(
             id=Identifier(data.get("id")),
-            boundary=boundary,
-            obstacles=obstacles,
+            boundary=Polygon.unserialize(data.get("boundary") or []),
+            obstacles=Table.unserialize([Polygon.unserialize(v) for v in data.get("obstacles", {}).values()]),
             owner_email=Email(data.get("owner_email")),
             owner_job_id=Identifier(data.get("owner_job_id")),
             created_at=Timestamp(data.get("created_at")),
             updated_at=Timestamp(data.get("updated_at")),
-            ears=ears,
-            convex_components=convex_components,
-            guards=guards,
-            visibility=visibility,
+            ears=Table.unserialize([Ear.unserialize(v) for v in data.get("ears", {}).values()]),
+            convex_components=Table.unserialize([ConvexComponent.unserialize(v) for v in data.get("convex_components", {}).values()]),
+            guards=Table.unserialize([Point.unserialize(v) for v in data.get("guards", {}).values()]),
+            visibility=Table.unserialize([Sequence([Point.unserialize(p) for p in points]) for points in data.get("visibility", {}).values()]),
         )
 
     def serialize(self) -> ArtGalleryDict:

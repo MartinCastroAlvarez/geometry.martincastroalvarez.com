@@ -16,9 +16,8 @@ from messages import Queue
 from models import Job
 from models import User
 from repositories.jobs import JobsRepository
-
 from tasks.base import Task
-from tasks.request import StartTaskRequest
+from tasks.request import TaskRequest
 from tasks.response import StartTaskResponse
 
 logger = logging.getLogger()
@@ -27,7 +26,7 @@ logger.setLevel(logging.INFO)
 queue: Queue = Queue()
 
 
-class StartTask(Task[StartTaskRequest, StartTaskResponse]):
+class StartTask(Task[TaskRequest, StartTaskResponse]):
     """
     Log job stdin with logger.info and enqueue a "report" message.
     Returns failed with reason if job is failed; does not enqueue further work.
@@ -37,16 +36,16 @@ class StartTask(Task[StartTaskRequest, StartTaskResponse]):
     >>> result = task.handle(body={"job_id": "abc", "user_email": "u@e.com"})
     """
 
-    def validate(self, body: dict[str, Any]) -> StartTaskRequest:
-        return StartTaskRequest(
+    def validate(self, body: dict[str, Any]) -> TaskRequest:
+        return TaskRequest(
             job_id=Identifier(body.get("job_id")),
             user_email=Email(body.get("user_email")),
         )
 
-    def execute(self, validated_input: StartTaskRequest) -> StartTaskResponse:
+    def execute(self, validated_input: TaskRequest) -> StartTaskResponse:
         job_id: Identifier = validated_input["job_id"]
         user_email: Email = validated_input["user_email"]
-        user: User = User(id=str(user_email), email=user_email)
+        user: User = User(email=user_email)
         repository: JobsRepository = JobsRepository(user=user)
         job: Job = repository.get(job_id)
         if job.is_failed():

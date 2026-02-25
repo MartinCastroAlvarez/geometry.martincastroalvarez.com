@@ -5,7 +5,6 @@ Ear: ConvexComponent with exactly 3 points and either is_ccw or is_cw. __and__ r
 from __future__ import annotations
 
 from exceptions import ValidationError
-
 from geometry.convex import ConvexComponent
 from geometry.point import Point
 from geometry.polygon import Polygon

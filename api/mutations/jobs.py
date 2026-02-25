@@ -6,30 +6,32 @@ from __future__ import annotations
 
 from typing import Any
 
+from attributes import Countdown
+from attributes import Identifier
+from attributes import Signature
+from enums import Action
+from exceptions import UnauthorizedError
 from exceptions import ValidationError
+from geometry import Polygon
 from indexes.indexed import Indexed
 from indexes.jobs import JobsPrivateIndex
 from messages import Message
 from messages import Queue
 from models import Job
-from repositories.jobs import JobsRepository
-from attributes import Identifier
-from attributes import Countdown
-from attributes import Signature
-from enums import Action
-from geometry import Polygon
-
-from structs import Table
 from mutations.private import PrivateMutation
 from mutations.request import JobMutationRequest
+from mutations.response import JobMutationResponse
+from repositories.jobs import JobsRepository
+from structs import Table
 
 queue = Queue()
 
 
-class JobMutation(PrivateMutation[JobMutationRequest, dict[str, Any]]):
+class JobMutation(PrivateMutation[JobMutationRequest, JobMutationResponse]):
     """Create job (idempotent id from boundary+obstacles), save, enqueue run, update job index."""
 
-    def _validate_body(self, body: dict[str, Any]) -> JobMutationRequest:
+    def validate(self, body: dict[str, Any]) -> JobMutationRequest:
+        super().validate(body)
         boundary = body.get("boundary")
         obstacles = body.get("obstacles")
         if not boundary or not isinstance(boundary, list):
@@ -41,7 +43,7 @@ class JobMutation(PrivateMutation[JobMutationRequest, dict[str, Any]]):
             obstacles=Table.unserialize([Polygon.unserialize(obs) for obs in (obstacles or []) if isinstance(obs, list)]),
         )
 
-    def mutate(self, validated_input: JobMutationRequest) -> dict[str, Any]:
+    def mutate(self, validated_input: JobMutationRequest) -> JobMutationResponse:
         boundary = validated_input["boundary"]
         obstacles = validated_input["obstacles"]
         job_id = Identifier(Signature(f"{hash(boundary)}_{hash(obstacles)}"))
@@ -59,5 +61,10 @@ class JobMutation(PrivateMutation[JobMutationRequest, dict[str, Any]]):
             raise UnauthorizedError("User must be authenticated")
         queue.put(Message(action=Action.START, job_id=job.id, user_email=email))
         index = JobsPrivateIndex(user_email=email)
-        index.save(Indexed(index_id=Identifier(Countdown.from_timestamp(job.created_at)), real_id=job.id))
+        index.save(
+            Indexed(
+                index_id=Identifier(Countdown.from_timestamp(job.created_at)),
+                real_id=job.id,
+            )
+        )
         return job.serialize()

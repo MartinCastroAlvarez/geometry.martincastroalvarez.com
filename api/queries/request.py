@@ -17,7 +17,7 @@ class QueryRequest(TypedDict):
     pass
 
 
-class ListQueryRequest(QueryRequest, total=False):
+class ListQueryRequest(QueryRequest):
     """Request for list queries: next_token and limit."""
 
     next_token: Offset | None

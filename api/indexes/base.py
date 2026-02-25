@@ -12,17 +12,16 @@ from typing import Generic
 from typing import Iterator
 from typing import TypeVar
 
-from data import Bucket
-from data import Page
-from exceptions import RecordNotFoundError
-from exceptions import ValidationError
-
 from attributes import Email
 from attributes import Identifier
 from attributes import Limit
 from attributes import Offset
-from models.base import ModelDict
+from data import Bucket
+from data import Page
+from exceptions import RecordNotFoundError
+from exceptions import ValidationError
 from indexes.indexed import Indexed
+from models.base import ModelDict
 
 bucket = Bucket()
 T = TypeVar("T")
@@ -188,5 +187,5 @@ class PrivateIndex(Index[T]):
         """Repository instance for this user, used to load full records by real_id."""
         from models import User
 
-        user = User(id=self.user_email, email=self.user_email)
+        user = User(email=self.user_email)
         return self.REPOSITORY(user=user)

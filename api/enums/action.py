@@ -24,6 +24,4 @@ class Action(str, Enum):
         try:
             return cls(raw)
         except ValueError:
-            raise InvalidActionError(
-                f"action must be one of [{cls.START.value!r}, {cls.REPORT.value!r}], got {raw!r}"
-            )
+            raise InvalidActionError(f"action must be one of [{cls.START.value!r}, {cls.REPORT.value!r}], got {raw!r}")
