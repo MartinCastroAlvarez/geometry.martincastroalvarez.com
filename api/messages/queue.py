@@ -15,8 +15,8 @@ from botocore.exceptions import ClientError
 
 from exceptions import ConfigurationError
 from exceptions import ServiceUnavailableError
-from exceptions import ValidationError
 
+from attributes import ReceiptHandle
 from .message import Message
 
 QUEUE_NAME: str | None = os.getenv("QUEUE_NAME")
@@ -29,9 +29,9 @@ class Queue:
 
     Example:
     >>> queue = Queue()
-    >>> queue.put(Message(action=Action("run"), job_id=job_id, user_email=user.email))
+    >>> queue.put(Message(action=Action.START, job_id=job_id, user_email=user.email))
     >>> for raw in queue.receive(max_messages=5):
-    ...     msg = Message.from_dict({**json.loads(raw["body"]), "receipt_handle": raw["receiptHandle"]})
+    ...     msg = Message.unserialize({**json.loads(raw["body"]), "receipt_handle": raw["receiptHandle"]})
     ...     process(msg)
     ...     queue.commit(msg)
     """
@@ -64,7 +64,7 @@ class Queue:
         if delay_seconds < 0 or delay_seconds > 900:
             raise ValidationError("Delay seconds must be between 0 and 900")
         try:
-            json_message = json.dumps(message.to_dict())
+            json_message = json.dumps(message.serialize())
             params: dict[str, Any] = {"QueueUrl": self.url, "MessageBody": json_message}
             if delay_seconds > 0:
                 params["DelaySeconds"] = delay_seconds
@@ -96,11 +96,10 @@ class Queue:
         except ClientError as err:
             raise ServiceUnavailableError(f"SQS service error: {str(err)}") from err
 
-    def delete(self, receipt_handle: str) -> None:
-        if not receipt_handle or not isinstance(receipt_handle, str):
-            raise ValidationError("Receipt handle must be a non-empty string")
+    def delete(self, receipt_handle: ReceiptHandle | str) -> None:
+        handle = ReceiptHandle(receipt_handle) if not isinstance(receipt_handle, ReceiptHandle) else receipt_handle
         try:
-            self.client.delete_message(QueueUrl=self.url, ReceiptHandle=receipt_handle)
+            self.client.delete_message(QueueUrl=self.url, ReceiptHandle=handle)
         except ClientError as err:
             raise ServiceUnavailableError(f"SQS service error: {str(err)}") from err
 

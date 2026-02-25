@@ -10,15 +10,18 @@ from typing import Any
 from typing import Iterator
 
 from exceptions import InvalidActionError
-from exceptions import ValidationError
+from interfaces import Serializable
 from messages import Message
-from attributes import Action
+from attributes import Email
+from attributes import Identifier
+from attributes import ReceiptHandle
+from enums import Action
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-class Request:
+class WorkerRequest(Serializable[dict[str, Any]]):
     """
     Worker request parsed from a single SQS message body.
 
@@ -26,8 +29,8 @@ class Request:
     and to commit the message after processing.
 
     Example:
-    >>> req = Request(message_data, receipt_handle)
-    >>> req.action == Action.RUN
+    >>> req = WorkerRequest(message_data, receipt_handle)
+    >>> req.action == Action.START
     True
     >>> queue.commit(req.message)
     """
@@ -35,56 +38,56 @@ class Request:
     def __init__(
         self,
         data: dict[str, Any],
-        receipt_handle: str | None = None,
+        receipt_handle: ReceiptHandle,
     ) -> None:
         self.data = data
         self.receipt_handle = receipt_handle
 
+    def serialize(self) -> dict[str, Any]:
+        raise NotImplementedError("WorkerRequest.serialize is not used")
+
     @property
     def action(self) -> Action:
-        raw = self.data.get("action")
-        if raw is None or (isinstance(raw, str) and not raw.strip()):
-            raise ValidationError("action is required and must be a string")
-        return Action(str(raw).strip().lower())
+        return Action.parse(self.data.get("action"))
 
     @property
-    def job_id(self) -> str:
-        raw = self.data.get("job_id")
-        if not raw or not isinstance(raw, str):
-            raise ValidationError("job_id is required and must be a non-empty string")
-        return raw
+    def job_id(self) -> Identifier:
+        return Identifier(self.data.get("job_id"))
 
     @property
-    def user_email(self) -> str:
-        raw = self.data.get("user_email")
-        if not raw or not isinstance(raw, str):
-            raise ValidationError("user_email is required and must be a non-empty string")
-        return raw
+    def user_email(self) -> Email:
+        return Email(self.data.get("user_email"))
 
     @property
     def message(self) -> Message:
-        return Message.from_dict(
-            {**self.data, "receipt_handle": self.receipt_handle}
-        )
+        return Message.unserialize({**self.data, "receipt_handle": str(self.receipt_handle)})
 
     @property
     def body(self) -> dict[str, Any]:
-        return {"job_id": self.job_id, "user_email": self.user_email}
+        return {"job_id": str(self.job_id), "user_email": str(self.user_email)}
 
     @classmethod
-    def from_records(cls, event: dict[str, Any]) -> Iterator[Request]:
+    def unserialize(cls, data: dict[str, Any]) -> WorkerRequest:
+        """Build one WorkerRequest from a single record (SQS record with body/receiptHandle or message dict)."""
+        if "body" in data:
+            body: str = data.get("body", "{}")
+            try:
+                message_data: dict[str, Any] = json.loads(body) if body else {}
+            except json.JSONDecodeError:
+                logger.warning("Invalid JSON in SQS message body: %s", body)
+                message_data = {}
+            receipt_handle: ReceiptHandle = ReceiptHandle(data.get("receiptHandle"))
+            return cls(message_data, receipt_handle)
+        receipt_handle = ReceiptHandle(data.get("receipt_handle"))
+        return cls(data or {}, receipt_handle)
+
+    @classmethod
+    def from_event(cls, event: dict[str, Any]) -> Iterator[WorkerRequest]:
         """
-        Yield a Request for each SQS record in the event, or a single Request for EventBridge/empty payloads.
+        Yield a WorkerRequest for each SQS record in the event, or a single WorkerRequest for EventBridge/empty payloads.
         """
         if "Records" in event:
             for record in event["Records"]:
-                body = record.get("body", "{}")
-                receipt_handle = record.get("receiptHandle")
-                try:
-                    message_data = json.loads(body) if body else {}
-                except json.JSONDecodeError:
-                    logger.warning("Invalid JSON in SQS message body: %s", body)
-                    message_data = {}
-                yield cls(message_data, receipt_handle)
+                yield cls.unserialize(record)
         else:
-            yield cls(event or {})
+            yield cls.unserialize(event or {})

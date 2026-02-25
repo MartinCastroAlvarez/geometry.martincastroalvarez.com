@@ -62,7 +62,7 @@ class Index(Generic[T]):
         data = bucket.load(f"{self.path}{identifier}.json")
         if data is None:
             raise RecordNotFoundError(f"Index entry {identifier} not found")
-        indexed = Indexed.from_dict(data)
+        indexed = Indexed.unserialize(data)
         return self.repository.get(indexed.real_id)
 
     def save(self, record: Indexed) -> None:
@@ -75,7 +75,7 @@ class Index(Generic[T]):
         """
         if not isinstance(record, Indexed):
             raise ValidationError("record must be Indexed")
-        bucket.save(f"{self.path}{record.index_id}.json", record.to_dict())
+        bucket.save(f"{self.path}{record.index_id}.json", record.serialize())
 
     def delete(self, identifier: Identifier) -> bool:
         """
@@ -125,7 +125,7 @@ class Index(Generic[T]):
                 # Read-repair: index key exists but indexed data is missing; delete stale key.
                 bucket.delete(key)
                 continue
-            indexed = Indexed.from_dict(data)
+            indexed = Indexed.unserialize(data)
             records.append(self.repository.get(indexed.real_id))
         return (records, page.next_token)
 
@@ -152,7 +152,7 @@ class Index(Generic[T]):
                     # Read-repair: index key exists but indexed data is missing; delete stale key.
                     bucket.delete(key)
                     continue
-                indexed = Indexed.from_dict(data)
+                indexed = Indexed.unserialize(data)
                 yield self.repository.get(indexed.real_id)
             if not page.continues:
                 break

@@ -1,43 +1,45 @@
 """
-Box type: axis-aligned box defined by four corner Points; implements Spatial and Serializable.
+Box type: axis-aligned box defined by four corner Points; implements Spatial and Serializable[dict].
 """
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from exceptions import BoxInvalidEdgeError
 from exceptions import SerializedInvalidDictError
 
-from attributes.interval import Interval
-from attributes.point import Point
+from geometry.interval import Interval
+from geometry.point import Point
+from interfaces.bounded import Bounded
 from interfaces.serializable import Serializable
 from interfaces.spatial import Spatial
 
 
-class Box(Spatial, Serializable):
-    def to_dict(self) -> dict[str, Any]:
+class Box(Spatial, Serializable[dict[str, Any]]):
+    def serialize(self) -> dict[str, Any]:
         return {
-            "bottom_left": self.bottom_left.to_list(),
-            "top_left": self.top_left.to_list(),
-            "bottom_right": self.bottom_right.to_list(),
-            "top_right": self.top_right.to_list(),
+            "bottom_left": json.loads(self.bottom_left.serialize()),
+            "top_left": json.loads(self.top_left.serialize()),
+            "bottom_right": json.loads(self.bottom_right.serialize()),
+            "top_right": json.loads(self.top_right.serialize()),
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Box:
+    def unserialize(cls, data: dict[str, Any]) -> Box:
         if not isinstance(data, dict):
             raise SerializedInvalidDictError(
-                f"Box.from_dict expects a dict, got {type(data).__name__}"
+                f"Box.unserialize expects a dict, got {type(data).__name__}"
             )
         for key in ("bottom_left", "top_left", "bottom_right", "top_right"):
             if key not in data:
-                raise BoxInvalidEdgeError(f"Box.from_dict missing key {key!r}")
+                raise BoxInvalidEdgeError(f"Box.unserialize missing key {key!r}")
         return cls(
-            bottom_left=Point.from_list(data["bottom_left"]),
-            top_left=Point.from_list(data["top_left"]),
-            bottom_right=Point.from_list(data["bottom_right"]),
-            top_right=Point.from_list(data["top_right"]),
+            bottom_left=Point.unserialize(data["bottom_left"]),
+            top_left=Point.unserialize(data["top_left"]),
+            bottom_right=Point.unserialize(data["bottom_right"]),
+            top_right=Point.unserialize(data["top_right"]),
         )
 
     def __init__(
@@ -56,9 +58,6 @@ class Box(Spatial, Serializable):
             bottom_right if isinstance(bottom_right, Point) else Point(bottom_right)
         )
         self.top_right = top_right if isinstance(top_right, Point) else Point(top_right)
-        self._validate()
-
-    def _validate(self) -> None:
         if self.bottom_left.x != self.top_left.x:
             raise BoxInvalidEdgeError(
                 f"Box must have vertical left edge: {self.bottom_left.x} != {self.top_left.x}"
@@ -96,6 +95,8 @@ class Box(Spatial, Serializable):
                 self.x.intersects(obj.x, inclusive=inclusive)
                 and self.y.intersects(obj.y, inclusive=inclusive)
             )
+        if isinstance(obj, Bounded):
+            return self.intersects(obj.box, inclusive=inclusive)
         raise NotImplementedError(
             f"Box.intersects not implemented for {type(obj).__name__}"
         )
@@ -111,12 +112,8 @@ class Box(Spatial, Serializable):
                 self.x.contains(obj.x, inclusive=inclusive)
                 and self.y.contains(obj.y, inclusive=inclusive)
             )
-        from attributes.segment import Segment
-        if isinstance(obj, Segment):
-            return (
-                self.contains(obj[0], inclusive=inclusive)
-                and self.contains(obj[1], inclusive=inclusive)
-            )
+        if isinstance(obj, Bounded):
+            return self.contains(obj.box, inclusive=inclusive)
         raise NotImplementedError(
             f"Box.contains not implemented for {type(obj).__name__}"
         )

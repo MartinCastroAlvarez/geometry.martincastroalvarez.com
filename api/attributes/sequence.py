@@ -1,9 +1,10 @@
 """
-Generic Sequence[T] type: list with optional None (-> []), slicing, shift, hash, add/sub/__and__/invert, in-place, to_list/from_list.
+Generic Sequence[T] type: list with optional None (-> []), slicing, shift, hash, add/sub/__and__/invert, in-place, serialize/unserialize.
 """
 
 from __future__ import annotations
 
+import json
 from typing import Any
 from typing import Callable
 from typing import Generic
@@ -249,18 +250,19 @@ class Sequence(list, Generic[T]):
                 result.append(self[i])
         return Sequence(result)
 
-    def to_list(self) -> list[Any]:
-        """Export to list; elements must support to_list() or be serializable."""
+    def serialize(self) -> list[Any]:
+        """Export to list; elements must support serialize() or be serializable."""
         out: list[Any] = []
         for item in self:
-            if hasattr(item, "to_list"):
-                out.append(item.to_list())
+            if hasattr(item, "serialize") and callable(getattr(item, "serialize")):
+                val = item.serialize()
+                out.append(json.loads(val) if isinstance(val, str) else val)
             else:
                 out.append(item)
         return out
 
     @classmethod
-    def from_list(
+    def unserialize(
         cls,
         data: list[Any],
         item_from: Callable[[Any], T],

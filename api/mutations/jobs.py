@@ -17,26 +17,28 @@ from messages import Message
 from messages import Queue
 from models import Job
 from repositories.jobs import JobsRepository
-from attributes import Action
 from attributes import Identifier
 from attributes import Countdown
+from enums import Action
+from enums import Status
+from geometry import Polygon
 
 from mutations.base import Mutation
-from mutations.base import MutationInput
+from mutations.request import MutationRequest
 from mutations.utils import coerce_boundary
 from mutations.utils import coerce_obstacles
 
 queue = Queue()
 
 
-class JobMutationInput(MutationInput):
+class JobMutationInput(MutationRequest):
     """Create job: boundary and obstacles; id is hash (idempotent)."""
 
-    boundary: list[tuple[str, str]]
-    obstacles: list[list[tuple[str, str]]]
+    boundary: Polygon
+    obstacles: list[Polygon]
 
 
-class JobUpdateMutationInput(MutationInput, total=False):
+class JobUpdateMutationInput(MutationRequest, total=False):
     """Update job (e.g. status) by id."""
 
     id: str
@@ -64,29 +66,25 @@ class JobMutation(Mutation[JobMutationInput]):
     def mutate(self, validated_input: JobMutationInput) -> dict[str, Any]:
         boundary = validated_input["boundary"]
         obstacles = validated_input["obstacles"]
-        payload = {"boundary": boundary, "obstacles": obstacles}
+        payload: dict[str, Any] = {
+            "boundary": boundary.serialize(),
+            "obstacles": [poly.serialize() for poly in obstacles],
+        }
         id_source = json.dumps(payload, sort_keys=True)
         job_id = hashlib.sha256(id_source.encode()).hexdigest()
         job = Job(
             id=Identifier(job_id),
-            parent_id="",
-            children_ids=[],
-            status="pending",
-            task="art_gallery",
             stdin=payload,
-            stdout={},
-            meta={},
-            stderr={},
         )
         repo = JobsRepository(user=self.user)
         repo.save(job)
         email = self.user.email
         if email is None:
             raise UnauthorizedError("User must be authenticated")
-        queue.put(Message(action=Action(Action.RUN), job_id=job_id, user_email=email))
+        queue.put(Message(action=Action.START, job_id=job_id, user_email=email))
         index = JobsPrivateIndex(user_email=email)
         index.save(Indexed(index_id=Identifier(str(Countdown.from_timestamp(job.created_at))), real_id=job.id))
-        return job.to_dict()
+        return job.serialize()
 
 
 class JobUpdateMutation(Mutation[JobUpdateMutationInput]):
@@ -109,6 +107,6 @@ class JobUpdateMutation(Mutation[JobUpdateMutationInput]):
         repo = JobsRepository(user=self.user)
         job = repo.get(identifier)
         if validated_input.get("status") is not None:
-            job.status = validated_input["status"]
+            job.status = Status.parse(validated_input["status"])
             repo.save(job)
-        return job.to_dict()
+        return job.serialize()

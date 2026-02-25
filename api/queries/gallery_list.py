@@ -10,29 +10,37 @@ from attributes import Limit
 from index.gallery import ArtGalleryPublicIndex
 
 from queries.base import Query
-from queries.base import QueryInput
+from queries.request import QueryRequest
+from queries.response import QueryResponse
 
 
-class ArtGalleryListQueryInput(QueryInput, total=False):
-    """Input for listing galleries."""
+class ArtGalleryListQueryRequest(QueryRequest, total=False):
+    """Request for listing galleries."""
 
     next_token: str
-    limit: Limit | int
+    limit: Limit
 
 
-class ArtGalleryListQuery(Query[ArtGalleryListQueryInput]):
+class ArtGalleryListQueryResponse(QueryResponse):
+    """Response for gallery list: records and next_token."""
+
+    records: list[dict[str, Any]]
+    next_token: str
+
+
+class ArtGalleryListQuery(Query[ArtGalleryListQueryRequest, ArtGalleryListQueryResponse]):
     """List galleries using the public index."""
 
-    def validate(self, body: dict[str, Any] | None = None) -> ArtGalleryListQueryInput:
+    def validate(self, body: dict[str, Any] | None = None) -> ArtGalleryListQueryRequest:
         payload = body or {}
         next_token = payload.get("next_token") or ""
         raw_limit = payload.get("limit")
-        out: ArtGalleryListQueryInput = {"next_token": next_token}
+        out: ArtGalleryListQueryRequest = {"next_token": next_token}
         if raw_limit is not None:
             out["limit"] = Limit(raw_limit)
         return out
 
-    def query(self, validated_input: ArtGalleryListQueryInput) -> dict[str, Any]:
+    def query(self, validated_input: ArtGalleryListQueryRequest) -> ArtGalleryListQueryResponse:
         index = ArtGalleryPublicIndex()
         limit = validated_input.get("limit") or Limit(20)
         records, next_token = index.search(
@@ -40,6 +48,6 @@ class ArtGalleryListQuery(Query[ArtGalleryListQueryInput]):
             limit=limit,
         )
         return {
-            "records": [record.to_dict() for record in records],
+            "records": [record.serialize() for record in records],
             "next_token": next_token,
         }

@@ -19,7 +19,7 @@ from attributes import Identifier
 from attributes import Countdown
 
 from mutations.base import Mutation
-from mutations.base import MutationInput
+from mutations.request import MutationRequest
 from mutations.utils import coerce_boundary
 from mutations.utils import coerce_convex
 from mutations.utils import coerce_ears
@@ -29,7 +29,7 @@ from mutations.utils import coerce_visibility
 from mutations.utils import gallery_id_from_job_and_user
 
 
-class ArtGalleryPublishMutationInput(MutationInput):
+class ArtGalleryPublishMutationInput(MutationRequest):
     """Publish: job_id required; gallery data taken from job stdout."""
 
     job_id: Identifier
@@ -58,7 +58,7 @@ class ArtGalleryPublishMutation(Mutation[ArtGalleryPublishMutationInput]):
             raise ValidationError("Job has no stdout; cannot publish")
         stdout = job.stdout
         gallery_id = gallery_id_from_job_and_user(str(job_id), self.user.email)
-        if not self.user.email:
+        if not self.user.is_authenticated():
             raise ValidationError("User email required to publish")
         gallery = ArtGallery(
             id=Identifier(gallery_id),
@@ -75,4 +75,4 @@ class ArtGalleryPublishMutation(Mutation[ArtGalleryPublishMutationInput]):
         gallery_repo.save(gallery)
         index = ArtGalleryPublicIndex()
         index.save(Indexed(index_id=Identifier(str(Countdown.from_timestamp(gallery.created_at))), real_id=gallery.id))
-        return gallery.to_dict()
+        return gallery.serialize()

@@ -17,11 +17,11 @@ from attributes import Identifier
 from attributes import Countdown
 
 from mutations.base import Mutation
-from mutations.base import MutationInput
+from mutations.request import MutationRequest
 from mutations.utils import gallery_id_from_job_and_user
 
 
-class ArtGalleryHideMutationInput(MutationInput):
+class ArtGalleryHideMutationInput(MutationRequest):
     """Hide: job_id required; gallery id derived from job id + hash(user email)."""
 
     job_id: Identifier
@@ -49,12 +49,12 @@ class ArtGalleryHideMutation(Mutation[ArtGalleryHideMutationInput]):
         gallery_id = gallery_id_from_job_and_user(str(job_id), self.user.email)
         gallery_repo = ArtGalleryRepository()
         try:
-            gallery = gallery_repo.get(gallery_id)
+            gallery = gallery_repo.get(Identifier(gallery_id))
         except RecordNotFoundError:
             return {"deleted": True, "id": gallery_id}
         index = ArtGalleryPublicIndex()
         index_id = Identifier(str(Countdown.from_timestamp(gallery.created_at)))
         if index.exists(index_id):
             index.delete(index_id)
-        gallery_repo.delete(gallery_id)
+        gallery_repo.delete(Identifier(gallery_id))
         return {"deleted": True, "id": gallery_id}

@@ -1,5 +1,5 @@
 """
-Response: status code, body, CORS headers; from_error() builds error responses from exceptions.
+ApiResponse: status code, body, CORS headers; from_error() builds error responses from exceptions.
 """
 
 from __future__ import annotations
@@ -7,16 +7,18 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from interfaces import Serializable
 
-class Response:
+
+class ApiResponse(Serializable[dict[str, Any]]):
     """
     API Gateway HTTP response formatting with CORS headers.
 
     For example, to create a successful response:
-    >>> response = Response(200, '{"message": "success"}')
+    >>> response = ApiResponse(200, '{"message": "success"}')
     >>> response.status_code
     200
-    >>> response_dict = response.to_dict()
+    >>> response_dict = response.serialize()
     >>> response_dict['statusCode']
     200
     """
@@ -31,7 +33,11 @@ class Response:
         self.body: str = body
         self.headers: dict[str, str] = headers or {}
 
-    def to_dict(self, request_origin: str | None = None) -> dict[str, Any]:
+    @classmethod
+    def unserialize(cls, data: dict[str, Any]) -> ApiResponse:
+        raise NotImplementedError("ApiResponse.unserialize is not used")
+
+    def serialize(self, request_origin: str | None = None) -> dict[str, Any]:
         cors_origin = self._get_cors_origin(request_origin)
         return {
             "statusCode": self.status_code,
@@ -58,7 +64,7 @@ class Response:
         return "https://geometry.martincastroalvarez.com"
 
     @classmethod
-    def from_error(cls, exception: Exception) -> Response:
+    def from_error(cls, exception: Exception) -> ApiResponse:
         status_code: int = getattr(exception, "code", 500)
         error_type: str = exception.__class__.__name__
         error_message: str = str(exception) if str(exception) else "An error occurred"

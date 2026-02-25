@@ -15,7 +15,7 @@ from data import Secret
 from exceptions import UnauthorizedError
 from models import User
 
-from api.api.request import Request
+from api.api.request import ApiRequest
 
 
 def private(func: Callable) -> Callable:
@@ -25,7 +25,7 @@ def private(func: Callable) -> Callable:
     """
 
     @wraps(func)
-    def wrapper(request: Request, *args: Any, **kwargs: Any) -> dict[str, Any]:
+    def wrapper(request: ApiRequest, *args: Any, **kwargs: Any) -> dict[str, Any]:
         if request.http_method.upper() != "OPTIONS":
             jwt_secret = Secret.get("JWT_SECRET")
             jwt_test = Secret.get("JWT_TEST")

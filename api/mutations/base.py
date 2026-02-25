@@ -9,33 +9,31 @@ from abc import abstractmethod
 from typing import Any
 from typing import Generic
 from typing import TypeVar
-from typing import TypedDict
 
 from models import User
 
-T = TypeVar("T", bound="MutationInput")
+from mutations.request import MutationRequest
+from mutations.response import MutationResponse
+
+I = TypeVar("I", bound=MutationRequest)
+O = TypeVar("O", bound=MutationResponse)
 
 
-class MutationInput(TypedDict):
-    """Base for mutation inputs."""
-
-    pass
-
-
-class Mutation(ABC, Generic[T]):
+class Mutation(ABC, Generic[I, O]):
     """Base mutation requiring an authenticated user."""
 
     def __init__(self, user: User) -> None:
         self.user = user
 
     @abstractmethod
-    def validate(self, body: dict[str, Any] | None = None) -> T:
+    def validate(self, body: dict[str, Any] | None = None) -> I:
         pass
 
     @abstractmethod
-    def mutate(self, validated_input: T) -> dict[str, Any]:
+    def mutate(self, validated_input: I) -> O:
         pass
 
-    def handle(self, body: dict[str, Any] | None = None) -> dict[str, Any]:
-        validated_input = self.validate(body)
+    def handle(self, body: dict[str, Any] | None = None) -> O:
+        payload: dict[str, Any] = body if body is not None else {}
+        validated_input = self.validate(payload)
         return self.mutate(validated_input)

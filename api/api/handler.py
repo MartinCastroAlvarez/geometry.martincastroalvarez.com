@@ -11,13 +11,13 @@ from models import User
 
 from api.api.private import private
 from api.api.interceptor import interceptor
-from api.api.request import Request
+from api.api.request import ApiRequest
 from api.api.urls import URLS
 
 
 @interceptor
 @private
-def handler(request: Request, context: Any) -> dict[str, Any]:
+def handler(request: ApiRequest, context: Any) -> dict[str, Any]:
     """
     Matches request path to route patterns with path parameters.
     Handles OPTIONS for CORS preflight. Merges path params with body/query (path overrides).

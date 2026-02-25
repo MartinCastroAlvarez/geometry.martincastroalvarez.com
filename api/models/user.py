@@ -15,6 +15,9 @@ from attributes import Url
 
 from models.base import Model
 
+# Sentinel for unauthenticated / anonymous user (email is non-nullable).
+ANONYMOUS_EMAIL = Email("nobody@unknown.local")
+
 
 @dataclass
 class User(Model):
@@ -32,7 +35,7 @@ class User(Model):
     id: Identifier = field(default_factory=lambda: Identifier("anonymous"))
     created_at: Timestamp = field(default_factory=Timestamp.now)
     updated_at: Timestamp = field(default_factory=Timestamp.now)
-    email: Email | None = None
+    email: Email = field(default_factory=lambda: ANONYMOUS_EMAIL)
     name: str = ""
     avatar_url: Url | None = None
 
@@ -40,7 +43,7 @@ class User(Model):
         if isinstance(self.id, str):
             self.id = Identifier(self.id) if self.id.strip() else Identifier("anonymous")
         if isinstance(self.email, str):
-            self.email = Email(self.email) if self.email.strip() else None
+            self.email = Email(self.email) if self.email.strip() else ANONYMOUS_EMAIL
         if isinstance(self.avatar_url, str) and self.avatar_url.strip():
             self.avatar_url = Url(self.avatar_url)
 
@@ -51,22 +54,22 @@ class User(Model):
         return f"User(id={self.id!r}, email={self.email!r})"
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> User:
+    def unserialize(cls, data: dict[str, Any]) -> User:
         raw_email = str(data.get("email", "") or data.get("id", "")).strip()
         raw_avatar = data.get("avatar_url")
         return cls(
             id=Identifier(raw_email) if raw_email else Identifier("anonymous"),
-            email=Email(raw_email) if raw_email else None,
+            email=Email(raw_email) if raw_email else ANONYMOUS_EMAIL,
             name=str(data.get("name", "")),
             avatar_url=Url(str(raw_avatar)) if raw_avatar else None,
             created_at=Timestamp(data.get("created_at")),
             updated_at=Timestamp(data.get("updated_at")),
         )
 
-    def to_dict(self) -> dict[str, Any]:
+    def serialize(self) -> dict[str, Any]:
         return {
             "id": str(self.id),
-            "email": str(self.email) if self.email is not None else "",
+            "email": str(self.email),
             "name": self.name,
             "avatar_url": str(self.avatar_url) if self.avatar_url is not None else None,
             "created_at": str(self.created_at),
@@ -74,4 +77,4 @@ class User(Model):
         }
 
     def is_authenticated(self) -> bool:
-        return self.email is not None
+        return self.email is not ANONYMOUS_EMAIL

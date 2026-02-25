@@ -1,9 +1,10 @@
 """
-Point type: list of exactly two Decimal coordinates (x, y). Hashable, comparable, to_list/from_list.
+Point type: list of exactly two Decimal coordinates (x, y). Hashable, comparable, Serializable[str].
 """
 
 from __future__ import annotations
 
+import json
 from decimal import Decimal
 from decimal import InvalidOperation
 from typing import TYPE_CHECKING
@@ -11,22 +12,23 @@ from typing import Any
 
 from exceptions import ValidationError
 
-if TYPE_CHECKING:
-    from attributes.segment import Segment
-
 from attributes.signature import Signature
+from interfaces import Serializable
+
+if TYPE_CHECKING:
+    from geometry.segment import Segment
 
 
-class Point(list):
+class Point(list, Serializable[str]):
     """
     A point as a list of exactly two Decimal values (x, y). Inherits from list.
-    Implements to(), __hash__, __eq__, __lt__, __sub__, __len__, __getitem__, to_list/from_list.
+    Implements serialize (-> str), unserialize (str | list); __hash__, __eq__, __lt__, __sub__, __len__, __getitem__.
 
     Example:
-    >>> p = Point(["1", "2"])
+    >>> p = Point.unserialize(["1", "2"])
     >>> p.x, p.y
     (Decimal('1'), Decimal('2'))
-    >>> p.to(Point(["0", "0"]))
+    >>> p.to(Point.unserialize(["0", "0"]))
     """
 
     def __init__(
@@ -82,7 +84,7 @@ class Point(list):
         return self[1]
 
     def to(self, other: Point) -> Segment:
-        from attributes.segment import Segment
+        from geometry.segment import Segment
         return Segment([self, other])
 
     def __hash__(self) -> Signature:
@@ -115,11 +117,27 @@ class Point(list):
             return super().__getitem__(1)
         raise IndexError("Point index out of range")
 
-    def to_list(self) -> list[str]:
-        return [str(self.x), str(self.y)]
+    def serialize(self) -> str:
+        """Return JSON string of [x, y] for use as dict key or wire format."""
+        return json.dumps([str(self.x), str(self.y)])
 
     @classmethod
-    def from_list(cls, data: list[Any]) -> Point:
-        if not isinstance(data, (list, tuple)) or len(data) < 2:
-            raise ValidationError("Point.from_list expects a list of at least 2 values")
-        return cls((data[0], data[1]))
+    def unserialize(cls, data: str | list[Any]) -> Point:
+        """
+        Build Point from list of strings, list of decimals, or JSON str.
+        Raises ValidationError on invalid JSON or data.
+        """
+        if isinstance(data, str):
+            data = data.strip()
+            if not data:
+                raise ValidationError("Point.unserialize expects non-empty str or list")
+            try:
+                loaded: Any = json.loads(data)
+            except json.JSONDecodeError as e:
+                raise ValidationError(f"Point.unserialize invalid JSON: {e}") from e
+            if not isinstance(loaded, (list, tuple)) or len(loaded) < 2:
+                raise ValidationError("Point.unserialize JSON must be list of at least 2 values")
+            return cls((loaded[0], loaded[1]))
+        if isinstance(data, (list, tuple)) and len(data) >= 2:
+            return cls((data[0], data[1]))
+        raise ValidationError("Point.unserialize expects str (JSON), list of strings, or list of decimals")

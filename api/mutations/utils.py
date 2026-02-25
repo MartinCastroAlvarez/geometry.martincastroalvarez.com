@@ -8,7 +8,9 @@ import hashlib
 from typing import Any
 
 from attributes import Point
-from attributes import Polygon
+from geometry import ConvexComponent
+from geometry import Ear
+from geometry import Polygon
 
 
 def gallery_id_from_job_and_user(job_id: str, user_email: str) -> str:
@@ -16,74 +18,45 @@ def gallery_id_from_job_and_user(job_id: str, user_email: str) -> str:
     return f"{job_id}_{digest}"
 
 
-def coerce_boundary(value: Any) -> list[tuple[str, str]]:
-    if not value:
+def coerce_boundary(value: Any) -> Polygon:
+    """Build Polygon from list of point coords; validation via Polygon.unserialize (Point.unserialize)."""
+    return Polygon.unserialize(value if isinstance(value, list) else [])
+
+
+def coerce_obstacles(value: Any) -> list[Polygon]:
+    """Build list of Polygon from list of obstacle point lists; validation via Polygon.unserialize."""
+    if not isinstance(value, list):
         return []
-    if isinstance(value, list):
-        return [
-            tuple(str(x) for x in p[:2]) if isinstance(p, (list, tuple)) and len(p) >= 2 else ("0", "0")
-            for p in value
-        ]
-    return []
+    return [Polygon.unserialize(obs) for obs in value if isinstance(obs, list)]
 
 
-def coerce_obstacles(value: Any) -> list[list[tuple[str, str]]]:
-    if not value:
+def coerce_ears(value: Any) -> list[Ear]:
+    """Build list of Ear from list of 3-point sequences; validation via Polygon.unserialize (Point.unserialize)."""
+    if not isinstance(value, list):
         return []
-    out: list[list[tuple[str, str]]] = []
-    for obs in value:
-        if isinstance(obs, list):
-            out.append([
-                tuple(str(x) for x in p[:2]) if isinstance(p, (list, tuple)) and len(p) >= 2 else ("0", "0")
-                for p in obs
-            ])
-        else:
-            out.append([])
-    return out
+    return [Ear(list(Polygon.unserialize(seq))) for seq in value if isinstance(seq, list)]
 
 
-def coerce_ears(value: Any) -> list[Polygon[Point]]:
-    if not value or not isinstance(value, list):
+def coerce_convex(value: Any) -> list[ConvexComponent]:
+    """Build list of ConvexComponent; validation via Polygon.unserialize (Point.unserialize)."""
+    if not isinstance(value, list):
         return []
-    return [
-        Polygon.from_list(seq, Point.from_list) if isinstance(seq, list) else Polygon([])
-        for seq in value
-    ]
-
-
-def coerce_convex(value: Any) -> list[Polygon[Point]]:
-    if not value or not isinstance(value, list):
-        return []
-    return [
-        Polygon.from_list(comp, Point.from_list) if isinstance(comp, list) else Polygon([])
-        for comp in value
-    ]
+    return [ConvexComponent(list(Polygon.unserialize(comp))) for comp in value if isinstance(comp, list)]
 
 
 def coerce_guards(value: Any) -> list[Point]:
-    if not value or not isinstance(value, list):
+    """Build list of Point; validation via Point.unserialize."""
+    if not isinstance(value, list):
         return []
-    return [
-        Point.from_list(p) if isinstance(p, (list, tuple)) and len(p) >= 2 else Point(["0", "0"])
-        for p in value
-    ]
+    return [Point.unserialize(p) for p in value]
 
 
 def coerce_visibility(value: Any) -> dict[Point, list[Point]]:
-    if not value or not isinstance(value, dict):
+    """Build visibility dict; keys and values validated via Point.unserialize."""
+    if not isinstance(value, dict):
         return {}
     out: dict[Point, list[Point]] = {}
     for key, points in value.items():
-        if isinstance(key, (list, tuple)) and len(key) >= 2:
-            key_pt = Point.from_list(key)
-        else:
-            parts = str(key).split(",")
-            key_pt = Point.from_list(parts) if len(parts) >= 2 else Point(["0", "0"])
-        if isinstance(points, list):
-            out[key_pt] = [
-                Point.from_list(p) if isinstance(p, (list, tuple)) and len(p) >= 2 else Point(["0", "0"])
-                for p in points
-            ]
-        else:
-            out[key_pt] = []
+        key_pt = Point.unserialize(key)
+        out[key_pt] = [Point.unserialize(p) for p in points] if isinstance(points, list) else []
     return out

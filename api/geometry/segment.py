@@ -1,28 +1,30 @@
 """
-Segment type: exactly two Point (start, end). Spatial, Bounded. to_list/from_list, midpoint, box, contains, intersects, connects.
+Segment type: exactly two Point (start, end). Spatial, Bounded. serialize/unserialize, midpoint, box, contains, intersects, connects.
 """
 
 from __future__ import annotations
 
+import json
 from decimal import Decimal
 from typing import Any
 
 from exceptions import ValidationError
 
+from attributes.signature import Signature
 from geometry.box import Box
 from geometry.path import Path
-from attributes.point import Point
-from attributes.signature import Signature
+from geometry.point import Point
+from interfaces import Serializable
 from interfaces.bounded import Bounded
 from interfaces.spatial import Spatial
 
 
-class Segment(list, Spatial, Bounded):
+class Segment(list, Spatial, Bounded, Serializable[list[Any]]):
     """
     A segment as a list of exactly two Point (start, end). Validates in constructor.
 
     Example:
-    >>> s = Segment([Point(["0","0"]), Point(["1","1"])])
+    >>> s = Segment([Point.unserialize(["0","0"]), Point.unserialize(["1","1"])])
     """
 
     def __init__(self, value: list[Point]) -> None:
@@ -183,11 +185,11 @@ class Segment(list, Spatial, Bounded):
             )
         )
 
-    def to_list(self) -> list[list[str]]:
-        return [self[0].to_list(), self[1].to_list()]
+    def serialize(self) -> list[list[Any]]:
+        return [json.loads(self[0].serialize()), json.loads(self[1].serialize())]
 
     @classmethod
-    def from_list(cls, data: list[Any]) -> Segment:
+    def unserialize(cls, data: list[Any]) -> Segment:
         if not isinstance(data, list) or len(data) != 2:
-            raise ValidationError("Segment.from_list expects a list of exactly 2 Point")
-        return cls([Point.from_list(data[0]), Point.from_list(data[1])])
+            raise ValidationError("Segment.unserialize expects a list of exactly 2 Point")
+        return cls([Point.unserialize(data[0]), Point.unserialize(data[1])])

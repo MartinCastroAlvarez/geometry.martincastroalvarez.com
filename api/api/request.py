@@ -1,5 +1,5 @@
 """
-Request: API Gateway event parsing; path, method, headers, body, path_params, query_params, user.
+ApiRequest: API Gateway event parsing; path, method, headers, body, path_params, query_params, user.
 """
 
 from __future__ import annotations
@@ -7,16 +7,17 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from interfaces import Serializable
 from models import User
 
 
-class Request:
+class ApiRequest(Serializable[dict[str, Any]]):
     """
     API Gateway HTTP request parsing and access to request data.
 
     For example, to parse an API Gateway event:
     >>> event = {'path': '/v1/galleries', 'httpMethod': 'GET', 'headers': {'Content-Type': 'application/json'}}
-    >>> request = Request(event)
+    >>> request = ApiRequest.unserialize(event)
     >>> request.path
     '/v1/galleries'
     >>> request.http_method
@@ -38,8 +39,11 @@ class Request:
         self.is_base64_encoded: bool = event.get("isBase64Encoded", False)
         self.user: User = User()
 
+    def serialize(self) -> dict[str, Any]:
+        raise NotImplementedError("ApiRequest.serialize is not used")
+
     @classmethod
-    def from_dict(cls, event: dict[str, Any]) -> Request:
+    def unserialize(cls, event: dict[str, Any]) -> ApiRequest:
         return cls(event)
 
     @property

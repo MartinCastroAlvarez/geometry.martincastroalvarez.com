@@ -1,5 +1,5 @@
 """
-Interval type: list of exactly two Decimal (start, end) with start <= end. to_list/from_list, contains, intersects, size. Measurable.
+Interval type: list of exactly two Decimal (start, end) with start <= end. serialize/unserialize, contains, intersects, size. Measurable.
 """
 
 from __future__ import annotations
@@ -10,11 +10,12 @@ from typing import Any
 
 from exceptions import ValidationError
 
+from interfaces import Serializable
 from interfaces.measurable import Measurable
 from interfaces.spatial import Spatial
 
 
-class Interval(list, Measurable, Spatial):
+class Interval(list, Measurable, Spatial, Serializable[list[Any]]):
     """
     An interval as a list of exactly two Decimal values (start, end) with start <= end.
 
@@ -93,18 +94,18 @@ class Interval(list, Measurable, Spatial):
             return self[0] <= obj[1] and obj[0] <= self[1]
         return self[0] < obj[1] and obj[0] < self[1]
 
-    def to_list(self) -> list[str]:
+    def serialize(self) -> list[str]:
         return [str(self[0]), str(self[1])]
 
     @classmethod
-    def from_list(cls, data: list[Any]) -> Interval:
+    def unserialize(cls, data: list[Any]) -> Interval:
         if not isinstance(data, (list, tuple)) or len(data) < 2:
             raise ValidationError(
-                "Interval.from_list expects a list of at least 2 values"
+                "Interval.unserialize expects a list of at least 2 values"
             )
         try:
             a: Decimal = data[0] if isinstance(data[0], Decimal) else Decimal(str(data[0]))
             b: Decimal = data[1] if isinstance(data[1], Decimal) else Decimal(str(data[1]))
         except (InvalidOperation, TypeError, ValueError):
-            raise ValidationError("Interval.from_list values must be valid numbers")
+            raise ValidationError("Interval.unserialize values must be valid numbers")
         return cls([a, b])

@@ -8,7 +8,7 @@ from decimal import Decimal
 from functools import cached_property
 from typing import Any
 
-from attributes.point import Point
+from geometry.point import Point
 from enums.orientation import Orientation
 
 

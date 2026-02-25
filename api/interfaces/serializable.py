@@ -1,8 +1,9 @@
 """
-Abstract base for types that can be serialized to and from JSON-compatible dicts.
+Abstract base for types that can be serialized to and from a wire/storage type T.
 
-Model (api/models/) and Indexed (api/index/indexed.py) implement this interface for
-S3 persistence and JSON transport. Subclasses must implement to_dict() and from_dict().
+Model (api/models/) and Indexed (api/index/indexed.py) implement Serializable[dict] for
+S3 persistence and JSON transport. Geometry types may implement Serializable[list] or
+Serializable[str]. Subclasses must implement serialize() and unserialize().
 """
 
 from __future__ import annotations
@@ -10,28 +11,40 @@ from __future__ import annotations
 from abc import ABC
 from abc import abstractmethod
 from typing import Any
+from typing import Generic
+from typing import TypeVar
+
+T = TypeVar("T")
 
 
-class Serializable(ABC):
+class Serializable(ABC, Generic[T]):
     """
-    Abstract base for objects that support to_dict and from_dict.
+    Abstract base for objects that support serialize() and unserialize() with type T.
 
-    Example:
-    >>> data = my_model.to_dict()
-    >>> obj = MyModel.from_dict(data)
+    Example (dict):
+    >>> data = my_model.serialize()
+    >>> obj = MyModel.unserialize(data)
+
+    Example (list):
+    >>> data = polygon.serialize()
+    >>> obj = Polygon.unserialize(data)
+
+    Example (str, Point):
+    >>> s = point.serialize()
+    >>> obj = Point.unserialize(s)
     """
 
     @abstractmethod
-    def to_dict(self) -> dict[str, Any]:
+    def serialize(self) -> T:
         """
-        Return a JSON-compatible dict representation of this object.
+        Return the serialized representation of this object (dict, list, str, etc.).
         """
         raise NotImplementedError
 
     @classmethod
     @abstractmethod
-    def from_dict(cls, data: dict[str, Any]) -> Serializable:
+    def unserialize(cls, data: T) -> Serializable[T]:
         """
-        Build an instance from a dict (e.g. loaded from storage).
+        Build an instance from serialized data. Always returns an instance of Serializable.
         """
         raise NotImplementedError

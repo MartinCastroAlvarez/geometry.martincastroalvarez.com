@@ -11,7 +11,7 @@ from models import Job
 from models import Model
 from models import User
 
-from repositories.base import PrivateRepository
+from repositories.private import PrivateRepository
 
 
 @dataclass

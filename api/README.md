@@ -17,8 +17,8 @@ REST and worker backend for the geometry project: Lambda handlers, S3 bucket acc
 | Type | Files / packages |
 |------|------------------|
 | **Handlers** | `api.py` |
-| **Core** | `exceptions.py`, `messages.py` |
-| **Packages** | `api/api/`, `attributes/`, `data/`, `index/`, `interfaces/`, `models/`, `mutations/`, `queries/`, `repositories/`, `tasks/`, `workers/` |
+| **Core** | `exceptions.py`, `messages/` |
+| **Packages** | `api/api/`, `attributes/`, `data/`, `enums/`, `index/`, `interfaces/`, `models/`, `mutations/`, `queries/`, `repositories/`, `tasks/`, `workers/` |
 | **Models** | `models/` (base.py: Model; art_gallery.py: ArtGallery; job.py: Job; user.py: User) |
 | **Other** | `README.md`, `requirements.txt` |
 
@@ -29,14 +29,15 @@ REST and worker backend for the geometry project: Lambda handlers, S3 bucket acc
 | **api/** | Package; `api.handler` is the Lambda entry point. |
 | **api/api/** | `request.py`: `Request`. `response.py`: `Response`. `private.py`: `private` decorator (X-Auth/JWT). `interceptor.py`: `interceptor` decorator (event→Request, response dict). `utils.py`: `extract_path_params()`. `urls.py`: `URLS` (path→method→Query/Mutation). `handler.py`: `handler` (routing, merge params, dispatch). |
 | `exceptions.py` | `GeometryException`, `ValidationError`, `RecordNotFoundError`, `UnauthorizedError`, `ForbiddenError`, `InvalidActionError`, etc. |
-| `messages.py` | `Message` (Serializable; action as `Action`), `Queue` (put, receive, delete, commit) |
+| **messages/** | `message.py`: `Message` (Serializable; action as `Action` from enums). `queue.py`: `Queue` (put, receive, delete, commit). |
 | **data/** | `bucket.py`: `Bucket` (exists, load, save, delete, search), `DATA_BUCKET_NAME`. `page.py`: `Page`. `secret.py`: `Secret.get(secret_id)`, `SECRETS_BUCKET_NAME` |
-| **models/** | `base.py`: `Model`. `art_gallery.py`: `ArtGallery`. `job.py`: `Job`. `user.py`: `User` (id, created_at, updated_at, to_dict/from_dict) |
+| **models/** | `base.py`: `Model`. `art_gallery.py`: `ArtGallery`. `job.py`: `Job`. `user.py`: `User` (id, email non-nullable, to_dict/from_dict) |
 | **interfaces/** | `Serializable` (to_dict, from_dict), `Measurable` (abstract size) |
-| **attributes/** | `Timestamp`, `Countdown`, `Action` (RUN, REPORT), `Identifier`, `Limit`, `Point`, `Polygon[T]`, `Segment`, `Interval`, `Email`, `Url`, etc. |
+| **enums/** | `action.py`: `Action` (START, REPORT; default START) with `parse()`. `status.py`: `Status` (PENDING, SUCCESS, FAILED) with `parse()`. `orientation.py`: `Orientation`. |
+| **attributes/** | `Timestamp`, `Countdown`, `Identifier`, `Limit`, `Email`, `Url`, `Sequence`, `Signature`, `Slug`, `Interval`; geometry types (Box, Point, Polygon, etc.) re-exported from geometry. |
 | **index/** | `Indexed`, `Index[T]`, `PrivateIndex`, `ArtGalleryPublicIndex`, `JobsPrivateIndex` (REPOSITORY set in subclass; index modules: `gallery.py`, `jobs.py`) |
-| **repositories/** | `Repository[T]`, `PrivateRepository[T]`, `Results[T]`, `ArtGalleryRepository`, `JobsRepository` |
+| **repositories/** | `base.py`: `Repository[T]`. `private.py`: `PrivateRepository[T]`. `results.py`: `Results[T]`. `ArtGalleryRepository`, `JobsRepository`. |
 | **queries/** | `Query[T]`, `ArtGalleryListQuery`, `ArtGalleryDetailsQuery`, `JobListQuery`, `JobDetailsQuery` |
 | **mutations/** | `ArtGalleryPublishMutation`, `ArtGalleryHideMutation`, `JobMutation`, `JobUpdateMutation`. Modules: `base.py`, `gallery_publish.py`, `gallery_unpublish.py`, `jobs.py`, `utils.py`. Object ids in mutation inputs use `Identifier`, not `str`. |
-| **tasks/** | `Task[T]`, `RunTask`, `ReportTask` (validate, execute, handle) |
-| **workers/** | `Request`, `handler` (SQS event → dispatch by `Action` to RunTask/ReportTask, commit) |
+| **tasks/** | `Task[T]`, `StartTask`, `ReportTask` (validate, execute, handle; report sets job success/failed from children, enqueues parent REPORT) |
+| **workers/** | `request.py`: `WorkerRequest` (action, job_id, user_email, body, message). `response.py`: `WorkerResponse`. `handler`: SQS event → dispatch by `Action` to StartTask/ReportTask, commit each message; returns `WorkerResponse`. `urls.py`: `TASK_BY_ACTION`. |

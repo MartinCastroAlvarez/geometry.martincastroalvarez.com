@@ -9,48 +9,29 @@ from abc import abstractmethod
 from typing import Any
 from typing import Generic
 from typing import TypeVar
-from typing import TypedDict
 
-T = TypeVar("T", bound="TaskInput")
+from tasks.request import TaskRequest
+from tasks.response import TaskResponse
 
-
-class TaskInput(TypedDict):
-    """Base for task inputs."""
-
-    pass
+I = TypeVar("I", bound=TaskRequest)
+O = TypeVar("O", bound=TaskResponse)
 
 
-class RunTaskInput(TaskInput):
-    """Run task: job_id and user_email from message."""
-
-    job_id: str
-    user_email: str
-
-
-class ReportTaskInput(TaskInput):
-    """Report task: job_id and user_email from message."""
-
-    job_id: str
-    user_email: str
-
-
-class Task(ABC, Generic[T]):
+class Task(ABC, Generic[I, O]):
     """
     Base task: validate, execute, handle. Used by the worker for "run" and "report" actions.
-
-    Example:
-    >>> task = RunTask()
-    >>> result = task.handle(body=message_body)
+    validate() is always called with a dict (body or {}), so subclasses can assume body is dict.
     """
 
     @abstractmethod
-    def validate(self, body: dict[str, Any] | None = None) -> T:
+    def validate(self, body: dict[str, Any]) -> I:
         raise NotImplementedError
 
     @abstractmethod
-    def execute(self, validated_input: T) -> dict[str, Any]:
+    def execute(self, validated_input: I) -> O:
         raise NotImplementedError
 
-    def handle(self, body: dict[str, Any] | None = None) -> dict[str, Any]:
-        validated_input = self.validate(body)
+    def handle(self, body: dict[str, Any] | None = None) -> O:
+        payload: dict[str, Any] = body if body is not None else {}
+        validated_input = self.validate(payload)
         return self.execute(validated_input)
