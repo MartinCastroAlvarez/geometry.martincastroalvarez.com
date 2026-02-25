@@ -1,0 +1,26 @@
+[run]
+source = api
+omit =
+    api/data/bucket.py
+    api/data/secret.py
+    api/messages/queue.py
+    api/workers/handler.py
+    api/structs/sequence.py
+    api/structs/table.py
+    api/tasks/start.py
+    api/tasks/report.py
+    api/repositories/base.py
+    api/indexes/base.py
+    api/mutations/galleries.py
+    api/api/private.py
+    api/mutations/jobs.py
+    api/models/job.py
+    api/workers/request.py
+    api/queries/jobs.py
+    api/repositories/private.py
+    api/enums/stage.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    raise NotImplementedError

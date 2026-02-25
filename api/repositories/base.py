@@ -25,7 +25,10 @@ from exceptions import ValidationError
 from models import Model
 from repositories.results import Results
 
+from api.logger import get_logger
+
 bucket = Bucket()
+logger = get_logger(__name__)
 T = TypeVar("T", bound=Model)
 
 
@@ -51,8 +54,10 @@ class Repository(Generic[T], ABC):
     def get(self, identifier: Identifier) -> T:
         if not self.MODEL:
             raise ConfigurationError("MODEL is not set")
-        data: Any = bucket.load(f"{self.path}/{identifier}.json")
+        key = f"{self.path}/{identifier}.json"
+        data: Any = bucket.load(key)
         if data is None:
+            logger.debug("Repository.get() | record not found path=%s id=%s", self.path, identifier)
             raise RecordNotFoundError(f"{identifier} not found in {self.path}")
         if not isinstance(data, dict) or data.get("id") != identifier:
             raise CorruptionError("ID mismatch in record")
@@ -63,11 +68,14 @@ class Repository(Generic[T], ABC):
             raise ConfigurationError("MODEL is not set")
         if not isinstance(record, self.MODEL):
             raise ValidationError(f"Object must be a {self.MODEL.__name__}")
-        bucket.save(f"{self.path}/{record.id}.json", record.serialize())
+        key = f"{self.path}/{record.id}.json"
+        bucket.save(key, record.serialize())
+        logger.debug("Repository.save() | path=%s id=%s", self.path, record.id)
         return self.get(record.id)
 
     def delete(self, identifier: Identifier) -> None:
         bucket.delete(f"{self.path}/{identifier}.json")
+        logger.debug("Repository.delete() | path=%s id=%s", self.path, identifier)
 
     def exists(self, identifier: Identifier) -> bool:
         return bucket.exists(f"{self.path}/{identifier}.json")

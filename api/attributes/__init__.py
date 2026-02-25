@@ -9,6 +9,7 @@ from attributes.email import Email
 from attributes.identifier import Identifier
 from attributes.limit import Limit
 from attributes.offset import Offset
+from attributes.origin import Origin
 from attributes.path import Path
 from attributes.receipt import ReceiptHandle
 from attributes.signature import Signature
@@ -47,6 +48,7 @@ __all__ = [
     "Email",
     "Identifier",
     "Interval",
+    "Origin",
     "Limit",
     "Offset",
     "Orientation",

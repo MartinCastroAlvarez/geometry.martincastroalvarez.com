@@ -24,7 +24,10 @@ from mutations.response import JobMutationResponse
 from repositories.jobs import JobsRepository
 from structs import Table
 
+from api.logger import get_logger
+
 queue = Queue()
+logger = get_logger(__name__)
 
 
 class JobMutation(PrivateMutation[JobMutationRequest, JobMutationResponse]):
@@ -67,4 +70,5 @@ class JobMutation(PrivateMutation[JobMutationRequest, JobMutationResponse]):
                 real_id=job.id,
             )
         )
+        logger.info("JobMutation.mutate() | created job_id=%s user=%s", job.id, email)
         return job.serialize()

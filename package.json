@@ -10,7 +10,7 @@
     "build:api:isort": "poetry run isort api/",
     "build:api:black": "poetry run black api/",
     "build:api:pytest": "PYTHONPATH=api poetry run pytest tests/ -v 2>/dev/null || true",
-    "build:api:coverage": "PYTHONPATH=api poetry run pytest tests/ --cov=api --cov-report=term-missing 2>/dev/null || true",
+    "build:api:coverage": "PYTHONPATH=api poetry run pytest tests/ --cov=api --cov-report=term-missing --cov-fail-under=90 2>/dev/null || true",
     "build:web:ts": "tsc -p tsconfig.react.json",
     "build:web:eslint": "eslint src --ext .ts,.tsx --max-warnings 0",
     "build:web:prettier": "prettier --write --print-width 120 \"src/**/*.{ts,tsx,js,jsx}\"",

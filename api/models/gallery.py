@@ -47,11 +47,11 @@ class ArtGallery(Model):
 
     id: Identifier
     boundary: Polygon
-    obstacles: Table[Polygon] = field(default_factory=Table)
     owner_email: Email
     owner_job_id: Identifier
     created_at: Timestamp = field(default_factory=Timestamp.now)
     updated_at: Timestamp = field(default_factory=Timestamp.now)
+    obstacles: Table[Polygon] = field(default_factory=Table)
     ears: Table[Ear] = field(default_factory=Table)
     convex_components: Table[ConvexComponent] = field(default_factory=Table)
     guards: Table[Point] = field(default_factory=Table)

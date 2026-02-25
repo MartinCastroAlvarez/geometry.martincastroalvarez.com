@@ -3,4 +3,5 @@ app.js
 node_modules/
 cdk.out/
 api/__pycache__/
+tests/__pycache__/
 api/*/__pycache__/

@@ -4,7 +4,6 @@ ReportTask: load job and its children; set job status from children (success/fai
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 from attributes import Email
@@ -20,8 +19,9 @@ from tasks.base import Task
 from tasks.request import TaskRequest
 from tasks.response import ReportTaskResponse
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+from api.logger import get_logger
+
+logger = get_logger(__name__)
 
 queue: Queue = Queue()
 
@@ -57,10 +57,12 @@ class ReportTask(Task[TaskRequest, ReportTaskResponse]):
         job: Job = repository.get(job_id)
 
         if job.is_failed():
+            logger.info("ReportTask.execute() | job already failed job_id=%s", job_id)
             self.notify(job, user_email)
             return {"status": Status.FAILED, "job_id": job_id, "reason": "job_failed"}
 
         children: list[Job] = [repository.get(cid) for cid in job.children_ids]
+        logger.debug("ReportTask.execute() | aggregating job_id=%s children=%d", job_id, len(children))
         for child in children:
             job.stdout.update(dict(child.stdout))
 
@@ -68,10 +70,12 @@ class ReportTask(Task[TaskRequest, ReportTaskResponse]):
             for child in children:
                 job.stderr.update(dict(child.stderr))
             job.status = Status.FAILED
+            logger.info("ReportTask.execute() | job failed job_id=%s status=FAILED", job_id)
         elif any(child.is_pending() for child in children):
             pass
         else:
             job.status = Status.SUCCESS
+            logger.info("ReportTask.execute() | job completed job_id=%s status=SUCCESS", job_id)
 
         repository.save(job)
         if not job.is_pending():

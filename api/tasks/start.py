@@ -4,7 +4,6 @@ StartTask: log job stdin, enqueue report message. Returns failed with reason if 
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 from attributes import Email
@@ -20,8 +19,9 @@ from tasks.base import Task
 from tasks.request import TaskRequest
 from tasks.response import StartTaskResponse
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+from api.logger import get_logger
+
+logger = get_logger(__name__)
 
 queue: Queue = Queue()
 
@@ -54,7 +54,7 @@ class StartTask(Task[TaskRequest, StartTaskResponse]):
                 "job_id": job_id,
                 "reason": "job_failed",
             }
-        logger.info("StartTask: job stdin=%s", job.stdin)
+        logger.info("StartTask.execute() | job stdin=%s", job.stdin)
         message: Message = Message(
             action=Action.REPORT,
             job_id=job.id,

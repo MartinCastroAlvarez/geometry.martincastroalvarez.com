@@ -17,8 +17,11 @@ from exceptions import ConfigurationError
 from exceptions import ServiceUnavailableError
 from exceptions import ValidationError
 
+from api.logger import get_logger
+
 from .message import Message
 
+logger = get_logger(__name__)
 QUEUE_NAME: str | None = os.getenv("QUEUE_NAME")
 
 
@@ -56,6 +59,7 @@ class Queue:
             response = self.client.get_queue_url(QueueName=self.name)
             return response["QueueUrl"]
         except ClientError as err:
+            logger.error("Queue.url | get_queue_url failed queue=%s error=%s", self.name, str(err))
             raise ServiceUnavailableError(f"SQS service error: {str(err)}") from err
 
     def put(self, message: Message, delay_seconds: int = 0) -> str:
@@ -69,10 +73,13 @@ class Queue:
             if delay_seconds > 0:
                 params["DelaySeconds"] = delay_seconds
             response = self.client.send_message(**params)
-            return response["MessageId"]
+            message_id = response["MessageId"]
+            logger.debug("Queue.put() | action=%s job_id=%s message_id=%s", message.action.value, message.job_id, message_id)
+            return message_id
         except (TypeError, ValueError) as err:
             raise ValidationError(f"Message is not JSON serializable: {str(err)}") from err
         except ClientError as err:
+            logger.error("Queue.put() | send_message failed action=%s job_id=%s error=%s", message.action.value, message.job_id, str(err))
             raise ServiceUnavailableError(f"SQS service error: {str(err)}") from err
 
     def receive(
@@ -94,6 +101,7 @@ class Queue:
             )
             return response.get("Messages", [])
         except ClientError as err:
+            logger.error("Queue.receive() | receive_message failed error=%s", str(err))
             raise ServiceUnavailableError(f"SQS service error: {str(err)}") from err
 
     def delete(self, receipt_handle: ReceiptHandle | str) -> None:
@@ -101,6 +109,7 @@ class Queue:
         try:
             self.client.delete_message(QueueUrl=self.url, ReceiptHandle=handle)
         except ClientError as err:
+            logger.error("Queue.delete() | delete_message failed error=%s", str(err))
             raise ServiceUnavailableError(f"SQS service error: {str(err)}") from err
 
     def commit(self, message: Message) -> None:

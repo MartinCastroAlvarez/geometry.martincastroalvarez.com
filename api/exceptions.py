@@ -3,7 +3,7 @@ Custom exceptions for the geometry (art gallery) API.
 
 All exceptions inherit from GeometryException and set a `code` attribute
 (http.HTTPStatus) used for HTTP status codes. Handlers use
-Response.from_error(exception) to build JSON error responses.
+ApiResponse.unserialize(exception) to build JSON error responses.
 
 Example:
 

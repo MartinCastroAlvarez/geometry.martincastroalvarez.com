@@ -24,8 +24,8 @@ class Walk:
             return Decimal("0")
         u = self[1] - self[0]
         v = self[2] - self[0]
-        # 2x2 determinant: u[0]*v[1] - u[1]*v[0]
-        return (u[0] * v[1] - u[1] * v[0]) / Decimal("2")
+        # 2x2 determinant: u.x*v.y - u.y*v.x
+        return (u.x * v.y - u.y * v.x) / Decimal("2")
 
     @property
     def orientation(self) -> Orientation:

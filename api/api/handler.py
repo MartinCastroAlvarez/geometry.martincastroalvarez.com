@@ -18,6 +18,9 @@ from api.api.interceptor import interceptor
 from api.api.private import private
 from api.api.request import ApiRequest
 from api.api.urls import URLS
+from api.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 @interceptor
@@ -44,7 +47,10 @@ def handler(request: ApiRequest, context: Any) -> dict[str, Any]:
             matched_prefix = str(route_path)
             break
     if handler_class is None or matched_prefix is None:
+        logger.warning("handler.handler() | method not allowed path=%s method=%s", path, method)
         raise MethodNotAllowedError("Method not allowed")
+
+    logger.debug("handler.handler() | route matched path=%s prefix=%s handler=%s", path, matched_prefix, handler_class.__name__)
 
     if not path_params and matched_prefix.endswith("/") and path != matched_prefix.rstrip("/"):
         try:
@@ -62,4 +68,5 @@ def handler(request: ApiRequest, context: Any) -> dict[str, Any]:
         instance = handler_class(user=user)
     else:
         instance = handler_class()
+    logger.debug("handler.handler() | dispatching handler=%s", handler_class.__name__)
     return instance.handle(body=merged_data)

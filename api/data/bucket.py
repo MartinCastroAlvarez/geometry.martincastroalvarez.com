@@ -21,6 +21,10 @@ from exceptions import ServiceUnavailableError
 from exceptions import StorageError
 from exceptions import ValidationError
 
+from api.logger import get_logger
+
+logger = get_logger(__name__)
+
 DATA_BUCKET_NAME: str | None = os.getenv("DATA_BUCKET_NAME")
 
 
@@ -59,6 +63,7 @@ class Bucket:
         except ClientError as e:
             if e.response["Error"]["Code"] == "404":
                 return False
+            logger.error("Bucket.exists() | head_object failed key=%s error=%s", key, str(e))
             raise ServiceUnavailableError(f"S3 service error: {str(e)}") from e
 
     def load(self, key: str, default: Any = None) -> Any:
@@ -75,6 +80,7 @@ class Bucket:
         except ClientError as e:
             if e.response["Error"]["Code"] == "NoSuchKey":
                 return default
+            logger.error("Bucket.load() | get_object failed key=%s error=%s", key, str(e))
             raise ServiceUnavailableError(f"S3 service error: {str(e)}") from e
         except json.JSONDecodeError as e:
             raise ValidationError(f"Invalid JSON content in object {key}: {str(e)}") from e
@@ -95,6 +101,7 @@ class Bucket:
         except (TypeError, ValueError) as e:
             raise ValidationError(f"Data is not JSON serializable: {str(e)}") from e
         except ClientError as e:
+            logger.error("Bucket.save() | put_object failed key=%s error=%s", key, str(e))
             raise ServiceUnavailableError(f"S3 service error: {str(e)}") from e
 
     def delete(self, key: str) -> bool:
@@ -106,6 +113,7 @@ class Bucket:
         except ClientError as e:
             if e.response["Error"]["Code"] == "NoSuchKey":
                 return False
+            logger.error("Bucket.delete() | delete_object failed key=%s error=%s", key, str(e))
             raise ServiceUnavailableError(f"S3 service error: {str(e)}") from e
 
     def search(
@@ -130,6 +138,7 @@ class Bucket:
         try:
             response: ListObjectsV2Response = self.client.list_objects_v2(**params)
         except ClientError as e:
+            logger.error("Bucket.search() | list_objects_v2 failed prefix=%s error=%s", prefix, str(e))
             raise ServiceUnavailableError(f"S3 service error: {str(e)}") from e
         if not isinstance(response, dict):
             raise StorageError("Invalid S3 response: expected dictionary")

@@ -6,12 +6,20 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from typing import Any
+from typing import TypedDict
 
 from attributes import Identifier
 from attributes import Signature
 from attributes import Timestamp
-from interfaces import ModelDict
 from interfaces import Serializable
+
+
+class ModelDict(TypedDict, total=False):
+    """Base shape for serialized Model instances."""
+
+    id: str
+    created_at: str
+    updated_at: str
 
 
 class Model(Serializable[dict[str, Any]]):

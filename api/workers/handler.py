@@ -4,7 +4,6 @@ SQS worker Lambda entry point.
 
 from __future__ import annotations
 
-import logging
 import traceback
 from typing import Any
 
@@ -18,8 +17,9 @@ from workers.request import WorkerRequest
 from workers.response import WorkerResponse
 from workers.urls import TASK_BY_ACTION
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+from api.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 def handler(event: dict[str, Any], context: Any) -> WorkerResponse:
@@ -34,7 +34,7 @@ def handler(event: dict[str, Any], context: Any) -> WorkerResponse:
     Returns a WorkerResponse with results as list of TaskResponse.
     """
     logger.info(
-        "Worker handler received event keys: %s",
+        "handler.handler() | received event keys=%s",
         list(event.keys()) if isinstance(event, dict) else type(event),
     )
     results: list[TaskResponse] = []
@@ -44,12 +44,12 @@ def handler(event: dict[str, Any], context: Any) -> WorkerResponse:
             action: Action = request.action
             body: dict[str, Any] = request.body
             logger.info(
-                "Processing request action=%s job_id=%s",
+                "handler.handler() | processing request action=%s job_id=%s",
                 action.value,
                 request.job_id,
             )
         except (ValidationError, InvalidActionError) as err:
-            logger.warning("Invalid request: %s", err)
+            logger.warning("handler.handler() | invalid request error=%s", err)
             results.append({"status": Status.FAILED, "error": str(err)})
             continue
 
@@ -61,7 +61,7 @@ def handler(event: dict[str, Any], context: Any) -> WorkerResponse:
                 out: TaskResponse = task_class().handle(body=body)
                 results.append(out)
             except Exception as err:
-                logger.exception("Task failed: %s", err)
+                logger.exception("handler.handler() | task failed error=%s", err)
                 results.append(
                     {
                         "status": Status.FAILED,
@@ -73,6 +73,6 @@ def handler(event: dict[str, Any], context: Any) -> WorkerResponse:
         try:
             queue.commit(request.message)
         except Exception as err:
-            logger.exception("Failed to commit message: %s", err)
+            logger.exception("handler.handler() | failed to commit message error=%s", err)
 
     return WorkerResponse(results=results)
