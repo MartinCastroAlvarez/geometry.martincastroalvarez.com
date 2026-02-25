@@ -112,8 +112,6 @@ TOTAL                             1822    131    93%
 Required test coverage of 90% reached. Total coverage: 92.81%
 ```
 
-See [docs/3 methodology/6 TESTING.md](docs/3%20methodology/6%20TESTING.md) for coverage tradeoffs and rationale.
-
 ## Build, deploy, and test
 
 Use **Node.js 25** for npm and CDK (e.g. run `nvm use 25` if using nvm).
