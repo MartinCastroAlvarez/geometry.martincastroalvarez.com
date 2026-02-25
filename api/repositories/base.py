@@ -25,6 +25,7 @@ from models import Model
 
 from attributes import Identifier
 from attributes import Limit
+from attributes import Offset
 from repositories.results import Results
 
 bucket = Bucket()
@@ -76,7 +77,7 @@ class Repository(Generic[T], ABC):
 
     def search(
         self,
-        next_token: str | None = None,
+        next_token: Offset | None = None,
         limit: Limit = Limit(20),
     ) -> Results[T]:
         if not self.MODEL:

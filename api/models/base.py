@@ -8,6 +8,7 @@ from abc import abstractmethod
 from typing import Any
 
 from attributes import Identifier
+from attributes import Signature
 from attributes import Timestamp
 from interfaces import Serializable
 
@@ -33,11 +34,14 @@ class Model(Serializable[dict[str, Any]]):
     def __repr__(self) -> str:
         raise NotImplementedError
 
+    def __hash__(self) -> Signature:
+        return Signature(self.id)
+
     @classmethod
     @abstractmethod
     def unserialize(cls, data: dict[str, Any]) -> Model:
         raise NotImplementedError
 
     @abstractmethod
-    def serialize(self) -> dict[str, Any]:
+    def serialize(self) -> ModelDict:
         raise NotImplementedError

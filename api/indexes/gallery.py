@@ -10,7 +10,7 @@ from typing import ClassVar
 
 from repositories.gallery import ArtGalleryRepository
 
-from index.base import Index
+from indexes.base import Index
 
 
 @dataclass

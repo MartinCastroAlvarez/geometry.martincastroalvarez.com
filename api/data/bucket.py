@@ -14,6 +14,7 @@ import boto3
 from botocore.exceptions import ClientError
 
 from attributes import Limit
+from attributes import Offset
 from exceptions import (
     ConfigurationError,
     StorageError,
@@ -115,7 +116,7 @@ class Bucket:
         self,
         prefix: str = "",
         limit: Limit | int = 20,
-        next_token: str | None = None,
+        next_token: Offset | None = None,
     ) -> Page:
         """
         List keys under prefix with pagination; returns Page with keys and next_token.
@@ -123,15 +124,13 @@ class Bucket:
         if prefix and not isinstance(prefix, str):
             raise ValidationError("Prefix must be a string")
         size = Limit(limit) if not isinstance(limit, Limit) else limit
-        if next_token and not isinstance(next_token, str):
-            raise ValidationError("Next token must be a string")
         params: dict[str, Any] = {
             "Bucket": self.name,
             "Prefix": prefix,
             "MaxKeys": int(size),
         }
-        if next_token:
-            params["ContinuationToken"] = next_token
+        if next_token is not None:
+            params["ContinuationToken"] = str(next_token)
         try:
             response: ListObjectsV2Response = self.client.list_objects_v2(**params)
         except ClientError as e:
@@ -144,5 +143,8 @@ class Bucket:
                 keys.append(obj["Key"])
         new_next = ""
         if response.get("IsTruncated", False):
-            new_next = response.get("NextContinuationToken", "")
-        return Page(keys=keys, next_token=new_next)
+            new_next = response.get("NextContinuationToken") or ""
+        return Page(
+            keys=keys,
+            next_token=Offset(new_next) if new_next else None,
+        )

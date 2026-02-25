@@ -11,11 +11,15 @@ from typing import Callable
 
 import jwt
 
+from attributes import Email
+from attributes import Identifier
+from attributes import Signature
 from data import Secret
 from exceptions import UnauthorizedError
 from models import User
 
 from api.api.request import ApiRequest
+from enums import Method
 
 
 def private(func: Callable) -> Callable:
@@ -26,18 +30,19 @@ def private(func: Callable) -> Callable:
 
     @wraps(func)
     def wrapper(request: ApiRequest, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        if request.http_method.upper() != "OPTIONS":
-            jwt_secret = Secret.get("JWT_SECRET")
-            jwt_test = Secret.get("JWT_TEST")
+        if request.http_method.upper() != Method.OPTIONS.value:
+            jwt_secret = Secret.get(Secret.JWT_SECRET_NAME)
+            jwt_test = Secret.get(Secret.JWT_TEST_NAME)
             token: str | None = request.headers.get("X-Auth") or request.headers.get("x-auth")
             if not token:
                 raise UnauthorizedError("X-Auth header is required")
             if secrets.compare_digest(token, jwt_test):
+                test_email = Email(User.TEST_EMAIL)
                 request.user = User(
-                    id="test@test.com",
-                    email="test@test.com",
-                    name="test test",
-                    avatar_url="https://picsum.photos/200",
+                    id=Identifier(test_email.slug),
+                    email=test_email,
+                    name=User.TEST_NAME,
+                    avatar_url=User.TEST_AVATAR_URL,
                 )
             else:
                 try:
@@ -46,11 +51,12 @@ def private(func: Callable) -> Callable:
                     raise UnauthorizedError("Token has expired")
                 except jwt.InvalidTokenError:
                     raise UnauthorizedError("Invalid token")
-                email = payload.get("email")
-                if not email:
+                email_raw = payload.get("email")
+                if not email_raw:
                     raise UnauthorizedError("Token missing email claim")
+                email = Email(email_raw)
                 request.user = User(
-                    id=email,
+                    id=Identifier(email.slug),
                     email=email,
                     name=payload.get("name", ""),
                     avatar_url=payload.get("avatarUrl"),

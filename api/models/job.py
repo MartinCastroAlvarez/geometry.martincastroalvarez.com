@@ -14,6 +14,20 @@ from enums import Stage
 from enums import Status
 
 from models.base import Model
+from models.base import ModelDict
+
+
+class JobDict(ModelDict, total=False):
+    """Serialized form of Job (serialize/unserialize)."""
+
+    parent_id: str | None
+    children_ids: list[str]
+    status: str
+    stage: str
+    stdin: dict[str, Any]
+    stdout: dict[str, Any]
+    meta: dict[str, Any]
+    stderr: dict[str, Any]
 
 
 @dataclass
@@ -58,7 +72,7 @@ class Job(Model):
         return self.status == Status.SUCCESS
 
     @classmethod
-    def unserialize(cls, data: dict[str, Any]) -> Job:
+    def unserialize(cls, data: Any) -> Job:
         raw_children = data.get("children_ids") or []
         children_ids: list[Identifier] = [Identifier(c) if not isinstance(c, Identifier) else c for c in raw_children]
         parent_raw = data.get("parent_id")
@@ -81,7 +95,7 @@ class Job(Model):
             updated_at=Timestamp(data.get("updated_at")),
         )
 
-    def serialize(self) -> dict[str, Any]:
+    def serialize(self) -> JobDict:
         return {
             "id": str(self.id),
             "parent_id": str(self.parent_id) if self.parent_id is not None else None,

@@ -18,8 +18,8 @@ from models import User
 from repositories.jobs import JobsRepository
 
 from tasks.base import Task
-from tasks.request import TaskRequest
-from tasks.response import TaskResponse
+from tasks.request import StartTaskRequest
+from tasks.response import StartTaskResponse
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -27,13 +27,7 @@ logger.setLevel(logging.INFO)
 queue: Queue = Queue()
 
 
-class StartTaskResponse(TaskResponse, total=False):
-    """Start task response: status, job_id; optional reason when job failed."""
-
-    reason: str
-
-
-class StartTask(Task[TaskRequest, StartTaskResponse]):
+class StartTask(Task[StartTaskRequest, StartTaskResponse]):
     """
     Log job stdin with logger.info and enqueue a "report" message.
     Returns failed with reason if job is failed; does not enqueue further work.
@@ -43,13 +37,13 @@ class StartTask(Task[TaskRequest, StartTaskResponse]):
     >>> result = task.handle(body={"job_id": "abc", "user_email": "u@e.com"})
     """
 
-    def validate(self, body: dict[str, Any]) -> TaskRequest:
-        return TaskRequest(
+    def validate(self, body: dict[str, Any]) -> StartTaskRequest:
+        return StartTaskRequest(
             job_id=Identifier(body.get("job_id")),
             user_email=Email(body.get("user_email")),
         )
 
-    def execute(self, validated_input: TaskRequest) -> StartTaskResponse:
+    def execute(self, validated_input: StartTaskRequest) -> StartTaskResponse:
         job_id: Identifier = validated_input["job_id"]
         user_email: Email = validated_input["user_email"]
         user: User = User(id=str(user_email), email=user_email)

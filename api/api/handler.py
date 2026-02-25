@@ -13,6 +13,7 @@ from api.api.private import private
 from api.api.interceptor import interceptor
 from api.api.request import ApiRequest
 from api.api.urls import URLS
+from enums import Method
 
 
 @interceptor
@@ -23,13 +24,13 @@ def handler(request: ApiRequest, context: Any) -> dict[str, Any]:
     Handles OPTIONS for CORS preflight. Merges path params with body/query (path overrides).
     """
     path: str = request.path.lstrip("/")
-    method: str = request.http_method.upper()
+    method: Method = Method.parse(request.http_method)
     body: dict[str, Any] = request.body or {}
     path_params: dict[str, str] = request.path_params or {}
     query_params: dict[str, str] = request.query_params or {}
     user: User = request.user
 
-    if method == "OPTIONS":
+    if method == Method.OPTIONS:
         return {}
 
     handler_class: type | None = None
@@ -47,7 +48,7 @@ def handler(request: ApiRequest, context: Any) -> dict[str, Any]:
         if suffix and "/" not in suffix:
             path_params = {"id": suffix}
 
-    if method == "GET":
+    if method == Method.GET:
         merged_data = {**query_params, **path_params}
     else:
         merged_data = {**body, **path_params}

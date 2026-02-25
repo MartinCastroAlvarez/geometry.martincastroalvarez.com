@@ -1,7 +1,7 @@
 """
 Abstract base for types that can be serialized to and from a wire/storage type T.
 
-Model (api/models/) and Indexed (api/index/indexed.py) implement Serializable[dict] for
+Model (api/models/) and Indexed (api/indexes/indexed.py) implement Serializable[dict] for
 S3 persistence and JSON transport. Geometry types may implement Serializable[list] or
 Serializable[str]. Subclasses must implement serialize() and unserialize().
 """
@@ -43,8 +43,9 @@ class Serializable(ABC, Generic[T]):
 
     @classmethod
     @abstractmethod
-    def unserialize(cls, data: T) -> Serializable[T]:
+    def unserialize(cls, data: Any) -> Serializable[T]:
         """
-        Build an instance from serialized data. Always returns an instance of Serializable.
+        Build an instance from serialized data. Subclasses must validate and coerce data.
+        Always returns an instance of Serializable.
         """
         raise NotImplementedError

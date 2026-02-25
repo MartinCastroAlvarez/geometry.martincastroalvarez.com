@@ -11,7 +11,7 @@ from typing import Any
 
 from exceptions import ValidationError
 
-from attributes.sequence import Sequence
+from structs import Sequence
 from geometry.box import Box
 from geometry.point import Point
 from geometry.segment import Segment

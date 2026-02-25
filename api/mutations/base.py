@@ -10,8 +10,6 @@ from typing import Any
 from typing import Generic
 from typing import TypeVar
 
-from models import User
-
 from mutations.request import MutationRequest
 from mutations.response import MutationResponse
 
@@ -20,20 +18,19 @@ O = TypeVar("O", bound=MutationResponse)
 
 
 class Mutation(ABC, Generic[I, O]):
-    """Base mutation requiring an authenticated user."""
+    """Base mutation: validate, mutate, handle. No user; use PrivateMutation for auth."""
 
-    def __init__(self, user: User) -> None:
-        self.user = user
+    def __init__(self, **kwargs: Any) -> None:
+        pass
 
     @abstractmethod
-    def validate(self, body: dict[str, Any] | None = None) -> I:
+    def validate(self, body: dict[str, Any]) -> I:
         pass
 
     @abstractmethod
     def mutate(self, validated_input: I) -> O:
         pass
 
-    def handle(self, body: dict[str, Any] | None = None) -> O:
-        payload: dict[str, Any] = body if body is not None else {}
-        validated_input = self.validate(payload)
+    def handle(self, body: dict[str, Any]) -> O:
+        validated_input = self.validate(body)
         return self.mutate(validated_input)

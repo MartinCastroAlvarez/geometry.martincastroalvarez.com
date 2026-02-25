@@ -11,6 +11,8 @@ from typing import Generic
 from typing import Iterator
 from typing import TypeVar
 
+from attributes import Offset
+
 T = TypeVar("T")
 
 
@@ -27,7 +29,7 @@ class Results(Generic[T]):
     """
 
     records: list[T] = field(default_factory=list)
-    next_token: str = field(default="")
+    next_token: Offset | None = None
 
     def __iter__(self) -> Iterator[T]:
         return iter(self.records)
@@ -38,5 +40,5 @@ class Results(Generic[T]):
     def serialize(self) -> dict[str, Any]:
         return {
             "records": [r.serialize() for r in self.records],
-            "next_token": self.next_token,
+            "next_token": str(self.next_token) if self.next_token else "",
         }

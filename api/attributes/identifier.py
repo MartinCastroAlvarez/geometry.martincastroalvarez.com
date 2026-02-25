@@ -13,11 +13,11 @@ from exceptions import ValidationError
 class Identifier(str):
     """
     A string identifier that allows only letters, digits, underscore (_), and dash (-).
-    Raises ValidationError for empty or invalid characters.
+    Accepts str or int (int is cast to str). Raises ValidationError for empty or invalid characters.
 
     Example:
     >>> uid = Identifier("gallery_abc-123")
-    >>> uid = Identifier("job_xyz")
+    >>> uid = Identifier(Signature(Email("user@example.com")))
     """
 
     # Only letters, digits, underscore, and hyphen
@@ -26,9 +26,12 @@ class Identifier(str):
     def __new__(cls, value: Any = None) -> Identifier:
         if value is None:
             raise ValidationError("Identifier is required")
-        if not isinstance(value, str):
-            raise ValidationError("Identifier argument must be a string")
-        raw: str = value.strip()
+        if isinstance(value, int):
+            raw = str(value).strip()
+        elif isinstance(value, str):
+            raw = value.strip()
+        else:
+            raise ValidationError("Identifier argument must be a string or int")
         if not raw:
             raise ValidationError("Identifier must be a non-empty string")
         if not cls.PATTERN.match(raw):

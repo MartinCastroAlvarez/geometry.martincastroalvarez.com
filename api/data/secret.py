@@ -26,9 +26,12 @@ class Secret:
     Retrieve secret values from S3. Cached per Lambda execution.
 
     Example:
-    >>> secret = Secret.get("JWT_SECRET")
-    >>> test_token = Secret.get("JWT_TEST")
+    >>> secret = Secret.get(Secret.JWT_SECRET_NAME)
+    >>> test_token = Secret.get(Secret.JWT_TEST_NAME)
     """
+
+    JWT_SECRET_NAME: ClassVar[str] = "JWT_SECRET"
+    JWT_TEST_NAME: ClassVar[str] = "JWT_TEST"
 
     _client: ClassVar[Any] = None
     _cache: ClassVar[dict[str, str]] = {}

@@ -38,7 +38,7 @@ class ApiResponse(Serializable[dict[str, Any]]):
         raise NotImplementedError("ApiResponse.unserialize is not used")
 
     def serialize(self, request_origin: str | None = None) -> dict[str, Any]:
-        cors_origin = self._get_cors_origin(request_origin)
+        cors_origin = self.get_origin(request_origin)
         return {
             "statusCode": self.status_code,
             "body": self.body,
@@ -51,7 +51,7 @@ class ApiResponse(Serializable[dict[str, Any]]):
             },
         }
 
-    def _get_cors_origin(self, request_origin: str | None) -> str:
+    def get_origin(self, request_origin: str | None) -> str:
         """
         Allowed patterns: https://*.martincastroalvarez.com, http://localhost:*
         """

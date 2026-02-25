@@ -5,7 +5,7 @@ REST and worker backend for the geometry project: Lambda handlers, S3 bucket acc
 ## Purpose
 
 - **REST:** v1/galleries (list, get), v1/jobs (list, get, create, update, delete); CORS and path params; private endpoints via X-Auth/JWT.
-- **Persistence:** S3 bucket (data/), repositories per entity (repositories/), indexes for “newest first” listing (index/, Countdown).
+- **Persistence:** S3 bucket (data/), repositories per entity (repositories/), indexes for “newest first” listing (indexes/, Countdown).
 - **Async:** SQS queue for job run/report; worker Lambda (workers/) parses messages and runs tasks (tasks/).
 
 ## Requirements
@@ -18,7 +18,7 @@ REST and worker backend for the geometry project: Lambda handlers, S3 bucket acc
 |------|------------------|
 | **Handlers** | `api.py` |
 | **Core** | `exceptions.py`, `messages/` |
-| **Packages** | `api/api/`, `attributes/`, `data/`, `enums/`, `index/`, `interfaces/`, `models/`, `mutations/`, `queries/`, `repositories/`, `tasks/`, `workers/` |
+| **Packages** | `api/api/`, `attributes/`, `data/`, `enums/`, `indexes/`, `interfaces/`, `models/`, `mutations/`, `queries/`, `repositories/`, `structs/`, `tasks/`, `workers/` |
 | **Models** | `models/` (base.py: Model; art_gallery.py: ArtGallery; job.py: Job; user.py: User) |
 | **Other** | `README.md`, `requirements.txt` |
 
@@ -34,10 +34,11 @@ REST and worker backend for the geometry project: Lambda handlers, S3 bucket acc
 | **models/** | `base.py`: `Model`. `art_gallery.py`: `ArtGallery`. `job.py`: `Job`. `user.py`: `User` (id, email non-nullable, to_dict/from_dict) |
 | **interfaces/** | `Serializable` (to_dict, from_dict), `Measurable` (abstract size) |
 | **enums/** | `action.py`: `Action` (START, REPORT; default START) with `parse()`. `status.py`: `Status` (PENDING, SUCCESS, FAILED) with `parse()`. `orientation.py`: `Orientation`. |
-| **attributes/** | `Timestamp`, `Countdown`, `Identifier`, `Limit`, `Email`, `Url`, `Sequence`, `Signature`, `Slug`, `Interval`; geometry types (Box, Point, Polygon, etc.) re-exported from geometry. |
-| **index/** | `Indexed`, `Index[T]`, `PrivateIndex`, `ArtGalleryPublicIndex`, `JobsPrivateIndex` (REPOSITORY set in subclass; index modules: `gallery.py`, `jobs.py`) |
+| **attributes/** | Value types: `Timestamp`, `Countdown`, `Identifier`, `Limit`, `Email`, `Url`, `Signature`, `Slug`, `Interval`; geometry types (Box, Point, Polygon, etc.) re-exported from geometry. |
+| **structs/** | **Data structures.** `sequence.py`: `Sequence[T]` (list-like with modular slicing, shift, hash, add/sub/__and__/invert, serialize/unserialize). `table.py`: `Table[T]` (dict-like keyed by `hash(item)`; add/+=, pop/-=; `Serializable[dict]`; serialize→dict, unserialize from list of items or dict with key=hash(value) or raise). |
+| **indexes/** | `Indexed`, `Index[T]`, `PrivateIndex`, `ArtGalleryPublicIndex`, `JobsPrivateIndex` (REPOSITORY set in subclass; index modules: `gallery.py`, `jobs.py`) |
 | **repositories/** | `base.py`: `Repository[T]`. `private.py`: `PrivateRepository[T]`. `results.py`: `Results[T]`. `ArtGalleryRepository`, `JobsRepository`. |
 | **queries/** | `Query[T]`, `ArtGalleryListQuery`, `ArtGalleryDetailsQuery`, `JobListQuery`, `JobDetailsQuery` |
-| **mutations/** | `ArtGalleryPublishMutation`, `ArtGalleryHideMutation`, `JobMutation`, `JobUpdateMutation`. Modules: `base.py`, `gallery_publish.py`, `gallery_unpublish.py`, `jobs.py`, `utils.py`. Object ids in mutation inputs use `Identifier`, not `str`. |
+| **mutations/** | `ArtGalleryPublishMutation`, `ArtGalleryHideMutation`, `JobMutation` (create only). Modules: `base.py`, `gallery_publish.py`, `gallery_unpublish.py`, `jobs.py`. Publish uses `ArtGallery.unserialize`; job create uses `Polygon.unserialize` and `Table.unserialize` inline. Object ids use `Identifier`. |
 | **tasks/** | `Task[T]`, `StartTask`, `ReportTask` (validate, execute, handle; report sets job success/failed from children, enqueues parent REPORT) |
 | **workers/** | `request.py`: `WorkerRequest` (action, job_id, user_email, body, message). `response.py`: `WorkerResponse`. `handler`: SQS event → dispatch by `Action` to StartTask/ReportTask, commit each message; returns `WorkerResponse`. `urls.py`: `TASK_BY_ACTION`. |

@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from dataclasses import field
 from typing import Iterator
 
+from attributes import Offset
+
 
 @dataclass
 class Page:
@@ -23,7 +25,7 @@ class Page:
     """
 
     keys: list[str] = field(default_factory=list)
-    next_token: str = field(default="")
+    next_token: Offset | None = None
 
     @property
     def continues(self) -> bool:

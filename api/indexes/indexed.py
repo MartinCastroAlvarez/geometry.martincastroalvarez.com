@@ -6,10 +6,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any
+from typing import TypedDict
 
 from attributes import Identifier
 from exceptions import ValidationError
 from interfaces import Serializable
+
+
+class IndexedDict(TypedDict):
+    """Serialized form of Indexed (serialize/unserialize)."""
+
+    index_id: str
+    real_id: str
 
 
 @dataclass
@@ -26,11 +34,11 @@ class Indexed(Serializable[dict[str, Any]]):
     index_id: Identifier
     real_id: Identifier
 
-    def serialize(self) -> dict[str, Any]:
+    def serialize(self) -> IndexedDict:
         return {"index_id": str(self.index_id), "real_id": str(self.real_id)}
 
     @classmethod
-    def unserialize(cls, data: dict[str, Any]) -> Indexed:
+    def unserialize(cls, data: Any) -> Indexed:
         if not isinstance(data, dict):
             raise ValidationError("Indexed data must be a dict")
         return cls(

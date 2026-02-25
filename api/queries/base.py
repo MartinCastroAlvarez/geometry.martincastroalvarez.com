@@ -8,8 +8,6 @@ from typing import Any
 from typing import Generic
 from typing import TypeVar
 
-from models import User
-
 from queries.request import QueryRequest
 from queries.response import QueryResponse
 
@@ -19,23 +17,22 @@ O = TypeVar("O", bound=QueryResponse)
 
 class Query(Generic[I, O]):
     """
-    Base query: validate, query, handle. Subclasses implement validate and query.
+    Base query: validate, query, handle. No user; use PrivateQuery for auth.
 
     Example:
-    >>> query = ArtGalleryListQuery(user=user)
+    >>> query = ArtGalleryListQuery()
     >>> query.handle(body={"next_token": "", "limit": 20})
     """
 
-    def __init__(self, user: User) -> None:
-        self.user = user
+    def __init__(self, **kwargs: Any) -> None:
+        pass
 
-    def validate(self, body: dict[str, Any] | None = None) -> I:
+    def validate(self, body: dict[str, Any]) -> I:
         raise NotImplementedError
 
     def query(self, validated_input: I) -> O:
         raise NotImplementedError
 
-    def handle(self, body: dict[str, Any] | None = None) -> O:
-        payload: dict[str, Any] = body if body is not None else {}
-        validated_input = self.validate(payload)
+    def handle(self, body: dict[str, Any]) -> O:
+        validated_input = self.validate(body)
         return self.query(validated_input)

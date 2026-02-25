@@ -1,112 +1,63 @@
 """
-Job create and update mutations.
+Job create mutation.
 """
 
 from __future__ import annotations
 
-import hashlib
-import json
 from typing import Any
-from typing import TypedDict
 
-from exceptions import UnauthorizedError
 from exceptions import ValidationError
-from index.indexed import Indexed
-from index.jobs import JobsPrivateIndex
+from indexes.indexed import Indexed
+from indexes.jobs import JobsPrivateIndex
 from messages import Message
 from messages import Queue
 from models import Job
 from repositories.jobs import JobsRepository
 from attributes import Identifier
 from attributes import Countdown
+from attributes import Signature
 from enums import Action
-from enums import Status
 from geometry import Polygon
 
-from mutations.base import Mutation
-from mutations.request import MutationRequest
-from mutations.utils import coerce_boundary
-from mutations.utils import coerce_obstacles
+from structs import Table
+from mutations.private import PrivateMutation
+from mutations.request import JobMutationRequest
 
 queue = Queue()
 
 
-class JobMutationInput(MutationRequest):
-    """Create job: boundary and obstacles; id is hash (idempotent)."""
-
-    boundary: Polygon
-    obstacles: list[Polygon]
-
-
-class JobUpdateMutationInput(MutationRequest, total=False):
-    """Update job (e.g. status) by id."""
-
-    id: str
-    status: str
-
-
-class JobMutation(Mutation[JobMutationInput]):
+class JobMutation(PrivateMutation[JobMutationRequest, dict[str, Any]]):
     """Create job (idempotent id from boundary+obstacles), save, enqueue run, update job index."""
 
-    def validate(self, body: dict[str, Any] | None = None) -> JobMutationInput:
-        if not self.user.is_authenticated():
-            raise UnauthorizedError("User must be authenticated")
-        payload = body or {}
-        boundary = payload.get("boundary")
-        obstacles = payload.get("obstacles")
+    def _validate_body(self, body: dict[str, Any]) -> JobMutationRequest:
+        boundary = body.get("boundary")
+        obstacles = body.get("obstacles")
         if not boundary or not isinstance(boundary, list):
             raise ValidationError("boundary is required and must be a list of points")
         if obstacles is not None and not isinstance(obstacles, list):
             raise ValidationError("obstacles must be a list of obstacle polygons")
-        return JobMutationInput(
-            boundary=coerce_boundary(boundary),
-            obstacles=coerce_obstacles(obstacles or []),
+        return JobMutationRequest(
+            boundary=Polygon.unserialize(boundary),
+            obstacles=Table.unserialize([Polygon.unserialize(obs) for obs in (obstacles or []) if isinstance(obs, list)]),
         )
 
-    def mutate(self, validated_input: JobMutationInput) -> dict[str, Any]:
+    def mutate(self, validated_input: JobMutationRequest) -> dict[str, Any]:
         boundary = validated_input["boundary"]
         obstacles = validated_input["obstacles"]
-        payload: dict[str, Any] = {
-            "boundary": boundary.serialize(),
-            "obstacles": [poly.serialize() for poly in obstacles],
-        }
-        id_source = json.dumps(payload, sort_keys=True)
-        job_id = hashlib.sha256(id_source.encode()).hexdigest()
+        job_id = Identifier(Signature(f"{hash(boundary)}_{hash(obstacles)}"))
         job = Job(
-            id=Identifier(job_id),
-            stdin=payload,
+            id=job_id,
+            stdin={
+                "boundary": boundary.serialize(),
+                "obstacles": [poly.serialize() for poly in obstacles],
+            },
         )
         repo = JobsRepository(user=self.user)
         repo.save(job)
         email = self.user.email
         if email is None:
             raise UnauthorizedError("User must be authenticated")
-        queue.put(Message(action=Action.START, job_id=job_id, user_email=email))
+        queue.put(Message(action=Action.START, job_id=job.id, user_email=email))
         index = JobsPrivateIndex(user_email=email)
-        index.save(Indexed(index_id=Identifier(str(Countdown.from_timestamp(job.created_at))), real_id=job.id))
-        return job.serialize()
-
-
-class JobUpdateMutation(Mutation[JobUpdateMutationInput]):
-    """Update job (e.g. status); id from path."""
-
-    def validate(self, body: dict[str, Any] | None = None) -> JobUpdateMutationInput:
-        if not self.user.is_authenticated():
-            raise UnauthorizedError("User must be authenticated")
-        payload = body or {}
-        identifier_raw = payload.get("id")
-        if not identifier_raw or not isinstance(identifier_raw, str):
-            raise ValidationError("id is required and must be a non-empty string")
-        out: JobUpdateMutationInput = {"id": Identifier(identifier_raw)}
-        if "status" in payload and payload["status"] is not None:
-            out["status"] = str(payload["status"])
-        return out
-
-    def mutate(self, validated_input: JobUpdateMutationInput) -> dict[str, Any]:
-        identifier = validated_input["id"]
-        repo = JobsRepository(user=self.user)
-        job = repo.get(identifier)
-        if validated_input.get("status") is not None:
-            job.status = Status.parse(validated_input["status"])
-            repo.save(job)
+        index.save(Indexed(index_id=Identifier(Countdown.from_timestamp(job.created_at)), real_id=job.id))
         return job.serialize()

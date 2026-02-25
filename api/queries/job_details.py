@@ -6,23 +6,16 @@ from __future__ import annotations
 
 from typing import Any
 
-from exceptions import UnauthorizedError
 from repositories.jobs import JobsRepository
 from attributes import Identifier
 
-from queries.base import Query
-from queries.request import QueryRequest
-from queries.response import QueryResponse
+from queries.private import PrivateQuery
+from queries.request import DetailsQueryRequest
+from queries.response import DetailsQueryResponse
 
 
-class JobDetailsQueryRequest(QueryRequest):
-    """Request for job by id."""
-
-    id: Identifier
-
-
-class JobDetailsQueryResponse(QueryResponse):
-    """Response for job details: single job dict."""
+class JobDetailsQueryResponse(DetailsQueryResponse):
+    """Details response: single job (JobDict shape)."""
 
     id: str
     parent_id: str | None
@@ -37,16 +30,13 @@ class JobDetailsQueryResponse(QueryResponse):
     updated_at: str
 
 
-class JobDetailsQuery(Query[JobDetailsQueryRequest, JobDetailsQueryResponse]):
+class JobDetailsQuery(PrivateQuery[DetailsQueryRequest, JobDetailsQueryResponse]):
     """Get a single job by id (must be owner)."""
 
-    def validate(self, body: dict[str, Any] | None = None) -> JobDetailsQueryRequest:
-        if not self.user.is_authenticated():
-            raise UnauthorizedError("User must be authenticated")
-        payload = body or {}
-        return JobDetailsQueryRequest(id=Identifier(payload.get("id")))
+    def _validate_body(self, body: dict[str, Any]) -> DetailsQueryRequest:
+        return DetailsQueryRequest(id=Identifier(body.get("id")))
 
-    def query(self, validated_input: JobDetailsQueryRequest) -> JobDetailsQueryResponse:
+    def query(self, validated_input: DetailsQueryRequest) -> JobDetailsQueryResponse:
         repo = JobsRepository(user=self.user)
         job = repo.get(validated_input["id"])
         return job.serialize()

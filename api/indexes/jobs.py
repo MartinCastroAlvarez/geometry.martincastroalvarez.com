@@ -10,7 +10,7 @@ from typing import ClassVar
 
 from repositories.jobs import JobsRepository
 
-from index.base import PrivateIndex
+from indexes.base import PrivateIndex
 
 
 @dataclass

@@ -1,12 +1,29 @@
 """
-Generic Sequence[T] type: list with optional None (-> []), slicing, shift, hash, add/sub/__and__/invert, in-place, serialize/unserialize.
+Sequence[T]: list-like with modular slicing, shift, add/sub/and/invert, hash, serialize/unserialize.
+
+Examples:
+    >>> from structs import Sequence
+    >>> s = Sequence([1, 2, 3, 4])
+    >>> s[1:3]
+    Sequence([2, 3])
+    >>> s[3:6]   # wrap: indices mod len(s)
+    Sequence([4, 1, 2])
+    >>> s << 1
+    Sequence([2, 3, 4, 1])
+    >>> s + Sequence([5, 6])
+    Sequence([1, 2, 3, 4, 5, 6])
+    >>> s - Sequence([3, 4])
+    Sequence([1, 2])
+    >>> Sequence([1, 2, 3]) & Sequence([2, 3, 4])
+    Sequence([2, 3])
+    >>> ~s
+    Sequence([4, 3, 2, 1])
 """
 
 from __future__ import annotations
 
 import json
 from typing import Any
-from typing import Callable
 from typing import Generic
 from typing import Iterator
 from typing import overload
@@ -21,8 +38,36 @@ T = TypeVar("T")
 
 class Sequence(list, Generic[T]):
     """
-    A list-like sequence: slicing (modular), __lshift__/__rshift__, __add__/__sub__/__and__/__invert__,
-    __iadd__/__isub__, index(), append(), insert(), pop(), dedup(), __contains__ (element or subsequence), __hash__.
+    List-like sequence with modular slicing (wrap-around), shift, add/sub/and/invert, hash, serialize.
+
+    Slicing: indices wrap (mod len). s[3:6] on length-4 sequence gives s[3:4] + s[0:2].
+    Shift: s << idx or s << element puts that index/element first; >> puts it last.
+    Add: s + other concatenates. Sub: s - other removes first contiguous occurrence of other (with wrap).
+    And: s & other returns the contiguous subsequence that appears in both (with wrap); raises if multiple overlaps.
+    Invert: ~s returns reversed copy.
+    Hash: idempotent by canonical rotation (same value for same cycle regardless of start).
+
+    Examples:
+        >>> s = Sequence([10, 20, 30])
+        >>> s[0], s[1], s[-1]
+        (10, 20, 30)
+        >>> s[1:4]
+        Sequence([20, 30, 10])
+        >>> s << 20
+        Sequence([20, 30, 10])
+        >>> s + Sequence([40])
+        Sequence([10, 20, 30, 40])
+        >>> (s + Sequence([40])) - Sequence([30, 40])
+        Sequence([10, 20])
+        >>> Sequence([1, 2, 3, 4]).dedup()
+        Sequence([1, 2, 3, 4])
+        >>> Sequence([1, 1, 2, 2]).dedup()
+        Sequence([1, 2])
+        >>> s.append(40)
+        >>> s.pop(2)
+        30
+        >>> 20 in s, Sequence([20, 30]) in s
+        (True, True)
     """
 
     def __init__(
@@ -262,12 +307,8 @@ class Sequence(list, Generic[T]):
         return out
 
     @classmethod
-    def unserialize(
-        cls,
-        data: list[Any],
-        item_from: Callable[[Any], T],
-    ) -> Sequence[T]:
-        """Build Sequence from list using item_from for each element."""
+    def unserialize(cls, data: Any) -> Sequence[T]:
+        """Single argument only: data is a list of items to put in the sequence. Caller must pass already-unserialized items."""
         if not isinstance(data, list):
             data = []
-        return cls([item_from(x) for x in data])
+        return cls(data)

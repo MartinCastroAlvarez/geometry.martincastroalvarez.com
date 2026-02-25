@@ -20,7 +20,9 @@ from exceptions import ValidationError
 from attributes import Email
 from attributes import Identifier
 from attributes import Limit
-from index.indexed import Indexed
+from attributes import Offset
+from models.base import ModelDict
+from indexes.indexed import Indexed
 
 bucket = Bucket()
 T = TypeVar("T")
@@ -31,6 +33,7 @@ class Index(Generic[T]):
     """
     Generic index: stores Indexed entries under index/{NAME}/{index_id}.
     REPOSITORY is used to load the full record by real_id. Set REPOSITORY in subclass.
+    Records loaded via get() have serialize() -> ModelDict.
 
     Example:
     >>> index = ArtGalleryPublicIndex()
@@ -64,6 +67,10 @@ class Index(Generic[T]):
             raise RecordNotFoundError(f"Index entry {identifier} not found")
         indexed = Indexed.unserialize(data)
         return self.repository.get(indexed.real_id)
+
+    def get_serialized(self, identifier: Identifier) -> ModelDict:
+        """Load the full record and return its serialized form (ModelDict)."""
+        return self.get(identifier).serialize()
 
     def save(self, record: Indexed) -> None:
         """
@@ -101,9 +108,9 @@ class Index(Generic[T]):
 
     def search(
         self,
-        next_token: str | None = None,
+        next_token: Offset | None = None,
         limit: Limit = Limit(20),
-    ) -> tuple[list[Any], str]:
+    ) -> tuple[list[Any], Offset | None]:
         """
         List index entries with pagination. Returns (records, next_token).
         Stale index keys (missing data) are removed as read-repair and skipped.
@@ -139,7 +146,7 @@ class Index(Generic[T]):
         >>> for gallery in index.all():
         ...     print(gallery.id)
         """
-        next_token: str | None = None
+        next_token: Offset | None = None
         while True:
             page = bucket.search(
                 prefix=self.path,

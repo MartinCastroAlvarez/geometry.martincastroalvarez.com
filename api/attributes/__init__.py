@@ -1,14 +1,15 @@
 """
-API value types: Timestamp, Countdown, Identifier, Email, Url, Point, Polygon, Segment, Sequence, Signature, Slug, Interval, Path, Box.
+API value types: Timestamp, Countdown, Identifier, Email, Url, Point, Polygon, Segment, Signature, Slug, Interval, Path, Box.
 Geometry types (Box, ConvexComponent, Ear, Path, Point, Polygon, Segment, Orientation) are re-exported lazily to avoid circular import.
+Data structures (Sequence, Table) live in structs/.
 """
 
 from attributes.countdown import Countdown
 from attributes.email import Email
 from attributes.identifier import Identifier
 from attributes.limit import Limit
+from attributes.offset import Offset
 from attributes.receipt import ReceiptHandle
-from attributes.sequence import Sequence
 from attributes.signature import Signature
 from attributes.slug import Slug
 from attributes.timestamp import Timestamp
@@ -35,13 +36,13 @@ __all__ = [
     "Identifier",
     "Interval",
     "Limit",
+    "Offset",
     "Orientation",
     "ReceiptHandle",
     "Path",
     "Point",
     "Polygon",
     "Segment",
-    "Sequence",
     "Signature",
     "Slug",
     "Timestamp",
