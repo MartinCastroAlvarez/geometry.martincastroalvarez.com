@@ -74,6 +74,11 @@ class GeometryStack extends cdk.Stack {
       actions: ['s3:ListBucket'],
       resources: [apiBucket.bucketArn],
     }))
+    lambdaRole.addToPolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ['sqs:SendMessage', 'sqs:GetQueueUrl'],
+      resources: [geometryQueue.queueArn],
+    }))
 
     const workerLambdaRole = new iam.Role(this, 'WorkerLambdaExecutionRole', {
       assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
@@ -116,6 +121,7 @@ class GeometryStack extends cdk.Stack {
       environment: {
         SECRETS_BUCKET_NAME: 'com.martincastroalvarez.secrets',
         DATA_BUCKET_NAME: apiBucket.bucketName,
+        QUEUE_NAME: geometryQueue.queueName,
       },
       timeout: cdk.Duration.seconds(30),
       memorySize: 256,
@@ -125,7 +131,7 @@ class GeometryStack extends cdk.Stack {
     const workerHandler = new lambda.Function(this, 'GeometryWorkerHandler', {
       functionName: 'geometry-worker-handler',
       runtime: lambda.Runtime.PYTHON_3_12,
-      handler: 'api.handler',
+      handler: 'workers.handler',
       role: workerLambdaRole,
       code: lambda.Code.fromAsset(join(__dirname, 'api'), {
         bundling: {
@@ -214,10 +220,18 @@ class GeometryStack extends cdk.Stack {
     const galleriesResource = v1Resource.addResource('galleries')
     galleriesResource.addMethod('GET', lambdaIntegration)
     galleriesResource.addMethod('OPTIONS', lambdaIntegration)
-    galleriesResource.addMethod('POST', lambdaIntegration)
     const galleryIdResource = galleriesResource.addResource('{id}')
     galleryIdResource.addMethod('GET', lambdaIntegration)
     galleryIdResource.addMethod('OPTIONS', lambdaIntegration)
+
+    const jobsResource = v1Resource.addResource('jobs')
+    jobsResource.addMethod('GET', lambdaIntegration)
+    jobsResource.addMethod('POST', lambdaIntegration)
+    jobsResource.addMethod('OPTIONS', lambdaIntegration)
+    const jobIdResource = jobsResource.addResource('{id}')
+    jobIdResource.addMethod('GET', lambdaIntegration)
+    jobIdResource.addMethod('POST', lambdaIntegration)
+    jobIdResource.addMethod('OPTIONS', lambdaIntegration)
 
     const distribution = new cloudfront.Distribution(this, 'GeometryDistribution', {
       defaultBehavior: {

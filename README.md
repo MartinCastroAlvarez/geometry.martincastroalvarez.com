@@ -2,6 +2,13 @@
 
 Computational geometry project: art gallery algorithms, convex decomposition, and guard placement from first principles.
 
+## Documentation by area
+
+| Area | Description | Readme |
+|------|-------------|--------|
+| **Lab** | Python prototype, examples, and art gallery pipeline | [lab/README.md](lab/README.md) |
+| **API** | REST and worker backend (Lambda, S3, SQS, repositories, indexes) | [api/README.md](api/README.md) |
+
 ## Lab examples
 
 The [lab](lab/) directory contains a Python prototype and example galleries. Each example builds an art gallery (polygon with holes), runs the pipeline (stitched boundary, ear-clipping triangulation, convex components, guards), and can be visualized (save the figure as `exampleN.png`).
