@@ -1,18 +1,18 @@
 import React from "react";
 
+/** NOTE: Do NOT add style or className props. Nothing should control the style or class names of wrapped HTML from outside. */
 interface ContainerProps {
+    name?: string;
     size?: number;
     padded?: boolean;
     spaced?: boolean;
+    rounded?: boolean;
     solid?: boolean;
     left?: boolean;
     center?: boolean;
     right?: boolean;
-    top?: boolean;
     middle?: boolean;
     bottom?: boolean;
-    horizontal?: boolean;
-    image?: string;
     children?: React.ReactNode;
     onMouseEnter?: React.MouseEventHandler<HTMLDivElement>;
     onMouseLeave?: React.MouseEventHandler<HTMLDivElement>;
@@ -22,6 +22,21 @@ interface ContainerProps {
     onClick?: React.MouseEventHandler<HTMLDivElement>;
     onDoubleClick?: React.MouseEventHandler<HTMLDivElement>;
     onContextMenu?: React.MouseEventHandler<HTMLDivElement>;
+    onFocus?: React.FocusEventHandler<HTMLDivElement>;
+    onBlur?: React.FocusEventHandler<HTMLDivElement>;
+    onKeyDown?: React.KeyboardEventHandler<HTMLDivElement>;
+    onKeyUp?: React.KeyboardEventHandler<HTMLDivElement>;
+    onKeyPress?: React.KeyboardEventHandler<HTMLDivElement>;
+    onTouchStart?: React.TouchEventHandler<HTMLDivElement>;
+    onTouchEnd?: React.TouchEventHandler<HTMLDivElement>;
+    onTouchMove?: React.TouchEventHandler<HTMLDivElement>;
+    onDragStart?: React.DragEventHandler<HTMLDivElement>;
+    onDragEnd?: React.DragEventHandler<HTMLDivElement>;
+    onDrag?: React.DragEventHandler<HTMLDivElement>;
+    onDragEnter?: React.DragEventHandler<HTMLDivElement>;
+    onDragLeave?: React.DragEventHandler<HTMLDivElement>;
+    onDragOver?: React.DragEventHandler<HTMLDivElement>;
+    onDrop?: React.DragEventHandler<HTMLDivElement>;
 }
 
 const colSpanClasses: Record<number, string> = {
@@ -31,21 +46,23 @@ const colSpanClasses: Record<number, string> = {
 };
 
 export const Container: React.FC<ContainerProps> = ({
+    name = "geometry-container",
     size = 12,
     padded = false,
     spaced = false,
+    rounded = false,
     solid = false,
     left = false,
     center = true,
     right = false,
-    top = false,
     middle = false,
     bottom = false,
-    horizontal = false,
-    image,
     children,
     onMouseEnter, onMouseLeave, onMouseMove, onMouseDown, onMouseUp,
     onClick, onDoubleClick, onContextMenu,
+    onFocus, onBlur, onKeyDown, onKeyUp, onKeyPress,
+    onTouchStart, onTouchEnd, onTouchMove,
+    onDragStart, onDragEnd, onDrag, onDragEnter, onDragLeave, onDragOver, onDrop,
 }) => {
     if (size < 0 || size > 12) throw new Error(`Container size must be between 0 and 12, received: ${size}`);
     if (size === 0) return null;
@@ -57,24 +74,17 @@ export const Container: React.FC<ContainerProps> = ({
         return false;
     });
 
-    const classes: string[] = ["time-container"];
-    if (horizontal) classes.push("overflow-x-auto", "overflow-y-hidden", "hide-scrollbar");
-    else classes.push("overflow-hidden");
+    const classes: string[] = [name];
+    classes.push("overflow-hidden");
 
-    if (horizontal) {
-        classes.push("flex", "flex-nowrap", "w-full");
-        if (top) classes.push("items-start");
-        else if (bottom) classes.push("items-end");
-        else if (middle) classes.push("items-center");
-    } else if (hasContainerChildren) {
+    if (hasContainerChildren) {
         classes.push("grid", "grid-cols-12", "w-full");
-        if (top) classes.push("items-start");
-        else if (bottom) classes.push("items-end");
+        if (bottom) classes.push("items-end");
         else if (middle) classes.push("items-center");
-    } else if (top || middle || bottom) {
-        classes.push("flex");
-        if (top) classes.push("items-start");
-        else if (bottom) classes.push("items-end");
+        else classes.push("items-start");
+    } else if (middle || bottom) {
+        classes.push("flex", "w-full");
+        if (bottom) classes.push("items-end");
         else if (middle) classes.push("items-center");
         if (left) classes.push("justify-start");
         else if (right) classes.push("justify-end");
@@ -84,34 +94,18 @@ export const Container: React.FC<ContainerProps> = ({
     classes.push(colSpanClasses[size]);
     if (padded) classes.push("p-4");
     if (spaced) classes.push("gap-2");
-    if (solid) classes.push("bg-x-white", "text-x-dark", "rounded-xl");
+    if (rounded) classes.push("rounded-xl");
+    if (solid) classes.push("bg-x-gray", "text-x-dark");
     if (left) classes.push("text-left");
     else if (right) classes.push("text-right");
     else if (center) classes.push("text-center");
 
-    const backgroundImageStyle: React.CSSProperties = {};
-    if (image) {
-        backgroundImageStyle.backgroundImage = `url(${image})`;
-        backgroundImageStyle.backgroundSize = "cover";
-        backgroundImageStyle.backgroundPosition = "center";
-        backgroundImageStyle.backgroundRepeat = "no-repeat";
-        backgroundImageStyle.opacity = 0.1;
-        backgroundImageStyle.position = "absolute";
-        backgroundImageStyle.top = "0";
-        backgroundImageStyle.left = "0";
-        backgroundImageStyle.right = "0";
-        backgroundImageStyle.bottom = "0";
-        backgroundImageStyle.pointerEvents = "none";
-        backgroundImageStyle.zIndex = 0;
-        backgroundImageStyle.filter = "blur(10px)";
-    }
-
-    const containerStyle: React.CSSProperties = image ? { position: "relative" } : {};
+    if (onClick) classes.push("cursor-pointer");
+    const finalClassName = classes.join(" ");
 
     return (
         <div
-            className={classes.join(" ")}
-            style={containerStyle}
+            className={finalClassName}
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
             onMouseMove={onMouseMove}
@@ -120,8 +114,22 @@ export const Container: React.FC<ContainerProps> = ({
             onClick={onClick}
             onDoubleClick={onDoubleClick}
             onContextMenu={onContextMenu}
+            onFocus={onFocus}
+            onBlur={onBlur}
+            onKeyDown={onKeyDown}
+            onKeyUp={onKeyUp}
+            onKeyPress={onKeyPress}
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
+            onTouchMove={onTouchMove}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            onDrag={onDrag}
+            onDragEnter={onDragEnter}
+            onDragLeave={onDragLeave}
+            onDragOver={onDragOver}
+            onDrop={onDrop}
         >
-            {image && <div style={backgroundImageStyle} />}
             {children}
         </div>
     );

@@ -32,8 +32,8 @@ export const Title: React.FC<TitleProps> = ({
     const truncateClass = truncate ? "truncate" : "";
 
     return (
-        <Container center>
-            <div onClick={onClick} style={maxWidthStyle} className={`display-block w-full mx-auto text-x-dark font-semibold font-title leading-relaxed tracking-normal ${sizeClass} ${alignmentClass} ${truncateClass}`}>
+        <Container center name="geometry-title">
+            <div onClick={onClick} style={maxWidthStyle} className={`display-block w-full mx-auto text-neutral-100 font-semibold font-title leading-relaxed tracking-normal ${sizeClass} ${alignmentClass} ${truncateClass}`}>
                 {children}
             </div>
         </Container>

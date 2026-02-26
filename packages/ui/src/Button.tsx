@@ -3,7 +3,6 @@ import Confirm from "./Confirm";
 import { Container } from "./Container";
 
 const useTranslation = (_ns: string) => ({ t: (key: string) => key });
-const useTheme = () => ({ isDarkTheme: false });
 
 interface ButtonsProps {
     children: React.ReactNode;
@@ -14,11 +13,10 @@ interface ButtonsProps {
 
 export const Buttons: React.FC<ButtonsProps> = ({ children, left = false, center: _center = true, right = false }) => {
     void _center;
-    const justifyClass = right ? "justify-end" : left ? "justify-start" : "justify-center";
 
     return (
-        <Container top>
-            <div className={`flex items-center gap-2 w-full ${justifyClass}`}>{children}</div>
+        <Container middle spaced size={12} left={left} center={!left && !right} right={right} name="geometry-buttons">
+            {children}
         </Container>
     );
 };
@@ -31,9 +29,7 @@ interface ButtonProps {
     lg?: boolean;
     disabled?: boolean;
     icon?: React.ReactNode;
-    iconPosition?: "left" | "right";
     confirm?: boolean | string;
-    primary?: boolean;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -44,36 +40,23 @@ export const Button: React.FC<ButtonProps> = ({
     lg = false,
     disabled = false,
     icon,
-    iconPosition = "left",
     confirm,
-    primary = false,
 }) => {
     const { t } = useTranslation("components");
     const [showConfirm, setShowConfirm] = useState(false);
-    const { isDarkTheme } = useTheme();
 
     if (!children && !icon) return null;
 
-    const baseClasses = `inline-flex items-center justify-center font-medium rounded-lg transition-all duration-300 focus:outline-none focus:ring-0 focus:ring-offset-0 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer font-normal active:scale-95 active:duration-75 hover:scale-105 hover:duration-150`;
+    const baseClasses =
+        "inline-flex items-center justify-center font-medium rounded-xl transition-colors duration-200 focus:outline-none focus:ring-0 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer font-normal border-0";
 
-    const getVariantClasses = (): string => {
-        if (primary) {
-            const textColor = isDarkTheme ? "text-x-dark" : "text-x-white";
-            const hoverTextColor = isDarkTheme ? "hover:text-x-dark" : "hover:text-x-white";
-            const activeTextColor = isDarkTheme ? "active:text-x-dark" : "active:text-x-white";
-            return `bg-primary ${textColor} ${hoverTextColor} focus:ring-0 focus:ring-offset-0 focus:outline-none border-none ${activeTextColor}`;
-        } else {
-            return "bg-transparent border-none shadow-none opacity-60 hover:opacity-100 text-x-dark hover:text-x-dark focus:ring-0 focus:ring-offset-0 focus:outline-none active:ring-0 active:outline-none active:opacity-80";
-        }
-    };
-
-    const variantClasses = getVariantClasses();
+    const variantClasses = "bg-neutral-700/80 text-neutral-200 hover:bg-neutral-600/90 active:bg-neutral-600";
 
     const getSizeClasses = (): string => {
-        if (xs) return "h-6 px-2 text-xs";
-        if (sm) return "h-8 px-3 text-sm";
-        if (lg) return "h-12 px-6 text-base";
-        return "h-10 px-4 text-sm";
+        if (xs) return "h-6 px-1.5 text-xs";
+        if (sm) return "h-7 px-1.5 text-xs";
+        if (lg) return "h-12 px-4 text-base";
+        return "h-10 px-3 text-sm";
     };
 
     const sizeClasses = getSizeClasses();
@@ -81,14 +64,9 @@ export const Button: React.FC<ButtonProps> = ({
 
     const cloneIconWithColor = (iconElement: React.ReactNode) => {
         if (!React.isValidElement(iconElement)) return iconElement;
-        const shouldUseWhite = primary && !isDarkTheme;
-        const shouldUseDark = primary && isDarkTheme;
-        let iconColorClass = "text-current";
-        if (shouldUseWhite) iconColorClass = "text-x-white";
-        else if (shouldUseDark) iconColorClass = "text-x-dark";
         const element = iconElement as React.ReactElement<{ className?: string }>;
         const existingClassName = element.props.className || "";
-        return React.cloneElement(element, { className: `${existingClassName} ${iconColorClass}`.trim() });
+        return React.cloneElement(element, { className: `${existingClassName} text-neutral-200`.trim() });
     };
 
     const handleClick = () => {
@@ -110,10 +88,9 @@ export const Button: React.FC<ButtonProps> = ({
 
     return (
         <>
-            <button type="button" onClick={handleClick} disabled={disabled} className={combinedClasses} style={{ outline: "none" }}>
-                {icon && iconPosition === "left" && <span className={children ? "mr-2" : ""}>{cloneIconWithColor(icon)}</span>}
+            <button type="button" onClick={handleClick} disabled={disabled} className={`geometry-button ${combinedClasses}`.trim()} style={{ outline: "none" }}>
+                {icon && <span className={children ? "mr-2" : ""}>{cloneIconWithColor(icon)}</span>}
                 {children && <span>{children}</span>}
-                {icon && iconPosition === "right" && <span className={children ? "ml-2" : ""}>{cloneIconWithColor(icon)}</span>}
             </button>
             {confirm && (
                 <Confirm isOpen={showConfirm} message={getConfirmMessage()} onConfirm={handleConfirm} onCancel={handleCancel} />

@@ -5,7 +5,7 @@
   "version": "0.0.0",
   "packageManager": "pnpm@9.0.0",
   "scripts": {
-    "dev": "VITE_GOOGLE_TAG_ID=G-0000000000 pnpm -C apps/web dev",
+    "dev": "VITE_GOOGLE_TAG_ID=G-0000000000 VITE_JWT_TEST=$(./spy.sh martin com.martincastroalvarez.secrets JWT_TEST) pnpm -C apps/web dev",
     "init": "pnpm run update && AWS_PROFILE='martin' pnpm exec cdk bootstrap",
     "update": "poetry install && pnpm install",
     "build:api:flake8": "poetry run flake8 api/ --max-line-length 150 --ignore=E203,W503",

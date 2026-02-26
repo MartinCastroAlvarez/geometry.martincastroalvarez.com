@@ -30,23 +30,23 @@ export function Toolbar({
         <Container solid padded>
             <Container center middle>
                 <Container size={3}>
-                    <div className="flex items-center gap-2">
+                    <Container middle spaced left>
                         <Square size={16} />
                         <Text sm>
                             {vertexCount} vértices
                         </Text>
                         {isClosed ? (
-                            <div className="flex items-center gap-1 text-green-500">
+                            <Container middle spaced left>
                                 <Check size={14} />
                                 <Text sm>Cerrado</Text>
-                            </div>
+                            </Container>
                         ) : vertexCount >= 3 ? (
-                            <div className="flex items-center gap-1 text-amber-500">
+                            <Container middle spaced left>
                                 <AlertCircle size={14} />
                                 <Text sm>Abierto</Text>
-                            </div>
+                            </Container>
                         ) : null}
-                    </div>
+                    </Container>
                 </Container>
 
                 <Container size={9} right>
@@ -63,7 +63,6 @@ export function Toolbar({
                         <Button
                             onClick={onStartHole}
                             disabled={!isClosed || isAddingHole}
-                            primary={isClosed && !isAddingHole}
                             sm
                         >
                             <Target size={16} className="mr-2" />
@@ -73,7 +72,6 @@ export function Toolbar({
                         <Button
                             onClick={onClosePolygon}
                             disabled={isClosed || vertexCount < 3}
-                            primary={!isClosed && vertexCount >= 3}
                             sm
                         >
                             <Check size={16} className="mr-2" />
@@ -93,7 +91,7 @@ export function Toolbar({
             </Container>
 
             {!isClosed && vertexCount > 0 && (
-                <Container top>
+                <Container middle>
                     <Text xs center>
                         {vertexCount < 3
                             ? `Agregá ${3 - vertexCount} vértice${3 - vertexCount > 1 ? 's' : ''} más para cerrar el polígono`

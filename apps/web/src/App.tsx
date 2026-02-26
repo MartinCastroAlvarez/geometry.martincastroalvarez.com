@@ -1,11 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Editor, Toolbar, domainToObject } from '@geometry/editor'
-import { Toaster, Nav, toast, Container, Title, Text } from '@geometry/ui'
+import { Toaster, Nav, toast, Container, Title, Text, Body } from '@geometry/ui'
+import { useSession, useLogout } from '@geometry/data'
 import { useEditor } from './store'
 import { Point, Polygon } from '@geometry/domain'
 import './index.css'
 
 function App() {
+    const { data: user } = useSession()
+    const logout = useLogout()
     const { gallery, setPerimeter, setHoles, reset } = useEditor(state => state)
     const [mode, setMode] = useState<'draw_perimeter' | 'draw_hole' | 'view'>('draw_perimeter')
     const [currentHolePoints, setCurrentHolePoints] = useState<Point[]>([])
@@ -87,19 +90,26 @@ function App() {
     const currentHoleVertices = domainToObject.polygonToVertices(currentHolePoly)
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans">
+        <Body>
             <Toaster />
-            <Nav />
+            <Nav
+                {...(user && {
+                    userName: user.name ?? undefined,
+                    userImageUrl: user.avatarUrl ?? undefined,
+                    onLogout: logout,
+                })}
+                onLogin={logout}
+            />
             <Container padded size={12}>
                 <Container size={8} center>
-                    <div className="mb-8 text-center">
-                        <Title size={2} center>
+                    <Container center>
+                        <Title xl center>
                             🎨 Geometry Art Gallery Editor
                         </Title>
                         <Text center size={600}>
                             Editor visual interactivo para el Art Gallery Problem
                         </Text>
-                    </div>
+                    </Container>
 
                     <Toolbar
                         outerRing={outerVertices}
@@ -126,7 +136,7 @@ function App() {
                     />
                 </Container>
             </Container>
-        </div>
+        </Body>
     )
 }
 

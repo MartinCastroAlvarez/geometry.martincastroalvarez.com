@@ -6,7 +6,7 @@ export const Toaster = () => (
         expand={true}
         richColors
         theme="system"
-        className="toaster-wrapper"
+        className="geometry-toaster toaster-wrapper"
     />
 );
 

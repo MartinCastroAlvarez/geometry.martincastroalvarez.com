@@ -27,7 +27,7 @@ class ArtGalleryPublishMutation(PrivateMutation[ArtGalleryPublishMutationRequest
 
     def validate(self, body: dict[str, Any]) -> ArtGalleryPublishMutationRequest:
         super().validate(body)
-        return ArtGalleryPublishMutationRequest(job_id=Identifier(body.get("job_id")))
+        return ArtGalleryPublishMutationRequest(job_id=Identifier(body.get("id")))
 
     def mutate(self, validated_input: ArtGalleryPublishMutationRequest) -> ArtGalleryPublishMutationResponse:
         job_id = validated_input["job_id"]
@@ -62,7 +62,7 @@ class ArtGalleryHideMutation(PrivateMutation[ArtGalleryHideMutationRequest, ArtG
 
     def validate(self, body: dict[str, Any]) -> ArtGalleryHideMutationRequest:
         super().validate(body)
-        return ArtGalleryHideMutationRequest(job_id=Identifier(body.get("job_id")))
+        return ArtGalleryHideMutationRequest(job_id=Identifier(body.get("id")))
 
     def mutate(self, validated_input: ArtGalleryHideMutationRequest) -> ArtGalleryHideMutationResponse:
         job_id = validated_input["job_id"]
