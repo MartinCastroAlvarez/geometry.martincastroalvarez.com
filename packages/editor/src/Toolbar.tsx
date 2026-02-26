@@ -1,105 +1,84 @@
-import { Container, Button, Buttons, Text } from '@geometry/ui'
-import type { Vertex } from './types'
-import { Undo, Target, Trash2, Check, AlertCircle, Square } from 'lucide-react'
+import { Container, Button, Text, Buttons } from "@geometry/ui";
+import { Undo, Target, Check, Trash2 } from "lucide-react";
 
-interface ToolbarProps {
-    outerRing: Vertex[]
-    holes: Vertex[][]
-    currentHole: Vertex[]
-    isClosed: boolean
-    isAddingHole: boolean
-    onUndo: () => void
-    onStartHole: () => void
-    onClosePolygon: () => void
-    onClear: () => void
+export interface ToolbarProps {
+    vertexCount: number;
+    isClosed: boolean;
+    isAddingHole: boolean;
+    onUndo: () => void;
+    onStartHole: () => void;
+    onClosePolygon: () => void;
+    onClear: () => void;
+    readonly?: boolean;
 }
 
 export function Toolbar({
-    outerRing,
+    vertexCount,
     isClosed,
     isAddingHole,
     onUndo,
     onStartHole,
     onClosePolygon,
-    onClear
+    onClear,
+    readonly = false,
 }: ToolbarProps) {
-    const vertices = outerRing
-    const vertexCount = vertices.length
-
     return (
-        <Container solid padded>
-            <Container center middle>
-                <Container size={3}>
-                    <Container middle spaced left>
-                        <Square size={16} />
-                        <Text sm>
-                            {vertexCount} vértices
-                        </Text>
-                        {isClosed ? (
-                            <Container middle spaced left>
-                                <Check size={14} />
-                                <Text sm>Cerrado</Text>
-                            </Container>
-                        ) : vertexCount >= 3 ? (
-                            <Container middle spaced left>
-                                <AlertCircle size={14} />
-                                <Text sm>Abierto</Text>
-                            </Container>
-                        ) : null}
-                    </Container>
+        <Container solid padded spaced rounded>
+            <Container middle spaced size={12}>
+                <Container size={4} left middle>
+                    <Text sm>{vertexCount} vértices</Text>
+                    {isClosed ? (
+                        <Container middle spaced left>
+                            <Check size={14} />
+                            <Text sm>Cerrado</Text>
+                        </Container>
+                    ) : vertexCount >= 3 ? (
+                        <Text sm>Abierto</Text>
+                    ) : null}
                 </Container>
-
-                <Container size={9} right>
-                    <Buttons right>
+                {!readonly && (
+                    <Container size={8} right middle>
+                        <Buttons right>
                         <Button
                             onClick={onUndo}
                             disabled={vertexCount === 0 && !isAddingHole}
                             sm
+                            icon={<Undo size={14} />}
                         >
-                            <Undo size={16} className="mr-2" />
                             Deshacer
                         </Button>
-
                         <Button
                             onClick={onStartHole}
                             disabled={!isClosed || isAddingHole}
                             sm
+                            icon={<Target size={14} />}
                         >
-                            <Target size={16} className="mr-2" />
                             Agujero
                         </Button>
-
                         <Button
                             onClick={onClosePolygon}
                             disabled={isClosed || vertexCount < 3}
                             sm
+                            icon={<Check size={14} />}
                         >
-                            <Check size={16} className="mr-2" />
-                            Cerrar Polígono
+                            Cerrar
                         </Button>
-
-                        <Button
-                            onClick={onClear}
-                            sm
-                            confirm="¿Estás seguro de que querés borrar todo?"
-                        >
-                            <Trash2 size={16} className="mr-2" />
+                        <Button onClick={onClear} sm confirm="¿Borrar todo?" icon={<Trash2 size={14} />}>
                             Limpiar
                         </Button>
-                    </Buttons>
-                </Container>
+                        </Buttons>
+                    </Container>
+                )}
             </Container>
-
-            {!isClosed && vertexCount > 0 && (
-                <Container middle>
+            {!readonly && !isClosed && vertexCount > 0 && (
+                <Container center>
                     <Text xs center>
                         {vertexCount < 3
-                            ? `Agregá ${3 - vertexCount} vértice${3 - vertexCount > 1 ? 's' : ''} más para cerrar el polígono`
-                            : 'Hacé click cerca del primer punto (verde) para cerrar el polígono'
-                        }
+                            ? `Agregá ${3 - vertexCount} vértice${3 - vertexCount > 1 ? "s" : ""} más para cerrar`
+                            : "Hacé click cerca del primer punto (verde) para cerrar"}
                     </Text>
                 </Container>
             )}
         </Container>
-    )
+    );
 }

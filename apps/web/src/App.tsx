@@ -1,93 +1,22 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Editor, Toolbar, domainToObject } from '@geometry/editor'
-import { Toaster, Nav, toast, Container, Title, Text, Body } from '@geometry/ui'
-import { useSession, useLogout } from '@geometry/data'
-import { useEditor } from './store'
-import { Point, Polygon } from '@geometry/domain'
-import './index.css'
+import { useCallback } from "react";
+import { Editor } from "@geometry/editor";
+import { Toaster, Nav, Container, Title, Text, Body } from "@geometry/ui";
+import { useSession, useLogout } from "@geometry/data";
+import { useEditor } from "./store";
+import "./index.css";
 
 function App() {
-    const { data: user } = useSession()
-    const logout = useLogout()
-    const { gallery, setPerimeter, setHoles, reset } = useEditor(state => state)
-    const [mode, setMode] = useState<'draw_perimeter' | 'draw_hole' | 'view'>('draw_perimeter')
-    const [currentHolePoints, setCurrentHolePoints] = useState<Point[]>([])
+    const { data: user } = useSession();
+    const logout = useLogout();
+    const { gallery, setPerimeter, setHoles } = useEditor((s) => s);
 
-    const isClosed = gallery.perimeter.isClosed
-    const isAddingHole = mode === 'draw_hole'
-
-    useEffect(() => {
-        if (isClosed && mode === 'draw_perimeter') {
-            setMode('view')
-        }
-        if (!isClosed && mode !== 'draw_perimeter') {
-            setMode('draw_perimeter')
-        }
-    }, [isClosed])
-
-    const handleAddVertex = useCallback((x: number, y: number) => {
-        const point = new Point(x, y)
-
-        if (mode === 'draw_perimeter') {
-            if (gallery.perimeter.points.length >= 3) {
-                const first = gallery.perimeter.points[0]
-                if (first.distanceTo(point) < 15) {
-                    setPerimeter(gallery.perimeter.addPoint(first))
-                    return
-                }
-            }
-            setPerimeter(gallery.perimeter.addPoint(point))
-        } else if (mode === 'draw_hole') {
-            if (!gallery.perimeter.contains(point)) {
-                toast.error('Hole must be inside perimeter')
-                return
-            }
-
-            if (currentHolePoints.length >= 3) {
-                const first = currentHolePoints[0]
-                if (first.distanceTo(point) < 15) {
-                    const newHole = new Polygon([...currentHolePoints, first])
-                    setHoles([...gallery.holes, newHole])
-                    setCurrentHolePoints([])
-                    setMode('view')
-                    toast.success('Hole added')
-                    return
-                }
-            }
-            setCurrentHolePoints(prev => [...prev, point])
-        }
-    }, [gallery.perimeter, gallery.holes, mode, currentHolePoints, setPerimeter, setHoles])
-
-    const handleStartHole = useCallback(() => {
-        setMode('draw_hole')
-        setCurrentHolePoints([])
-        toast.info('Draw hole inside polygon')
-    }, [])
-
-    const handleUndo = useCallback(() => {
-        if (mode === 'draw_hole') {
-            if (currentHolePoints.length > 0) {
-                setCurrentHolePoints(prev => prev.slice(0, -1))
-            } else {
-                setMode('view')
-            }
-        } else if (mode === 'draw_perimeter') {
-            if (gallery.perimeter.points.length > 0) {
-                setPerimeter(gallery.perimeter.removeLastPoint())
-            }
-        }
-    }, [mode, currentHolePoints.length, gallery.perimeter.points.length, setPerimeter, gallery.perimeter])
-
-    const handleClear = useCallback(() => {
-        reset()
-        setMode('draw_perimeter')
-        setCurrentHolePoints([])
-    }, [reset])
-
-    const outerVertices = domainToObject.polygonToVertices(gallery.perimeter)
-    const holeVertices = gallery.holes.map(h => domainToObject.polygonToVertices(h))
-    const currentHolePoly = new Polygon(currentHolePoints)
-    const currentHoleVertices = domainToObject.polygonToVertices(currentHolePoly)
+    const handleChange = useCallback(
+        (boundary?: import("@geometry/domain").Polygon, obstacles?: import("@geometry/domain").Polygon[]) => {
+            if (boundary) setPerimeter(boundary);
+            if (obstacles) setHoles(obstacles);
+        },
+        [setPerimeter, setHoles]
+    );
 
     return (
         <Body>
@@ -111,33 +40,18 @@ function App() {
                         </Text>
                     </Container>
 
-                    <Toolbar
-                        outerRing={outerVertices}
-                        holes={holeVertices}
-                        currentHole={currentHoleVertices}
-                        isClosed={isClosed}
-                        isAddingHole={isAddingHole}
-                        onUndo={handleUndo}
-                        onStartHole={handleStartHole}
-                        onClosePolygon={() => { }}
-                        onClear={handleClear}
-                    />
-
                     <Editor
-                        outerRing={outerVertices}
-                        holes={holeVertices}
-                        currentHole={currentHoleVertices}
-                        isClosed={isClosed}
-                        isAddingHole={isAddingHole}
-                        onAddVertex={handleAddVertex}
-                        onMoveVertex={() => { }}
+                        boundary={gallery.perimeter}
+                        obstacles={gallery.holes}
                         width={850}
                         height={550}
+                        onChange={handleChange}
+                        readonly={false}
                     />
                 </Container>
             </Container>
         </Body>
-    )
+    );
 }
 
-export default App
+export default App;

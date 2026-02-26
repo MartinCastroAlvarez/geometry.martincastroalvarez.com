@@ -7,15 +7,15 @@ interface BodyProps {
 }
 
 export const Body: React.FC<BodyProps> = ({ children }) => {
-    const { isMobile } = useDevice();
-    const sideSize = isMobile ? 0 : 2;
-    const middleSize = isMobile ? 12 : 8;
+    const { isMobile, isTablet } = useDevice();
+    const sideSize = isMobile || isTablet ? 0 : 2;
+    const middleSize = isMobile || isTablet ? 12 : 8;
 
     return (
         <div className="geometry-body min-h-screen font-sans bg-dark">
-            <Container padded spaced size={12}>
+            <Container size={12}>
                 <Container size={sideSize} />
-                <Container size={middleSize} padded spaced>
+                <Container size={middleSize}>
                     {children}
                 </Container>
                 <Container size={sideSize} />
