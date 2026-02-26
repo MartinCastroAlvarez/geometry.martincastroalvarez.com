@@ -1,5 +1,6 @@
 import * as cdk from 'aws-cdk-lib'
 import * as s3 from 'aws-cdk-lib/aws-s3'
+import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment'
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront'
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins'
 import * as acm from 'aws-cdk-lib/aws-certificatemanager'
@@ -255,14 +256,14 @@ class GeometryStack extends cdk.Stack {
       )
     })
 
-    // new s3deploy.BucketDeployment(this, 'GeometryDeployWebsite', {
-    //   sources: [s3deploy.Source.asset('./dist')],
-    //   destinationBucket: webBucket,
-    //   distribution,
-    //   distributionPaths: ['/*'],
-    //   prune: true,
-    //   retainOnDelete: false,
-    // })
+    new s3deploy.BucketDeployment(this, 'GeometryDeployWebsite', {
+      sources: [s3deploy.Source.asset(join(__dirname, 'apps', 'web', 'dist'))],
+      destinationBucket: webBucket,
+      distribution,
+      distributionPaths: ['/*'],
+      prune: true,
+      retainOnDelete: false,
+    })
 
     new cdk.CfnOutput(this, 'WebBucketName', { value: webBucket.bucketName, exportName: 'GeometryWebBucketName' })
     new cdk.CfnOutput(this, 'ApiBucketName', { value: apiBucket.bucketName, exportName: 'GeometryApiBucketName' })

@@ -5,3 +5,12 @@ cdk.out/
 api/__pycache__/
 tests/__pycache__/
 api/*/__pycache__/
+apps/*/node_modules/
+apps/web/node_modules/
+packages/*/node_modules/
+packages/*/dist/
+apps/*/dist/
+apps/web/dist/
+.turbo/
+apps/*/.turbo/
+packages/*/.turbo/

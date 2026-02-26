@@ -8,7 +8,6 @@ from indexes.gallery import ArtGalleryPublicIndex
 from models.gallery import ArtGalleryDict
 from queries.base import DetailsQuery
 from queries.base import ListQuery
-from queries.private import PrivateQuery
 from queries.request import DetailsQueryRequest
 from queries.request import ListQueryRequest
 from queries.response import DetailsQueryResponse
@@ -31,11 +30,8 @@ class ArtGalleryListQuery(ListQuery[ListQueryResponse[ArtGalleryDict]]):
         }
 
 
-class ArtGalleryDetailsQuery(
-    PrivateQuery[DetailsQueryRequest, DetailsQueryResponse[ArtGalleryDict]],
-    DetailsQuery[DetailsQueryResponse[ArtGalleryDict]],
-):
-    """Get a single gallery by id from the repository."""
+class ArtGalleryDetailsQuery(DetailsQuery[DetailsQueryResponse[ArtGalleryDict]]):
+    """Get a single gallery by id from the repository. Public query; no user check."""
 
     def query(self, validated_input: DetailsQueryRequest) -> DetailsQueryResponse[ArtGalleryDict]:
         repo = ArtGalleryRepository()

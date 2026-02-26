@@ -23,7 +23,7 @@ The [lab](lab/) directory contains a Python prototype and example galleries. Eac
 
 ## API test coverage
 
-Backend coverage (pytest, `npm run build:api:coverage`). Required minimum 90%.
+Backend coverage (pytest, `pnpm run build:api:coverage`). Required minimum 90%.
 
 ```
 Name                             Stmts   Miss  Cover   Missing
@@ -114,12 +114,14 @@ Required test coverage of 90% reached. Total coverage: 92.81%
 
 ## Build, deploy, and test
 
-Use **Node.js 25** for npm and CDK (e.g. run `nvm use 25` if using nvm).
+Use **Node.js 25** and **pnpm** (e.g. run `nvm use 25` if using nvm; install pnpm with `npm install -g pnpm` if needed).
 
 From the project root:
 
-- **Install and bootstrap:** `npm run init` (uses AWS profile `martin`; run `npm run update` to only install dependencies).
-- **Build:** `npm run build` (runs `build:api` and `build:cdk`). Use `npm run build:api` or `npm run build:cdk` for specific parts.
-- **Deploy:** `npm run deploy` (update, build, CDK deploy, then CloudFront invalidation via `npm run publish`).
-- **Publish (invalidation only):** `npm run publish` (invalidates the geometry CloudFront distribution using `GeometryStack` / `GeometryDistributionId` from `outputs.json`).
-- **Test:** `npm run test` (runs `test:lab`). Use `npm run test:lab:1` … `npm run test:lab:10` to run `lab/example1.py` … `lab/example10.py`.
+- **Install and bootstrap:** `pnpm run init` (uses AWS profile `martin`; run `pnpm run update` to only install dependencies).
+- **Dev (web app):** `pnpm run dev` (starts the Art Gallery editor at http://localhost:5174 with hardcoded Google Tag ID).
+- **Build:** `pnpm run build` (runs `build:api` and `build:cdk`). Use `pnpm run build:api` or `pnpm run build:cdk` for specific parts. Use `pnpm run build:web` to build the web app, or `pnpm run build:web:with-tag` to build with Google Analytics ID from secrets.
+- **Build all (for deploy):** `pnpm run build:all` (API, CDK, and web app with Google Tag).
+- **Deploy:** `pnpm run deploy` (update, build all, CDK deploy, then CloudFront invalidation via `pnpm run publish`).
+- **Publish (invalidation only):** `pnpm run publish` (invalidates the geometry CloudFront distribution using `GeometryStack` / `GeometryDistributionId` from `outputs.json`).
+- **Test:** `pnpm run test` (runs `test:lab`). Use `pnpm run test:lab:1` … `pnpm run test:lab:10` to run `lab/example1.py` … `lab/example10.py`.

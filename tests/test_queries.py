@@ -34,11 +34,9 @@ class TestDetailsQuery:
     """Test DetailsQuery validate."""
 
     def test_details_query_validate_accepts_id(self):
-        from models import User
-
         from queries.galleries import ArtGalleryDetailsQuery
 
-        query = ArtGalleryDetailsQuery(user=User.test())
+        query = ArtGalleryDetailsQuery()
         validated = query.validate({"id": "gallery-123"})
         assert validated["id"] is not None
         assert str(validated["id"]) == "gallery-123"
