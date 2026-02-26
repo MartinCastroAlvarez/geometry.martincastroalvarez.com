@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "login": "Login",
+    "logout": "Logout",
+    "jobs": "Jobs",
+    "newArtGallery": "New Art Gallery"
+  },
+  "toolbar": {
+    "vertices": "vertices",
+    "closed": "Closed",
+    "open": "Open",
+    "undo": "Undo",
+    "hole": "Hole",
+    "close": "Close",
+    "clear": "Clear",
+    "clearConfirm": "Delete everything?",
+    "addVertices": "Add {{count}} more vertex to close",
+    "addVerticesPlural": "Add {{count}} more vertices to close",
+    "clickToClose": "Click near the first point (green) to close"
+  },
+  "common": {
+    "defaultConfirmMessage": "Are you sure?"
+  }
+}

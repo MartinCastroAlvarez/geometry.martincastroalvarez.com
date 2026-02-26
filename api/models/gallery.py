@@ -10,6 +10,7 @@ from typing import Any
 
 from attributes import Email
 from attributes import Identifier
+from attributes import Title
 from attributes import Point
 from attributes import Timestamp
 from geometry import ConvexComponent
@@ -28,6 +29,7 @@ class ArtGalleryDict(ModelDict):
     obstacles: dict[str, Any]
     owner_email: str
     owner_job_id: str
+    title: str
     ears: dict[str, Any]
     convex_components: dict[str, Any]
     guards: dict[str, Any]
@@ -49,6 +51,7 @@ class ArtGallery(Model):
     boundary: Polygon
     owner_email: Email
     owner_job_id: Identifier
+    title: Title
     created_at: Timestamp = field(default_factory=Timestamp.now)
     updated_at: Timestamp = field(default_factory=Timestamp.now)
     obstacles: Table[Polygon] = field(default_factory=Table)
@@ -71,6 +74,7 @@ class ArtGallery(Model):
             obstacles=Table.unserialize([Polygon.unserialize(v) for v in data.get("obstacles", {}).values()]),
             owner_email=Email(data.get("owner_email")),
             owner_job_id=Identifier(data.get("owner_job_id")),
+            title=Title(data.get("title", "Untitled Art Gallery")),
             created_at=Timestamp(data.get("created_at")),
             updated_at=Timestamp(data.get("updated_at")),
             ears=Table.unserialize([Ear.unserialize(v) for v in data.get("ears", {}).values()]),
@@ -86,6 +90,7 @@ class ArtGallery(Model):
             "obstacles": self.obstacles.serialize(),
             "owner_email": str(self.owner_email),
             "owner_job_id": str(self.owner_job_id),
+            "title": str(self.title),
             "created_at": str(self.created_at),
             "updated_at": str(self.updated_at),
             "ears": self.ears.serialize(),

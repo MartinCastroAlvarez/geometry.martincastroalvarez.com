@@ -1,75 +1,80 @@
 @import "tailwindcss";
 
-/* Custom colors (Tailwind theme) */
+/* ===== GEOMETRY PALETTE: Warm minimal ===== */
 @theme {
-  --color-x-white: #ffffff;
-  --color-x-gray: #e0e0e0;
-  --color-x-dark: rgba(55, 65, 81, 1);
+  /* Surfaces */
+  --color-x-surface: rgba(255, 250, 245, 0.12);
+  --color-x-surface-strong: rgba(255, 250, 245, 0.18);
+  /* Text */
+  --color-x-text: #f5f0e8;
+  --color-x-text-muted: #c4b8a8;
+  --color-x-dark: #a89888;
+  /* Legacy aliases (Container solid, etc.) */
+  --color-x-white: #faf8f5;
+  --color-x-gray: rgba(255, 250, 245, 0.15);
+  /* Borders */
+  --color-x-border: rgba(255, 250, 245, 0.08);
+  --color-x-border-subtle: rgba(255, 250, 245, 0.04);
+}
+
+/* .geometry-body: diagonal gradient (warm brown to dark) */
+@layer components {
+    .geometry-body {
+        min-height: 100vh;
+        background: linear-gradient(to bottom right, #4a2c1a 0%, #1a0f08 100%);
+    }
 }
 
 /* Ensure Tailwind scans the UI package (workspace) for dynamic classes */
 @source "../../packages/ui/src";
 
-/* Safelist Container props: padded, spaced, rounded (dynamic class names) */
-@source inline("p-4 gap-2 rounded-xl rounded-full overflow-hidden bg-x-gray bg-x-white text-x-dark border border-x-gray grid grid-cols-12 w-full col-span-1 col-span-2 col-span-3 col-span-4 col-span-5 col-span-6 col-span-7 col-span-8 col-span-9 col-span-10 col-span-11 col-span-12");
+/* Safelist Container props */
+@source inline("p-4 gap-2 rounded-xl rounded-lg rounded-full overflow-hidden overflow-visible bg-x-gray bg-x-white bg-x-surface bg-x-surface-strong text-x-dark text-x-text text-x-text-muted border border-x-gray border-x-border grid grid-cols-12 w-full flex flex-col col-span-1 col-span-2 col-span-3 col-span-4 col-span-5 col-span-6 col-span-7 col-span-8 col-span-9 col-span-10 col-span-11 col-span-12 cursor-pointer");
 
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  /* Editor colors (read by Konva canvas) - warm palette */
+  --editor-bg: rgba(26, 15, 8, 0.85);
+  --editor-border: rgba(255, 250, 245, 0.06);
+  --editor-vertex: #d4a574;
+  --editor-vertex-active: #e8b87c;
+  --editor-vertex-first: #c9a060;
+  --editor-edge: rgba(255, 255, 255, 0.35);
+  --editor-edge-closed: #c9a060;
+  --editor-stroke: rgba(26, 15, 8, 0.9);
+  --editor-stroke-hover: #f5f0e8;
+
+  font-family: Inter, system-ui, -apple-system, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
+  color: #f5f0e8;
+  background-color: transparent;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+html {
+  height: 100%;
+  min-height: 100vh;
+}
+
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
+  height: 100%;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 320px;
 }
 
 #root {
   width: 100%;
-  margin: 0 auto;
+  height: 100%;
+  min-height: 100vh;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   text-align: left;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-
-button:hover {
-  border-color: #646cff;
-}
-
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-
-  button {
-    background-color: #f9f9f9;
-  }
 }

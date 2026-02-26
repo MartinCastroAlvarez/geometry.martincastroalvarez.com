@@ -24,6 +24,7 @@ class ArtGalleryPublishMutationResponse(MutationResponse):
     obstacles: dict[str, Any]
     owner_email: str
     owner_job_id: str
+    title: str
     ears: dict[str, Any]
     convex_components: dict[str, Any]
     guards: dict[str, Any]

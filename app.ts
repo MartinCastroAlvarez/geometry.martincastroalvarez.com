@@ -234,6 +234,7 @@ class GeometryStack extends cdk.Stack {
     const jobIdResource = jobsResource.addResource('{id}')
     jobIdResource.addMethod('GET', lambdaIntegration)
     jobIdResource.addMethod('POST', lambdaIntegration)
+    jobIdResource.addMethod('PATCH', lambdaIntegration)
     jobIdResource.addMethod('OPTIONS', lambdaIntegration)
 
     const distribution = new cloudfront.Distribution(this, 'GeometryDistribution', {

@@ -12,7 +12,7 @@ export const Body: React.FC<BodyProps> = ({ children }) => {
     const middleSize = isMobile || isTablet ? 12 : 8;
 
     return (
-        <div className="geometry-body min-h-screen font-sans bg-dark">
+        <div className="geometry-body min-h-screen flex flex-col flex-1 font-sans">
             <Container size={12}>
                 <Container size={sideSize} />
                 <Container size={middleSize}>

@@ -40,6 +40,7 @@ export interface GeometryApiArtGallery {
     obstacles: Record<string, unknown>;
     owner_email: string;
     owner_job_id: string;
+    title: string;
     ears?: Record<string, unknown>;
     convex_components?: Record<string, unknown>;
     guards?: Record<string, unknown>;
@@ -80,6 +81,14 @@ export class GeometryApiClient {
     async unpublish(jobId: string): Promise<{ deleted: boolean; id: string }> {
         const response = await fetchWithAuth(`${this.baseUrl}/v1/jobs/${jobId}`, {
             method: "DELETE",
+        });
+        return response.json();
+    }
+
+    async updateJob(jobId: string, meta: Record<string, string>): Promise<GeometryApiJob> {
+        const response = await fetchWithAuth(`${this.baseUrl}/v1/jobs/${jobId}`, {
+            method: "PATCH",
+            body: JSON.stringify({ meta }),
         });
         return response.json();
     }

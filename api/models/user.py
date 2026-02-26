@@ -12,6 +12,7 @@ from typing import ClassVar
 from attributes import Email
 from attributes import Identifier
 from attributes import Signature
+from attributes import Title
 from attributes import Timestamp
 from attributes import Url
 from exceptions import ValidationError
@@ -54,10 +55,12 @@ class User(Model):
     created_at: Timestamp = field(default_factory=Timestamp.now)
     updated_at: Timestamp = field(default_factory=Timestamp.now)
     email: Email = field(default_factory=lambda: User.ANONYMOUS_EMAIL)
-    name: str = ""
+    name: Title = field(default_factory=lambda: Title("", min_length=0, max_length=200))
     avatar_url: Url | None = None
 
     def __post_init__(self) -> None:
+        if isinstance(self.name, str):
+            self.name = Title(self.name, min_length=0, max_length=200)
         if isinstance(self.email, str):
             self.email = Email(self.email) if self.email.strip() else User.ANONYMOUS_EMAIL
         if isinstance(self.avatar_url, str) and self.avatar_url.strip():
@@ -101,7 +104,7 @@ class User(Model):
         return cls(
             id=Identifier(Signature(email)),
             email=email,
-            name=str(data.get("name", "")),
+            name=Title(str(data.get("name", "")), min_length=0, max_length=200),
             avatar_url=Url(str(raw_avatar)) if raw_avatar else None,
             created_at=Timestamp(data.get("created_at")),
             updated_at=Timestamp(data.get("updated_at")),
@@ -111,7 +114,7 @@ class User(Model):
         return {
             "id": str(self.id),
             "email": str(self.email),
-            "name": self.name,
+            "name": str(self.name),
             "avatar_url": str(self.avatar_url) if self.avatar_url is not None else None,
             "created_at": str(self.created_at),
             "updated_at": str(self.updated_at),

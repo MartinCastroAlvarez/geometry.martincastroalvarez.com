@@ -9,6 +9,7 @@ from enums import Method
 from mutations import ArtGalleryHideMutation
 from mutations import ArtGalleryPublishMutation
 from mutations import JobMutation
+from mutations import JobUpdateMutation
 from mutations.base import Mutation
 from queries import ArtGalleryDetailsQuery
 from queries import ArtGalleryListQuery
@@ -22,6 +23,7 @@ URLS: dict[Path, dict[Method, Type[Query | Mutation]]] = {
     Path("v1/jobs/"): {
         Method.GET: JobDetailsQuery,
         Method.POST: ArtGalleryPublishMutation,
+        Method.PATCH: JobUpdateMutation,
         Method.DELETE: ArtGalleryHideMutation,
     },
     Path("v1/jobs"): {Method.GET: JobListQuery, Method.POST: JobMutation},

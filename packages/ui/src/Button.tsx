@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import Confirm from "./Confirm";
 import { Container } from "./Container";
-
-const useTranslation = (_ns: string) => ({ t: (key: string) => key });
+import { useLocale } from "@geometry/i18n";
 
 interface ButtonsProps {
     children: React.ReactNode;
@@ -42,21 +41,22 @@ export const Button: React.FC<ButtonProps> = ({
     icon,
     confirm,
 }) => {
-    const { t } = useTranslation("components");
+    const { t } = useLocale();
     const [showConfirm, setShowConfirm] = useState(false);
 
     if (!children && !icon) return null;
 
     const baseClasses =
-        "inline-flex items-center justify-center font-medium rounded-xl transition-colors duration-200 focus:outline-none focus:ring-0 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer font-normal border-0";
+        "inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 focus:outline-none focus:ring-0 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer font-normal";
 
-    const variantClasses = "bg-neutral-700/80 text-neutral-200 hover:bg-neutral-600/90 active:bg-neutral-600";
+    const variantClasses =
+        "bg-transparent text-x-text border border-x-border hover:bg-x-surface hover:border-x-border active:bg-x-surface-strong";
 
     const getSizeClasses = (): string => {
-        if (xs) return "h-6 px-1.5 text-xs";
-        if (sm) return "h-7 px-1.5 text-xs";
-        if (lg) return "h-12 px-4 text-base";
-        return "h-10 px-3 text-sm";
+        if (xs) return "h-7 px-2 text-xs";
+        if (sm) return "h-8 px-3 text-sm";
+        if (lg) return "h-11 px-5 text-base";
+        return "h-9 px-4 text-sm";
     };
 
     const sizeClasses = getSizeClasses();
@@ -66,7 +66,7 @@ export const Button: React.FC<ButtonProps> = ({
         if (!React.isValidElement(iconElement)) return iconElement;
         const element = iconElement as React.ReactElement<{ className?: string }>;
         const existingClassName = element.props.className || "";
-        return React.cloneElement(element, { className: `${existingClassName} text-neutral-200`.trim() });
+        return React.cloneElement(element, { className: `${existingClassName} text-x-text-muted`.trim() });
     };
 
     const handleClick = () => {
@@ -83,7 +83,7 @@ export const Button: React.FC<ButtonProps> = ({
 
     const getConfirmMessage = (): string => {
         if (typeof confirm === "string") return confirm;
-        return t("defaultConfirmMessage");
+        return t("common.defaultConfirmMessage");
     };
 
     return (

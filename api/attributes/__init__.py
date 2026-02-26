@@ -15,6 +15,7 @@ from attributes.receipt import ReceiptHandle
 from attributes.signature import Signature
 from attributes.slug import Slug
 from attributes.timestamp import Timestamp
+from attributes.title import Title
 from attributes.url import Url
 
 _GEOMETRY_NAMES = frozenset(
@@ -60,6 +61,7 @@ __all__ = [
     "Signature",
     "Slug",
     "Timestamp",
+    "Title",
     "Url",
     "Walk",
 ]

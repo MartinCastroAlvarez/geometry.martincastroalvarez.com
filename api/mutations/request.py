@@ -34,3 +34,10 @@ class JobMutationRequest(MutationRequest):
 
     boundary: Polygon
     obstacles: Table[Polygon]
+
+
+class JobUpdateMutationRequest(MutationRequest):
+    """Update job: job_id from path; metadata only."""
+
+    job_id: Identifier
+    meta: dict[str, str]

@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "login": "Login",
+    "logout": "Logout",
+    "jobs": "Jobs",
+    "newArtGallery": "Nueva Galería de Arte"
+  },
+  "toolbar": {
+    "vertices": "vértices",
+    "closed": "Cerrado",
+    "open": "Abierto",
+    "undo": "Deshacer",
+    "hole": "Agujero",
+    "close": "Cerrar",
+    "clear": "Limpiar",
+    "clearConfirm": "¿Borrar todo?",
+    "addVertices": "Agregá {{count}} vértice más para cerrar",
+    "addVerticesPlural": "Agregá {{count}} vértices más para cerrar",
+    "clickToClose": "Hacé click cerca del primer punto (verde) para cerrar"
+  },
+  "common": {
+    "defaultConfirmMessage": "¿Estás seguro?"
+  }
+}

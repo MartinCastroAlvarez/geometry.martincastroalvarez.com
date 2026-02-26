@@ -8,6 +8,7 @@ module.exports = {
     safelist: [
         "rounded-full",
         "rounded-xl",
+        "rounded-lg",
         "overflow-hidden",
         "p-4",
         "gap-2",
@@ -15,13 +16,16 @@ module.exports = {
     theme: {
         extend: {
             colors: {
-                dark: "#1a1a1a",
-                "x-white": "#ffffff",
-                "x-gray": "#e0e0e0",
-                "x-dark": "rgba(55, 65, 81, 1)",
-                primary: "#0f62fe",
+                "x-surface": "rgba(255, 250, 245, 0.12)",
+                "x-surface-strong": "rgba(255, 250, 245, 0.18)",
+                "x-text": "#f5f0e8",
+                "x-text-muted": "#c4b8a8",
+                "x-dark": "#a89888",
+                "x-white": "#faf8f5",
+                "x-gray": "rgba(255, 250, 245, 0.15)",
+                "x-border": "rgba(255, 250, 245, 0.08)",
+                "x-border-subtle": "rgba(255, 250, 245, 0.04)",
             },
         },
     },
-    plugins: [],
-}
+};

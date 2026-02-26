@@ -99,6 +99,7 @@ export interface ApiArtGallery {
     obstacles: Record<string, ApiPolygon>;
     owner_email: string;
     owner_job_id: string;
+    title?: string;
     ears?: Record<string, unknown>;
     convex_components?: Record<string, unknown>;
     guards?: Record<string, ApiPoint>;
@@ -119,6 +120,7 @@ export class ArtGalleryModel {
             obstacles: typeof obstacles === "object" ? obstacles : {},
             owner_email: String(d.owner_email ?? ""),
             owner_job_id: String(d.owner_job_id ?? ""),
+            title: d.title != null ? String(d.title) : undefined,
             ears: (d.ears as Record<string, unknown>) ?? {},
             convex_components: (d.convex_components as Record<string, unknown>) ?? {},
             guards,

@@ -5,7 +5,7 @@ export const Toaster = () => (
         position="bottom-right"
         expand={true}
         richColors
-        theme="system"
+        theme="dark"
         className="geometry-toaster toaster-wrapper"
     />
 );

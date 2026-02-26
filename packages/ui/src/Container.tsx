@@ -8,6 +8,7 @@ interface ContainerProps {
     spaced?: boolean;
     rounded?: boolean;
     solid?: boolean;
+    overflowVisible?: boolean;
     left?: boolean;
     center?: boolean;
     right?: boolean;
@@ -52,6 +53,7 @@ export const Container: React.FC<ContainerProps> = ({
     spaced = false,
     rounded = false,
     solid = false,
+    overflowVisible = false,
     left = false,
     center = true,
     right = false,
@@ -75,7 +77,7 @@ export const Container: React.FC<ContainerProps> = ({
     });
 
     const classes: string[] = [name];
-    classes.push("overflow-hidden");
+    classes.push(overflowVisible ? "overflow-visible" : "overflow-hidden");
 
     if (hasContainerChildren) {
         classes.push("grid", "grid-cols-12", "w-full");
@@ -83,7 +85,7 @@ export const Container: React.FC<ContainerProps> = ({
         else if (middle) classes.push("items-center");
         else classes.push("items-start");
     } else if (middle || bottom) {
-        classes.push("flex", "w-full");
+        classes.push("flex", "flex-col", "w-full");
         if (bottom) classes.push("items-end");
         else if (middle) classes.push("items-center");
         if (left) classes.push("justify-start");
@@ -95,7 +97,7 @@ export const Container: React.FC<ContainerProps> = ({
     if (padded) classes.push("p-4");
     if (spaced) classes.push("gap-2");
     if (rounded) classes.push("rounded-xl");
-    if (solid) classes.push("bg-x-gray", "text-x-dark");
+    if (solid) classes.push("bg-x-surface", "text-x-text", "border", "border-x-border");
     if (left) classes.push("text-left");
     else if (right) classes.push("text-right");
     else if (center) classes.push("text-center");

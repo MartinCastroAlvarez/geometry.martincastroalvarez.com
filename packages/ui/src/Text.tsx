@@ -34,7 +34,7 @@ export const Text: React.FC<TextProps> = ({
 
     return (
         <Container center name="geometry-text">
-            <div onClick={onClick} style={maxWidthStyle} className={`display-block w-full mx-auto text-neutral-300 font-normal leading-relaxed ${sizeClass} ${alignmentClass} ${truncateClass}`}>
+            <div onClick={onClick} style={maxWidthStyle} className={`display-block w-full mx-auto text-x-text-muted font-normal leading-relaxed ${sizeClass} ${alignmentClass} ${truncateClass}`}>
                 {children}
             </div>
         </Container>

@@ -5,7 +5,7 @@ interface ReactQueryProviderProps {
     children: ReactNode
 }
 
-export function ReactQueryProvider({ children }: ReactQueryProviderProps) {
+export const ReactQueryProvider = ({ children }: ReactQueryProviderProps) => {
     const [queryClient] = useState(() => new QueryClient({
         defaultOptions: {
             queries: {
@@ -21,4 +21,4 @@ export function ReactQueryProvider({ children }: ReactQueryProviderProps) {
             {children}
         </TanStackQueryClientProvider>
     )
-}
+};

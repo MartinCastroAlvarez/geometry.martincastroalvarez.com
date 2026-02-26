@@ -1,4 +1,5 @@
 import { Container, Button, Text, Buttons } from "@geometry/ui";
+import { useLocale } from "@geometry/i18n";
 import { Undo, Target, Check, Trash2 } from "lucide-react";
 
 export interface ToolbarProps {
@@ -12,7 +13,7 @@ export interface ToolbarProps {
     readonly?: boolean;
 }
 
-export function Toolbar({
+export const Toolbar = ({
     vertexCount,
     isClosed,
     isAddingHole,
@@ -21,19 +22,20 @@ export function Toolbar({
     onClosePolygon,
     onClear,
     readonly = false,
-}: ToolbarProps) {
+}: ToolbarProps) => {
+    const { t } = useLocale();
     return (
         <Container solid padded spaced rounded>
             <Container middle spaced size={12}>
                 <Container size={4} left middle>
-                    <Text sm>{vertexCount} vértices</Text>
+                    <Text sm>{vertexCount} {t("toolbar.vertices")}</Text>
                     {isClosed ? (
                         <Container middle spaced left>
                             <Check size={14} />
-                            <Text sm>Cerrado</Text>
+                            <Text sm>{t("toolbar.closed")}</Text>
                         </Container>
                     ) : vertexCount >= 3 ? (
-                        <Text sm>Abierto</Text>
+                        <Text sm>{t("toolbar.open")}</Text>
                     ) : null}
                 </Container>
                 {!readonly && (
@@ -45,7 +47,7 @@ export function Toolbar({
                             sm
                             icon={<Undo size={14} />}
                         >
-                            Deshacer
+                            {t("toolbar.undo")}
                         </Button>
                         <Button
                             onClick={onStartHole}
@@ -53,7 +55,7 @@ export function Toolbar({
                             sm
                             icon={<Target size={14} />}
                         >
-                            Agujero
+                            {t("toolbar.hole")}
                         </Button>
                         <Button
                             onClick={onClosePolygon}
@@ -61,10 +63,10 @@ export function Toolbar({
                             sm
                             icon={<Check size={14} />}
                         >
-                            Cerrar
+                            {t("toolbar.close")}
                         </Button>
-                        <Button onClick={onClear} sm confirm="¿Borrar todo?" icon={<Trash2 size={14} />}>
-                            Limpiar
+                        <Button onClick={onClear} sm confirm={t("toolbar.clearConfirm")} icon={<Trash2 size={14} />}>
+                            {t("toolbar.clear")}
                         </Button>
                         </Buttons>
                     </Container>
@@ -74,11 +76,11 @@ export function Toolbar({
                 <Container center>
                     <Text xs center>
                         {vertexCount < 3
-                            ? `Agregá ${3 - vertexCount} vértice${3 - vertexCount > 1 ? "s" : ""} más para cerrar`
-                            : "Hacé click cerca del primer punto (verde) para cerrar"}
+                            ? t(3 - vertexCount > 1 ? "toolbar.addVerticesPlural" : "toolbar.addVertices", { count: 3 - vertexCount })
+                            : t("toolbar.clickToClose")}
                     </Text>
                 </Container>
             )}
         </Container>
     );
-}
+};

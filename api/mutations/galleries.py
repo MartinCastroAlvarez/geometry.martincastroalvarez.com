@@ -36,11 +36,13 @@ class ArtGalleryPublishMutation(PrivateMutation[ArtGalleryPublishMutationRequest
         if not job.is_finished():
             raise ValidationError("Job must be successfully finished to publish")
         gallery_id = gallery_id_from_job_and_user(job_id, self.user.email)
+        title: str = job.meta.get("title", "Untitled Art Gallery") if isinstance(job.meta.get("title"), str) else "Untitled Art Gallery"
         data: dict[str, Any] = {
             **job.stdout,
             "id": str(gallery_id),
             "owner_email": str(self.user.email),
             "owner_job_id": str(job_id),
+            "title": title,
             "created_at": str(job.created_at),
             "updated_at": str(job.updated_at),
         }

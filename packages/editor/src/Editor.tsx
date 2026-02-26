@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Stage, Layer } from "react-konva";
 import { Point, Polygon } from "@geometry/domain";
 import { EditorModel, type EditorVertex } from "./models";
 import { Edge } from "./Edge";
 import { Vertex } from "./Vertex";
-
 export interface EditorProps {
     boundary: Polygon;
     obstacles: Polygon[];
@@ -82,14 +81,14 @@ function isInside(a: EditorVertex[], b: EditorVertex[]): boolean {
     return poly.contains(p);
 }
 
-export function Editor({
+export const Editor = ({
     boundary,
     obstacles,
     width,
     height,
     onChange,
     readonly = false,
-}: EditorProps) {
+}: EditorProps) => {
     const [vertices, setVertices] = useState<EditorVertex[]>(() => [
         ...EditorModel.fromDomain(boundary),
         ...obstacles.flatMap((o) => EditorModel.fromDomain(o)),
@@ -108,6 +107,8 @@ export function Editor({
         return e;
     });
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
+    const [selectedEdgeIndex, setSelectedEdgeIndex] = useState<number | null>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const bv = EditorModel.fromDomain(boundary);
@@ -170,28 +171,77 @@ export function Editor({
         }
     }, [boundaryPoly, holePolys, notifyChange]);
 
+    const handleEdgeClick = useCallback(
+        (edgeIndex: number, x: number, y: number) => {
+            if (readonly) return;
+            if (selectedEdgeIndex === edgeIndex) {
+                const [a, b] = edges[edgeIndex];
+                const newVertex: EditorVertex = {
+                    id: `v-${Date.now()}-${x}-${y}`,
+                    x,
+                    y,
+                };
+                const newIndex = vertices.length;
+                setVertices((v) => [...v, newVertex]);
+                setEdges((e) => {
+                    const next = e.filter((_, i) => i !== edgeIndex);
+                    next.push([a, newIndex], [newIndex, b]);
+                    return next;
+                });
+                setSelectedEdgeIndex(null);
+                setActiveIndex(newIndex);
+            } else {
+                setSelectedEdgeIndex(edgeIndex);
+                setActiveIndex(null);
+            }
+            containerRef.current?.focus();
+        },
+        [readonly, selectedEdgeIndex, edges, vertices.length]
+    );
+
     const handleStageClick = useCallback(
         (e: { target: { getStage: () => unknown } }) => {
             if (readonly) return;
-            const stage = e.target.getStage() as {
-                getPointerPosition: () => { x: number; y: number } | null;
-            } | null;
-            const pos = stage?.getPointerPosition?.();
+            const stage = e.target.getStage();
+            if (!stage || e.target !== stage) return;
+            setSelectedEdgeIndex(null);
+            const pos = (stage as { getPointerPosition: () => { x: number; y: number } | null })
+                .getPointerPosition?.();
             if (!pos) return;
             const newVertex: EditorVertex = {
                 id: `v-${Date.now()}-${pos.x}-${pos.y}`,
                 x: pos.x,
                 y: pos.y,
             };
+            const newIndex = vertices.length;
             setVertices((prev) => [...prev, newVertex]);
-            setActiveIndex(null);
+            setActiveIndex(newIndex);
+            containerRef.current?.focus();
         },
-        [readonly]
+        [readonly, vertices.length]
     );
 
     const handleVertexClick = useCallback(
         (index: number) => {
             if (readonly) return;
+
+            if (selectedEdgeIndex !== null) {
+                const [a, b] = edges[selectedEdgeIndex];
+                if (index === a || index === b) {
+                    setSelectedEdgeIndex(null);
+                    return;
+                }
+                setEdges((prev) => {
+                    const next = prev.filter((_, i) => i !== selectedEdgeIndex);
+                    next.push([a, index], [index, b]);
+                    return next;
+                });
+                setSelectedEdgeIndex(null);
+                setActiveIndex(index);
+                containerRef.current?.focus();
+                return;
+            }
+
             if (activeIndex === index) {
                 setActiveIndex(null);
                 return;
@@ -209,12 +259,14 @@ export function Editor({
                 if (!existing.has(key(activeIndex, index))) {
                     setEdges((prev) => [...prev, [activeIndex, index]]);
                 }
-                setActiveIndex(null);
+                setActiveIndex(index);
+                containerRef.current?.focus();
                 return;
             }
             setActiveIndex(index);
+            containerRef.current?.focus();
         },
-        [readonly, activeIndex, degree, edges]
+        [readonly, activeIndex, degree, edges, selectedEdgeIndex]
     );
 
     const handleVertexDrag = useCallback(
@@ -227,6 +279,36 @@ export function Editor({
             });
         },
         [readonly]
+    );
+
+    const handleKeyDown = useCallback(
+        (e: KeyboardEvent<HTMLDivElement>) => {
+            if (readonly) return;
+            if (e.key !== "Delete" && e.key !== "Backspace") return;
+
+            if (selectedEdgeIndex !== null) {
+                setEdges((prev) => prev.filter((_, i) => i !== selectedEdgeIndex));
+                setSelectedEdgeIndex(null);
+                e.preventDefault();
+                return;
+            }
+
+            if (activeIndex !== null) {
+                const idx = activeIndex;
+                setEdges((prev) =>
+                    prev
+                        .filter(([a, b]) => a !== idx && b !== idx)
+                        .map(([a, b]) => [
+                            a > idx ? a - 1 : a,
+                            b > idx ? b - 1 : b,
+                        ] as [number, number])
+                );
+                setVertices((prev) => prev.filter((_, i) => i !== idx));
+                setActiveIndex(null);
+                e.preventDefault();
+            }
+        },
+        [readonly, selectedEdgeIndex, activeIndex]
     );
 
     const cursor = readonly ? "default" : "crosshair";
@@ -251,27 +333,55 @@ export function Editor({
 
     return (
         <div
+            ref={containerRef}
+            tabIndex={-1}
+            role="application"
+            aria-label="Geometry editor"
+            onKeyDown={handleKeyDown}
             style={{
-                border: "2px solid rgba(100, 116, 139, 0.6)",
+                position: "relative",
+                width,
+                height,
+                minWidth: width,
+                minHeight: height,
+                flexShrink: 0,
                 borderRadius: 12,
                 overflow: "hidden",
-                background: "rgba(30, 41, 59, 0.5)",
+                outline: "none",
             }}
         >
+            <div
+                style={{
+                    position: "absolute",
+                    inset: 0,
+                    backgroundColor: "rgba(26, 15, 8, 0.85)",
+                    backgroundImage: `
+                        linear-gradient(to right, rgba(255, 250, 245, 0.04) 1px, transparent 1px),
+                        linear-gradient(to bottom, rgba(255, 250, 245, 0.04) 1px, transparent 1px)
+                    `,
+                    backgroundSize: "24px 24px",
+                }}
+            />
             <Stage
                 width={width}
                 height={height}
                 onClick={handleStageClick}
-                style={{ cursor, borderRadius: 10 }}
+                style={{
+                    position: "relative",
+                    zIndex: 1,
+                    cursor,
+                    borderRadius: 10,
+                }}
             >
                 <Layer>
-                    {allEdges.map(({ start, end, closed }, i) => (
+                    {allEdges.map(({ start, end }, i) => (
                         <Edge
                             key={`edge-${i}`}
                             start={start}
                             end={end}
-                            closed={closed}
-                            dashed={!closed}
+                            selected={selectedEdgeIndex === i}
+                            onClick={!readonly ? (x, y) => handleEdgeClick(i, x, y) : undefined}
+                            readonly={readonly}
                         />
                     ))}
                     {vertices.map((v, i) => (
@@ -282,11 +392,21 @@ export function Editor({
                             isActive={activeIndex === i}
                             onClick={() => handleVertexClick(i)}
                             onDragMove={!readonly ? (x, y) => handleVertexDrag(i, x, y) : undefined}
+                            onDragEnd={
+                                !readonly
+                                    ? () => {
+                                          setActiveIndex(i);
+                                          containerRef.current?.focus();
+                                      }
+                                    : undefined
+                            }
                             draggable={!readonly}
+                            dragBounds={readonly ? undefined : { width, height }}
+                            readonly={readonly}
                         />
                     ))}
                 </Layer>
             </Stage>
         </div>
     );
-}
+};

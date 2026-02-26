@@ -1,5 +1,6 @@
 export * from './Toast'
 export * from './Button'
+export * from './Toggle'
 export * from './Confirm'
 export * from './Container'
 export * from './Text'

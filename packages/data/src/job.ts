@@ -53,3 +53,16 @@ export function useUnpublish() {
         },
     });
 }
+
+export function useUpdateJob() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ jobId, meta }: { jobId: string; meta: Record<string, string> }) =>
+            geometryApiClient.updateJob(jobId, meta),
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: jobQueryKey(variables.jobId) });
+            queryClient.invalidateQueries({ queryKey: jobsQueryKey });
+            queryClient.invalidateQueries({ queryKey: ["galleries"] });
+        },
+    });
+}
