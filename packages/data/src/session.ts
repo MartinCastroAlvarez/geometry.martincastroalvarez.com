@@ -7,7 +7,7 @@
  * AUTH_REDIRECT_URL with return URL for post-login redirect.
  *
  * Example:
- *   const { data: user } = useSession();  // User | null
+ *   const { user } = useSession();  // User | null
  *   const logout = useLogout();  logout();  // redirect to login with returnUrl
  */
 
@@ -21,7 +21,7 @@ import { toDomainUser } from "./adapters";
 export { SESSION_QUERY_KEY } from "./constants";
 
 export const useSession = () => {
-    return useQuery({
+    const query = useQuery({
         queryKey: SESSION_QUERY_KEY,
         queryFn: async () => {
             const data = await authApiClient.getSession();
@@ -40,6 +40,8 @@ export const useSession = () => {
             return failureCount < 3;
         },
     });
+    const { data, isLoading, ...rest } = query;
+    return { ...rest, user: data, isLoading };
 };
 
 export const useLogout = () => {

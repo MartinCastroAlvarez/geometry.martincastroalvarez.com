@@ -10,6 +10,7 @@
 
 export * from './Edge'
 export * from './Editor'
+export * from './Editor.skeleton'
 export * from './Toolbar'
 export * from './types'
 export * from './adapters'

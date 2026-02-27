@@ -7,8 +7,8 @@
  * List supports pagination via nextToken/limit; single gallery is cached per id.
  *
  * Example:
- *   const { data } = useArtGalleries({ limit: 10 });
- *   const { data: gallery } = useArtGallery(galleryId);  // gallery.artGallery is ArtGallery
+ *   const { galleries } = useArtGalleries({ limit: 10 });
+ *   const { gallery } = useArtGallery(galleryId);  // gallery.artGallery is ArtGallery
  */
 
 import { useQuery } from "@tanstack/react-query";
@@ -24,7 +24,7 @@ import {
 export { GALLERIES_QUERY_KEY, GALLERY_QUERY_KEY } from "./constants";
 
 export const useArtGalleries = (params?: { nextToken?: string; limit?: number }) => {
-    return useQuery({
+    const query = useQuery({
         queryKey: [...GALLERIES_QUERY_KEY, params?.nextToken ?? "", params?.limit ?? 20],
         queryFn: async () => {
             const data = await geometryApiClient.getArtGalleries(params);
@@ -35,10 +35,12 @@ export const useArtGalleries = (params?: { nextToken?: string; limit?: number })
         },
         staleTime: STALE_TIME_GALLERIES_LIST_MS,
     });
+    const { data, isLoading, ...rest } = query;
+    return { ...rest, galleries: data, isLoading };
 };
 
 export const useArtGallery = (galleryId: string | null) => {
-    return useQuery({
+    const query = useQuery({
         queryKey: GALLERY_QUERY_KEY(galleryId ?? ""),
         queryFn: async () => {
             if (!galleryId) throw new Error("galleryId required");
@@ -48,4 +50,6 @@ export const useArtGallery = (galleryId: string | null) => {
         enabled: !!galleryId,
         staleTime: STALE_TIME_GALLERY_MS,
     });
+    const { data, isLoading, ...rest } = query;
+    return { ...rest, gallery: data, isLoading };
 };

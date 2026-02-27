@@ -14,7 +14,7 @@ import { useSession, useLogout } from "@geometry/data";
 import { HomePage, JobsPage, JobPage, GalleryPage, EditorPage } from "./pages";
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
-    const { data: user, isLoading } = useSession();
+    const { user, isLoading } = useSession();
     const logout = useLogout();
     useEffect(() => {
         if (!isLoading && !user) logout();

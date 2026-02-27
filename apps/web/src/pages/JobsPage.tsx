@@ -6,15 +6,15 @@
  * Protected by PrivateRoute.
  *
  * Example:
- *   const { data, isLoading } = useJobs();
- *   data?.records.map((job) => <Link to={`/jobs/${job.id}`}>...</Link>)
+ *   const { jobs, isLoading } = useJobs();
+ *   jobs?.records.map((job) => <Link to={`/jobs/${job.id}`}>...</Link>)
  */
 import { Link } from "react-router-dom";
 import { Container, Title, Text, Button, Badge } from "@geometry/ui";
 import { useJobs } from "@geometry/data";
 
 export const JobsPage = () => {
-    const { data, isLoading } = useJobs();
+    const { jobs, isLoading } = useJobs();
 
     return (
         <Container padded spaced size={12}>
@@ -23,10 +23,10 @@ export const JobsPage = () => {
                     My Jobs
                 </Title>
                 <Text center>
-                    {isLoading ? "Loading..." : `${data?.records.length ?? 0} job(s)`}
+                    {isLoading ? "Loading..." : `${jobs?.records.length ?? 0} job(s)`}
                 </Text>
             </Container>
-            {data?.records.map((job) => (
+            {jobs?.records.map((job) => (
                 <Container key={job.id} padded spaced size={12}>
                     <Link to={`/jobs/${job.id}`}>
                         <Button>

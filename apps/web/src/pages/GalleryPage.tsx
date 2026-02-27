@@ -12,7 +12,7 @@ import { useAnalytics, GoogleAnalyticsActions, GoogleAnalyticsCategories } from 
 
 export const GalleryPage = () => {
     const { id } = useParams<{ id: string }>();
-    const { data: gallery, isLoading } = useArtGallery(id ?? null);
+    const { gallery, isLoading } = useArtGallery(id ?? null);
     const { track } = useAnalytics();
 
     useEffect(() => {

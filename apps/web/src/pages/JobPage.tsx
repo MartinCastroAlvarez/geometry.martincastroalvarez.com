@@ -13,7 +13,7 @@ import { useAnalytics, GoogleAnalyticsActions, GoogleAnalyticsCategories } from 
 
 export const JobPage = () => {
     const { id } = useParams<{ id: string }>();
-    const { data: job, isLoading } = useJob(id ?? null);
+    const { job, isLoading } = useJob(id ?? null);
     const publish = usePublish();
     const unpublish = useUnpublish();
     const updateJob = useUpdateJob();

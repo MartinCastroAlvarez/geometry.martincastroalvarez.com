@@ -7,8 +7,8 @@
  * galleries caches so the UI stays in sync after publish/unpublish/update.
  *
  * Example:
- *   const { data } = useJobs({ limit: 20 });
- *   const { data: job } = useJob(jobId);
+ *   const { jobs } = useJobs({ limit: 20 });
+ *   const { job } = useJob(jobId);
  *   const publish = usePublish();  publish.mutate(jobId);
  *   const update = useUpdateJob(); update.mutate({ jobId, meta: { title: "New" } });
  */
@@ -27,7 +27,7 @@ import {
 export { JOBS_QUERY_KEY, JOB_QUERY_KEY } from "./constants";
 
 export const useJobs = (params?: { nextToken?: string; limit?: number }) => {
-    return useQuery({
+    const query = useQuery({
         queryKey: [...JOBS_QUERY_KEY, params?.nextToken ?? "", params?.limit ?? 20],
         queryFn: async () => {
             const data = await geometryApiClient.getJobs(params);
@@ -38,10 +38,12 @@ export const useJobs = (params?: { nextToken?: string; limit?: number }) => {
         },
         staleTime: STALE_TIME_JOBS_LIST_MS,
     });
+    const { data, isLoading, ...rest } = query;
+    return { ...rest, jobs: data, isLoading };
 };
 
 export const useJob = (jobId: string | null) => {
-    return useQuery({
+    const query = useQuery({
         queryKey: JOB_QUERY_KEY(jobId ?? ""),
         queryFn: async () => {
             if (!jobId) throw new Error("jobId required");
@@ -51,33 +53,37 @@ export const useJob = (jobId: string | null) => {
         enabled: !!jobId,
         staleTime: STALE_TIME_JOB_MS,
     });
+    const { data, isLoading, ...rest } = query;
+    return { ...rest, job: data, isLoading };
 };
 
 export const usePublish = () => {
     const queryClient = useQueryClient();
-    return useMutation({
+    const mutation = useMutation({
         mutationFn: (jobId: string) => geometryApiClient.publish(jobId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: GALLERIES_QUERY_KEY });
             queryClient.invalidateQueries({ queryKey: JOBS_QUERY_KEY });
         },
     });
+    return { ...mutation, isLoading: mutation.isPending };
 };
 
 export const useUnpublish = () => {
     const queryClient = useQueryClient();
-    return useMutation({
+    const mutation = useMutation({
         mutationFn: (jobId: string) => geometryApiClient.unpublish(jobId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: GALLERIES_QUERY_KEY });
             queryClient.invalidateQueries({ queryKey: JOBS_QUERY_KEY });
         },
     });
+    return { ...mutation, isLoading: mutation.isPending };
 };
 
 export const useUpdateJob = () => {
     const queryClient = useQueryClient();
-    return useMutation({
+    const mutation = useMutation({
         mutationFn: ({ jobId, meta }: { jobId: string; meta: Record<string, string> }) =>
             geometryApiClient.updateJob(jobId, meta),
         onSuccess: (_, variables) => {
@@ -86,4 +92,5 @@ export const useUpdateJob = () => {
             queryClient.invalidateQueries({ queryKey: GALLERIES_QUERY_KEY });
         },
     });
+    return { ...mutation, isLoading: mutation.isPending };
 };

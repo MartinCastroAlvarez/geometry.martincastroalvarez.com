@@ -9,7 +9,7 @@
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Globe, Plus } from "lucide-react";
-import { Toaster, Nav, Container, Body, Buttons, Button, Toggle, Text, Image } from "@geometry/ui";
+import { Toaster, Nav, NavSkeleton, Container, Body, Buttons, Button, Toggle, Card } from "@geometry/ui";
 import { useSession, useLogout, AuthenticationProvider } from "@geometry/data";
 import { useLocale, Language } from "@geometry/i18n";
 import { useAnalytics, GoogleAnalyticsActions, GoogleAnalyticsCategories } from "@geometry/analytics";
@@ -21,7 +21,7 @@ const LANG_OPTIONS = [Language.EN, Language.ES];
 const App = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { data: user } = useSession();
+    const { user, isLoading: sessionLoading } = useSession();
     const logout = useLogout();
     const { t, language, setLanguage } = useLocale();
     const { track } = useAnalytics();
@@ -58,23 +58,21 @@ const App = () => {
         <AuthenticationProvider jwtToken={jwtToken}>
         <Body>
             <Toaster />
+            {sessionLoading ? (
+                <NavSkeleton />
+            ) : (
             <Nav onClick={goHome}>
                 <Buttons right>
+                    <Button onClick={goEditor} icon={<Plus size={14} />} sm>
+                        {t("nav.create")}
+                    </Button>
                     {user && (
                         <Button onClick={goJobs} sm>
                             {t("nav.jobs")}
                         </Button>
                     )}
-                    <Button onClick={goEditor} icon={<Plus size={14} />} sm>
-                        {t("nav.create")}
-                    </Button>
                     <Toggle value={language} options={LANG_OPTIONS} onChange={(v) => setLanguage(v as Language)} icon={<Globe size={14} />} sm />
-                    {user && (
-                        <div className="flex items-center gap-2 shrink-0">
-                            <Image src={user.avatarUrl ?? undefined} size={28} rounded />
-                            <Text sm>{user.name?.trim() || user.email || ""}</Text>
-                        </div>
-                    )}
+                    {user && <Card user={user} sm right rounded />}
                     {user ? (
                         <Button onClick={handleLogout} sm>
                             {t("nav.logout")}
@@ -86,6 +84,7 @@ const App = () => {
                     )}
                 </Buttons>
             </Nav>
+            )}
             <Container padded spaced size={12}>
                 <AppRoutes />
             </Container>

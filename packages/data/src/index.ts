@@ -7,6 +7,7 @@
  *
  * Example:
  *   import { useSession, useJobs, useArtGallery, fetchWithAuth } from "@geometry/data";
+ *   const { user } = useSession(); const { jobs } = useJobs(); const { gallery } = useArtGallery(id);
  */
 
 export * from "./constants";
