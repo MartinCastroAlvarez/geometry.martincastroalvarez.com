@@ -1,1 +1,7 @@
-{"app":"node app.js","outputsFile":"outputs.json","context":{"@aws-cdk/core:newStyleStackSynthesis":true}}
+{
+  "app": "node app.js",
+  "outputsFile": "outputs.json",
+  "context": {
+    "@aws-cdk/core:newStyleStackSynthesis": true
+  }
+}

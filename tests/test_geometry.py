@@ -766,3 +766,106 @@ class TestPolygon:
         assert concave.is_convex() is False
         assert Polygon([]).is_convex() is False
         assert Polygon([Point([0, 0]), Point([1, 0])]).is_convex() is False
+
+    def test_edges_triangle(self):
+        p = Polygon([Point([0, 0]), Point([1, 0]), Point([0.5, 1])])
+        edges = list(p.edges)
+        assert len(edges) == 3
+        assert all(isinstance(e, Segment) for e in edges)
+
+    def test_contains_point_outside_box(self):
+        square = Polygon([Point([0, 0]), Point([2, 0]), Point([2, 2]), Point([0, 2])])
+        assert square.contains(Point([5, 5])) is False
+
+    def test_contains_point_on_edge_inclusive(self):
+        square = Polygon([Point([0, 0]), Point([2, 0]), Point([2, 2]), Point([0, 2])])
+        assert square.contains(Point([1, 0]), inclusive=True) is True
+
+    def test_contains_point_inside_ray_casting(self):
+        square = Polygon([Point([0, 0]), Point([2, 0]), Point([2, 2]), Point([0, 2])])
+        assert square.contains(Point([1, 1])) is True
+        assert square.contains(Point([0.5, 0.5])) is True
+
+    def test_contains_point_inclusive_false_not_on_edge(self):
+        square = Polygon([Point([0, 0]), Point([2, 0]), Point([2, 2]), Point([0, 2])])
+        assert square.contains(Point([1, 1]), inclusive=False) is True
+
+    def test_contains_segment_outside_box(self):
+        square = Polygon([Point([0, 0]), Point([2, 0]), Point([2, 2]), Point([0, 2])])
+        seg = Segment([Point([5, 5]), Point([6, 6])])
+        assert square.contains(seg) is False
+
+    def test_contains_segment_equals_edge(self):
+        square = Polygon([Point([0, 0]), Point([2, 0]), Point([2, 2]), Point([0, 2])])
+        seg = Segment([Point([0, 0]), Point([2, 0])])
+        assert square.contains(seg, inclusive=True) is True
+
+    def test_contains_segment_fully_inside(self):
+        square = Polygon([Point([0, 0]), Point([4, 0]), Point([4, 4]), Point([0, 4])])
+        seg = Segment([Point([1, 1]), Point([2, 2])])
+        assert square.contains(seg) is True
+
+    def test_contains_polygon(self):
+        outer = Polygon([Point([0, 0]), Point([4, 0]), Point([4, 4]), Point([0, 4])])
+        inner = Polygon([Point([1, 1]), Point([2, 1]), Point([2, 2]), Point([1, 2])])
+        assert outer.contains(inner) is True
+        assert inner.contains(outer) is False
+
+    def test_intersects_point(self):
+        square = Polygon([Point([0, 0]), Point([2, 0]), Point([2, 2]), Point([0, 2])])
+        assert square.intersects(Point([1, 1])) is True
+        assert square.intersects(Point([5, 5])) is False
+
+    def test_intersects_segment_vertex_on_edge(self):
+        square = Polygon([Point([0, 0]), Point([2, 0]), Point([2, 2]), Point([0, 2])])
+        seg = Segment([Point([1, 0]), Point([1, 1])])
+        assert square.intersects(seg, inclusive=True) is True
+
+    def test_intersects_segment_crossing(self):
+        square = Polygon([Point([0, 0]), Point([2, 0]), Point([2, 2]), Point([0, 2])])
+        seg = Segment([Point([-1, 1]), Point([3, 1])])
+        assert square.intersects(seg) is True
+
+    def test_intersects_box_no_overlap(self):
+        p = Polygon([Point([0, 0]), Point([1, 0]), Point([1, 1]), Point([0, 1])])
+        box = Box(
+            bottom_left=Point([5, 5]),
+            top_left=Point([5, 6]),
+            bottom_right=Point([6, 5]),
+            top_right=Point([6, 6]),
+        )
+        assert p.intersects(box) is False
+
+    def test_intersects_box_corner_inside(self):
+        square = Polygon([Point([0, 0]), Point([4, 0]), Point([4, 4]), Point([0, 4])])
+        box = Box(
+            bottom_left=Point([2, 2]),
+            top_left=Point([2, 5]),
+            bottom_right=Point([5, 2]),
+            top_right=Point([5, 5]),
+        )
+        assert square.intersects(box) is True
+
+    def test_intersects_polygon_no_box_overlap(self):
+        p1 = Polygon([Point([0, 0]), Point([1, 0]), Point([1, 1]), Point([0, 1])])
+        p2 = Polygon([Point([5, 5]), Point([6, 5]), Point([6, 6]), Point([5, 6])])
+        assert p1.intersects(p2) is False
+
+    def test_intersects_polygon_vertex_inside(self):
+        p1 = Polygon([Point([0, 0]), Point([4, 0]), Point([4, 4]), Point([0, 4])])
+        p2 = Polygon([Point([2, 2]), Point([6, 2]), Point([6, 6]), Point([2, 6])])
+        assert p1.intersects(p2) is True
+
+    def test_is_simple_true(self):
+        square = Polygon([Point([0, 0]), Point([1, 0]), Point([1, 1]), Point([0, 1])])
+        assert square.is_simple() is True
+
+    def test_is_simple_false_self_intersecting(self):
+        bowtie = Polygon([
+            Point([0, 0]), Point([2, 2]), Point([2, 0]), Point([0, 2])
+        ])
+        assert bowtie.is_simple() is False
+
+    def test_is_simple_less_than_three_vertices(self):
+        assert Polygon([]).is_simple() is False
+        assert Polygon([Point([0, 0]), Point([1, 0])]).is_simple() is False

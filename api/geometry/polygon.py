@@ -29,16 +29,16 @@ import json
 from decimal import Decimal
 from typing import Any
 
-from enums.orientation import Orientation
+from enums import Orientation
 from exceptions import ValidationError
 from geometry.box import Box
 from geometry.point import Point
 from geometry.segment import Segment
 from geometry.walk import Walk
+from interfaces import Bounded
 from interfaces import Serializable
-from interfaces.bounded import Bounded
-from interfaces.spatial import Spatial
-from interfaces.volume import Volume
+from interfaces import Spatial
+from interfaces import Volume
 from structs import Sequence
 
 
@@ -259,3 +259,24 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[list[Any]]
             elif walk.orientation != orientation:
                 return False
         return orientation is not None
+
+    def is_simple(self) -> bool:
+        """
+        Return True if the polygon is simple (no two non-adjacent edges intersect).
+        Non-adjacent edges may only touch at a shared vertex; any proper crossing means not simple.
+        """
+        n: int = len(self)
+        if n < 3:
+            return False
+        edges: Sequence[Segment] = self.edges
+        for i in range(n):
+            for j in range(n):
+                if i == j:
+                    continue
+                if (i - j) % n == 1 or (j - i) % n == 1:
+                    continue  # adjacent edges share a vertex
+                e_i = edges[i]
+                e_j = edges[j]
+                if e_i.intersects(e_j, inclusive=True) and not e_i.connects(e_j):
+                    return False
+        return True

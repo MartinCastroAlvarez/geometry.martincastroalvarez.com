@@ -16,7 +16,16 @@ if "boto3" not in sys.modules:
     sys.modules["boto3"] = MagicMock()
 if "botocore" not in sys.modules:
     sys.modules["botocore"] = MagicMock()
-    sys.modules["botocore.exceptions"] = MagicMock()
+    # data.py expects ClientError to be catchable and have .response["Error"]["Code"]
+    class _FakeClientError(Exception):
+        def __init__(self, response, operation_name="Op"):
+            super().__init__(operation_name)
+            self.response = response
+            self.operation_name = operation_name
+
+    _botocore_exceptions = MagicMock()
+    _botocore_exceptions.ClientError = _FakeClientError
+    sys.modules["botocore.exceptions"] = _botocore_exceptions
 if "jwt" not in sys.modules:
     _jwt = MagicMock()
     _jwt.decode = lambda payload, key, algorithms: {"email": "test@test.com", "name": "", "avatarUrl": None}

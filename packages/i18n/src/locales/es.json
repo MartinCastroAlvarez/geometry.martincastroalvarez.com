@@ -1,8 +1,8 @@
 {
   "nav": {
-    "login": "Login",
-    "logout": "Logout",
-    "jobs": "Jobs",
+    "login": "Acceder",
+    "logout": "Salir",
+    "history": "Historial",
     "create": "Crear"
   },
   "toolbar": {

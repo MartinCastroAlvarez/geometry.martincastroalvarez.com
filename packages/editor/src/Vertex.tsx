@@ -24,6 +24,8 @@ export interface VertexProps {
     readonly?: boolean;
     /** Constrain drag within bounds [0,0] to [width,height] */
     dragBounds?: { width: number; height: number };
+    /** When set, constrain drag to this rect instead of [0,0]–[dragBounds.width,dragBounds.height] */
+    contentBounds?: { minX: number; minY: number; maxX: number; maxY: number };
 }
 
 export const Vertex = ({
@@ -35,6 +37,7 @@ export const Vertex = ({
     onClick,
     draggable = true,
     dragBounds,
+    contentBounds,
     readonly = false,
 }: VertexProps) => {
     const [isHovered, setIsHovered] = useState(false);
@@ -42,11 +45,22 @@ export const Vertex = ({
     const strokeWidth = isHovered && !readonly ? 3 : 2;
 
     const dragBoundFunc =
-        dragBounds && onDragMove
-            ? (pos: { x: number; y: number }) => ({
-                  x: Math.max(radius, Math.min(dragBounds.width - radius, pos.x)),
-                  y: Math.max(radius, Math.min(dragBounds.height - radius, pos.y)),
-              })
+        onDragMove && (contentBounds || dragBounds)
+            ? (pos: { x: number; y: number }) => {
+                  if (contentBounds) {
+                      return {
+                          x: Math.max(contentBounds.minX + radius, Math.min(contentBounds.maxX - radius, pos.x)),
+                          y: Math.max(contentBounds.minY + radius, Math.min(contentBounds.maxY - radius, pos.y)),
+                      };
+                  }
+                  if (dragBounds) {
+                      return {
+                          x: Math.max(radius, Math.min(dragBounds.width - radius, pos.x)),
+                          y: Math.max(radius, Math.min(dragBounds.height - radius, pos.y)),
+                      };
+                  }
+                  return pos;
+              }
             : undefined;
 
     const fill = isFirst ? editorColors.vertexFirst : isActive ? editorColors.vertexActive : editorColors.vertex;

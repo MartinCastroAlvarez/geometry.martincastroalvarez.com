@@ -2,7 +2,7 @@
 
 from enums import Status
 
-from tasks.response import TaskResponse
+from tasks import TaskResponse
 
 
 class TestTaskResponse:

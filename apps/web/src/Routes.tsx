@@ -20,7 +20,7 @@ const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
         if (isLoading) return;
         if (!user) logout();
     }, [isLoading, user, logout]);
-    if (isLoading || !user) return null;
+    if (!isLoading && !user) return null;
     return <>{children}</>;
 };
 

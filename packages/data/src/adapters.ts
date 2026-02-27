@@ -4,11 +4,12 @@
  * Context: The backend returns plain JSON (ApiJob, ApiArtGallery, ApiUser). We convert
  * to domain types (Job, Gallery, User) so the rest of the app works with rich objects
  * (e.g. ArtGallery, Polygon, Point) and stays independent of API field names.
+ * polygonToApiFormat converts domain Polygon to the wire format for validatePolygon and createJob.
  *
  * Example:
  *   const apiJob = await geometryApiClient.getJob(id);
  *   const job = toDomainJob(fromApiJob(apiJob));  // Job with typed meta, stdout, etc.
- *   const gallery = toDomainArtGallery(fromApiArtGallery(apiGallery));  // Gallery with ArtGallery instance
+ *   polygonToApiFormat(domainPolygon);  // [{ x, y }, ...] for API
  */
 
 import { ArtGallery, Point, Polygon } from "@geometry/domain";
@@ -62,6 +63,11 @@ export function fromApiJob(raw: unknown): ApiJob {
         created_at: String(d.created_at ?? ""),
         updated_at: String(d.updated_at ?? ""),
     };
+}
+
+/** Convert domain Polygon to API wire format (array of { x, y }) for validatePolygon and createJob. */
+export function polygonToApiFormat(poly: Polygon): Array<{ x: number; y: number }> {
+    return poly.points.map((p) => p.toDict());
 }
 
 export function fromApiArtGallery(raw: unknown): ApiArtGallery {

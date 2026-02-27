@@ -21,20 +21,19 @@ Examples:
 from __future__ import annotations
 
 from indexes.gallery import ArtGalleryPublicIndex
-from models.gallery import ArtGalleryDict
 from queries.base import DetailsQuery
 from queries.base import ListQuery
 from queries.request import DetailsQueryRequest
 from queries.request import ListQueryRequest
-from queries.response import DetailsQueryResponse
 from queries.response import ListQueryResponse
-from repositories.gallery import ArtGalleryRepository
+from repositories import ArtGalleryRepository
+from serializers import Serialized
 
 
-class ArtGalleryListQuery(ListQuery[ListQueryResponse[ArtGalleryDict]]):
+class ArtGalleryListQuery(ListQuery):
     """List galleries using the public index. Public query; no user check."""
 
-    def query(self, validated_input: ListQueryRequest) -> ListQueryResponse[ArtGalleryDict]:
+    def query(self, validated_input: ListQueryRequest) -> ListQueryResponse:
         index = ArtGalleryPublicIndex()
         records, next_token = index.search(
             next_token=validated_input.get("next_token"),
@@ -46,10 +45,10 @@ class ArtGalleryListQuery(ListQuery[ListQueryResponse[ArtGalleryDict]]):
         }
 
 
-class ArtGalleryDetailsQuery(DetailsQuery[DetailsQueryResponse[ArtGalleryDict]]):
+class ArtGalleryDetailsQuery(DetailsQuery):
     """Get a single gallery by id from the repository. Public query; no user check."""
 
-    def query(self, validated_input: DetailsQueryRequest) -> DetailsQueryResponse[ArtGalleryDict]:
+    def query(self, validated_input: DetailsQueryRequest) -> Serialized:
         repo = ArtGalleryRepository()
         gallery = repo.get(validated_input["id"])
         return gallery.serialize()

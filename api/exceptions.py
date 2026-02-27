@@ -16,13 +16,14 @@ ValidationError (400), NotFoundError/RecordNotFoundError (404), UnauthorizedErro
 (401), ForbiddenError (403), and others cover typical API and storage failures.
 StorageError is for invalid S3 data; ValidationError is for bad request input.
 
-Examples:
+For example, to raise and catch exceptions:
 >>> raise ValidationError("id is required")
 >>> raise RecordNotFoundError("Job xyz not found")
 >>> try:
->>> ...
->>> except GeometryException as e:
->>> print(e.code.value, str(e))
+...     some_operation()
+... except GeometryException as e:
+...     e.code.value
+400
 >>> response = ApiResponse.unserialize(e)
 """
 
@@ -49,6 +50,15 @@ class GeometryException(Exception):
 class ValidationError(GeometryException):
     """
     Raised when input validation fails.
+
+    For example, to raise on invalid input:
+    >>> raise ValidationError("id is required")
+    For example, to catch from attribute validation:
+    >>> try:
+    ...     Email("")
+    ... except ValidationError as e:
+    ...     e.code
+    400
     """
 
     code: http.HTTPStatus = http.HTTPStatus.BAD_REQUEST
@@ -60,6 +70,9 @@ class ValidationError(GeometryException):
 class NotFoundError(GeometryException):
     """
     Raised when a requested resource is not found.
+
+    For example, to raise when a secret is missing:
+    >>> raise NotFoundError("Secret 'JWT_SECRET' not found")
     """
 
     code: http.HTTPStatus = http.HTTPStatus.NOT_FOUND
@@ -71,6 +84,9 @@ class NotFoundError(GeometryException):
 class UnauthorizedError(GeometryException):
     """
     Raised when authentication is required but missing or invalid.
+
+    For example, to raise when user is not authenticated:
+    >>> raise UnauthorizedError("User must be authenticated")
     """
 
     code: http.HTTPStatus = http.HTTPStatus.UNAUTHORIZED
@@ -82,6 +98,9 @@ class UnauthorizedError(GeometryException):
 class ForbiddenError(GeometryException):
     """
     Raised when access is forbidden for authenticated users.
+
+    For example, to raise when user lacks permission:
+    >>> raise ForbiddenError("Access forbidden")
     """
 
     code: http.HTTPStatus = http.HTTPStatus.FORBIDDEN
@@ -115,6 +134,9 @@ class ServiceUnavailableError(GeometryException):
 class ConfigurationError(GeometryException):
     """
     Raised when there are configuration issues.
+
+    For example, to raise when env var is missing:
+    >>> raise ConfigurationError("DATA_BUCKET_NAME environment variable is required")
     """
 
     code: http.HTTPStatus = http.HTTPStatus.INTERNAL_SERVER_ERROR
@@ -149,6 +171,9 @@ class MethodNotAllowedError(GeometryException):
 class RecordNotFoundError(GeometryException):
     """
     Raised when a record is not found.
+
+    For example, to raise when get() finds no record:
+    >>> raise RecordNotFoundError("Job xyz not found in data/user/jobs")
     """
 
     code: http.HTTPStatus = http.HTTPStatus.NOT_FOUND
@@ -220,4 +245,19 @@ class PathMissingResourceIdError(GeometryException):
     code: http.HTTPStatus = http.HTTPStatus.BAD_REQUEST
 
     def __init__(self, message: str = "Path must include resource id (e.g. v1/galleries/:id)"):
+        super().__init__(message)
+
+
+class PolygonValidationError(GeometryException):
+    """
+    Raised when polygon validation fails (e.g. boundary not convex, obstacle not contained).
+    Used by JobMutation after calling PolygonValidation to fail fast on invalid input.
+
+    For example, to raise when validation fails:
+    >>> raise PolygonValidationError("Polygon validation failed: polygon.convex")
+    """
+
+    code: http.HTTPStatus = http.HTTPStatus.BAD_REQUEST
+
+    def __init__(self, message: str = "Polygon validation failed"):
         super().__init__(message)

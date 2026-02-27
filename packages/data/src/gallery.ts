@@ -29,10 +29,10 @@ export const useArtGalleries = (params?: { nextToken?: string; limit?: number })
     const query = useQuery({
         queryKey: [...GALLERIES_QUERY_KEY, params?.nextToken ?? "", params?.limit ?? 20],
         queryFn: async () => {
-            const data = await new GeometryApiClient(GEOMETRY_API_URL, token).getArtGalleries(params);
+            const res = await new GeometryApiClient(GEOMETRY_API_URL, token).getArtGalleries(params);
             return {
-                records: data.records.map((r) => toDomainArtGallery(fromApiArtGallery(r))),
-                next_token: data.next_token,
+                data: res.data.map((r) => toDomainArtGallery(fromApiArtGallery(r))),
+                next_token: res.next_token,
             };
         },
         staleTime: STALE_TIME_GALLERIES_LIST_MS,

@@ -3,17 +3,20 @@
  *
  * Context: useJob(id) loads job; usePublish/useUnpublish/useUpdateJob for mutations.
  * Title is synced from job.meta.title and saved on blur. Publish/Unpublish only
- * when job.status === "success". Protected by PrivateRoute.
+ * when job.status === "success". Protected by PrivateRoute. Shows JobPageSkeleton
+ * while session or job is loading.
  */
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Container, Title, Text, Button, Input, Badge } from "@geometry/ui";
-import { useJob, usePublish, useUnpublish, useUpdateJob } from "@geometry/data";
+import { useJob, usePublish, useUnpublish, useUpdateJob, useSession } from "@geometry/data";
 import { useAnalytics, GoogleAnalyticsActions, GoogleAnalyticsCategories } from "@geometry/analytics";
+import { JobPageSkeleton } from "../skeletons";
 
 export const JobPage = () => {
     const { id } = useParams<{ id: string }>();
-    const { job, isLoading } = useJob(id ?? null);
+    const { isLoading: sessionLoading } = useSession();
+    const { job, isLoading: jobLoading } = useJob(id ?? null);
     const publish = usePublish();
     const unpublish = useUnpublish();
     const updateJob = useUpdateJob();
@@ -23,17 +26,17 @@ export const JobPage = () => {
         if (job?.meta?.title != null) setTitle(String(job.meta.title));
     }, [job?.meta?.title]);
     useEffect(() => {
-        if (id && !isLoading && job) {
+        if (id && !jobLoading && job) {
             track({
                 action: GoogleAnalyticsActions.JOB_VIEW,
                 category: GoogleAnalyticsCategories.PAGE,
                 label: id,
             });
         }
-    }, [id, isLoading, job, track]);
+    }, [id, jobLoading, job, track]);
 
     if (!id) return <Text>Job ID required</Text>;
-    if (isLoading || !job) return <Text>Loading...</Text>;
+    if (sessionLoading || jobLoading || !job) return <JobPageSkeleton />;
 
     const handlePublish = () => publish.mutate(id);
     const handleUnpublish = () => unpublish.mutate(id);

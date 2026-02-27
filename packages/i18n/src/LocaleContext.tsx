@@ -11,7 +11,7 @@
  *   const value = useContext(LocaleContext);  // prefer useLocale() instead
  */
 
-import React, { createContext } from "react";
+import { createContext } from "react";
 import { Language } from "./Language";
 
 export type TFunction = (key: string, vars?: Record<string, string | number>) => string;

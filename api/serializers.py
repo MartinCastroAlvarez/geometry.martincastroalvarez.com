@@ -1,0 +1,68 @@
+"""
+Serialized (dict) shapes for API and S3 transport.
+
+Title
+-----
+Serializers Module
+
+Context
+-------
+TypedDicts that describe the JSON-serialized form of domain models.
+Serialized is the parent type used as Serializable[T] in models; ModelDict
+is the base shape; UserDict, JobDict, ArtGalleryDict extend it.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+from typing import TypedDict
+
+
+class Serialized(TypedDict, total=False):
+    """Parent shape for any serialized model (used as Serializable[T] in models)."""
+
+    id: str
+    created_at: str
+    updated_at: str
+
+
+class ModelDict(Serialized):
+    """Base shape for serialized Model instances."""
+
+    pass
+
+
+class UserDict(ModelDict):
+    """Serialized form of User (serialize/unserialize)."""
+
+    email: str
+    name: str
+    avatar_url: str | None
+
+
+class JobDict(ModelDict):
+    """Serialized form of Job (serialize/unserialize)."""
+
+    parent_id: str | None
+    children_ids: list[str]
+    status: str
+    stage: str
+    stdin: dict[str, Any]
+    stdout: dict[str, Any]
+    meta: dict[str, Any]
+    stderr: dict[str, Any]
+
+
+class ArtGalleryDict(ModelDict):
+    """Serialized form of ArtGallery (serialize/unserialize)."""
+
+    boundary: list[Any]
+    obstacles: dict[str, Any]
+    owner_email: str
+    owner_job_id: str
+    owner_image_url: str | None
+    title: str
+    ears: dict[str, Any]
+    convex_components: dict[str, Any]
+    guards: dict[str, Any]
+    visibility: dict[str, Any]

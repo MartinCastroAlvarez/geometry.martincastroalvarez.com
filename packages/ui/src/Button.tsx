@@ -43,6 +43,7 @@ interface ButtonProps {
     disabled?: boolean;
     icon?: React.ReactNode;
     confirm?: boolean | string;
+    "aria-label"?: string;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -54,6 +55,7 @@ export const Button: React.FC<ButtonProps> = ({
     disabled = false,
     icon,
     confirm,
+    "aria-label": ariaLabel,
 }) => {
     const { t } = useLocale();
     const [showConfirm, setShowConfirm] = useState(false);
@@ -99,7 +101,7 @@ export const Button: React.FC<ButtonProps> = ({
 
     return (
         <>
-            <button type="button" onClick={handleClick} disabled={disabled} className={`geometry-button ${combinedClasses}`.trim()}>
+            <button type="button" onClick={handleClick} disabled={disabled} className={`geometry-button ${combinedClasses}`.trim()} aria-label={ariaLabel}>
                 <span className="flex flex-row flex-nowrap items-center gap-2">
                     {icon && <span className="flex shrink-0 [&_svg]:inline-block [&_svg]:align-middle">{cloneIconWithColor(icon)}</span>}
                     {children && <span>{children}</span>}

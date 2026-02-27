@@ -12,6 +12,6 @@
  *   const token = useContext(AuthTokenContext);  // prefer useAuthToken() instead
  */
 
-import React, { createContext } from "react";
+import { createContext } from "react";
 
 export const AuthTokenContext = createContext<string | null | undefined>(undefined);

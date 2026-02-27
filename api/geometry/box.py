@@ -30,9 +30,9 @@ from exceptions import BoxInvalidEdgeError
 from exceptions import SerializedInvalidDictError
 from geometry.interval import Interval
 from geometry.point import Point
-from interfaces.bounded import Bounded
-from interfaces.serializable import Serializable
-from interfaces.spatial import Spatial
+from interfaces import Bounded
+from interfaces import Serializable
+from interfaces import Spatial
 
 
 class Box(Spatial, Serializable[dict[str, Any]]):

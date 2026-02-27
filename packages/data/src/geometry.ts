@@ -12,9 +12,21 @@
  */
 
 import { GEOMETRY_API_URL } from "./constants";
-import type { PageResponse, GeometryApiJob, GeometryApiArtGallery } from "./types";
+import type {
+    ListResponse,
+    DetailsResponse,
+    GeometryApiJob,
+    GeometryApiArtGallery,
+    PolygonValidationResponse,
+} from "./types";
 
-export type { PageResponse, GeometryApiJob, GeometryApiArtGallery } from "./types";
+export type {
+    ListResponse,
+    DetailsResponse,
+    GeometryApiJob,
+    GeometryApiArtGallery,
+    PolygonValidationResponse,
+} from "./types";
 
 function request(
     url: string,
@@ -52,7 +64,7 @@ export class GeometryApiClient {
         this.jwtToken = jwtToken;
     }
 
-    async getJobs(params?: { nextToken?: string; limit?: number }): Promise<PageResponse<GeometryApiJob>> {
+    async getJobs(params?: { nextToken?: string; limit?: number }): Promise<ListResponse<GeometryApiJob>> {
         if (this.jwtToken == null || this.jwtToken === "") requireToken("getJobs");
         const searchParams = new URLSearchParams();
         if (params?.nextToken) searchParams.set("next_token", params.nextToken);
@@ -66,7 +78,8 @@ export class GeometryApiClient {
     async getJob(jobId: string): Promise<GeometryApiJob> {
         if (this.jwtToken == null || this.jwtToken === "") requireToken("getJob");
         const response = await requestOrThrow(`${this.baseUrl}/v1/jobs/${jobId}`, this.jwtToken);
-        return response.json();
+        const json = (await response.json()) as DetailsResponse<GeometryApiJob>;
+        return json.data;
     }
 
     async publish(jobId: string): Promise<GeometryApiArtGallery> {
@@ -109,7 +122,26 @@ export class GeometryApiClient {
         return response.json();
     }
 
-    async getArtGalleries(params?: { nextToken?: string; limit?: number }): Promise<PageResponse<GeometryApiArtGallery>> {
+    /**
+     * Validate polygon (boundary and obstacles). Returns a dict of status and note keys
+     * (e.g. "polygon.convex", "polygon.convex.note", "obstacles.0.contained").
+     * Public endpoint; token optional (not required for validation).
+     */
+    async validatePolygon(
+        boundary: Array<{ x: number; y: number }>,
+        obstacles: Array<Array<{ x: number; y: number }>>,
+    ): Promise<PolygonValidationResponse> {
+        const response = await requestOrThrow(`${this.baseUrl}/v1/polygon`, this.jwtToken, {
+            method: "POST",
+            body: JSON.stringify({
+                boundary: { points: boundary },
+                obstacles: obstacles.map((obs) => ({ points: obs })),
+            }),
+        });
+        return response.json();
+    }
+
+    async getArtGalleries(params?: { nextToken?: string; limit?: number }): Promise<ListResponse<GeometryApiArtGallery>> {
         const searchParams = new URLSearchParams();
         if (params?.nextToken) searchParams.set("next_token", params.nextToken);
         if (params?.limit != null) searchParams.set("limit", String(params.limit));
@@ -121,6 +153,7 @@ export class GeometryApiClient {
 
     async getArtGallery(galleryId: string): Promise<GeometryApiArtGallery> {
         const response = await requestOrThrow(`${this.baseUrl}/v1/galleries/${galleryId}`, this.jwtToken);
-        return response.json();
+        const json = (await response.json()) as DetailsResponse<GeometryApiArtGallery>;
+        return json.data;
     }
 }

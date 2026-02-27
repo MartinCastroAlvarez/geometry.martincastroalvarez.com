@@ -58,9 +58,15 @@ export interface ApiArtGallery {
     updated_at: string;
 }
 
-export interface PageResponse<T> {
-    records: T[];
+/** List endpoint response: array of entities under `data` and next_token. */
+export interface ListResponse<T> {
+    data: T[];
     next_token: string;
+}
+
+/** Details endpoint response: single entity under `data`. */
+export interface DetailsResponse<T> {
+    data: T;
 }
 
 export interface SessionResponse {
@@ -97,3 +103,6 @@ export interface GeometryApiArtGallery {
     created_at: string;
     updated_at: string;
 }
+
+/** Polygon validation response: keys like "polygon.convex", "polygon.convex.note", "obstacles.0.contained"; values are status ("pending"|"success"|"failed") or note strings. */
+export type PolygonValidationResponse = Record<string, string>;

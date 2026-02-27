@@ -4,11 +4,13 @@
  * Context: Holds ArtGallery (perimeter + holes) in state; Editor from @geometry/editor
  * gets boundary and obstacles, reports changes via onChange. ResizeObserver keeps
  * editor size (width × 0.65) in sync with container. Protected by PrivateRoute.
+ * Shows EditorSkeleton while useSession is loading.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArtGallery, Polygon } from "@geometry/domain";
-import { Editor } from "@geometry/editor";
+import { Editor, EditorSkeleton } from "@geometry/editor";
 import { Container } from "@geometry/ui";
+import { useSession } from "@geometry/data";
 import { useAnalytics, GoogleAnalyticsActions, GoogleAnalyticsCategories } from "@geometry/analytics";
 
 const emptyGallery = new ArtGallery(new Polygon([]));
@@ -17,6 +19,7 @@ export const EditorPage = () => {
     const editorRef = useRef<HTMLDivElement>(null);
     const [editorSize, setEditorSize] = useState({ width: 850, height: 550 });
     const [gallery, setGallery] = useState<ArtGallery>(() => emptyGallery);
+    const { isLoading: sessionLoading } = useSession();
     const { track } = useAnalytics();
 
     useEffect(() => {
@@ -52,14 +55,18 @@ export const EditorPage = () => {
 
     return (
         <Container ref={editorRef} name="geometry-editor-wrapper w-full max-h-[70vh]" size={12}>
-            <Editor
-                boundary={gallery.perimeter}
-                obstacles={gallery.holes}
-                width={editorSize.width}
-                height={editorSize.height}
-                onChange={handleChange}
-                readonly={false}
-            />
+            {sessionLoading ? (
+                <EditorSkeleton size={editorSize.height} />
+            ) : (
+                <Editor
+                    boundary={gallery.perimeter}
+                    obstacles={gallery.holes}
+                    width={editorSize.width}
+                    height={editorSize.height}
+                    onChange={handleChange}
+                    readonly={false}
+                />
+            )}
         </Container>
     );
 };

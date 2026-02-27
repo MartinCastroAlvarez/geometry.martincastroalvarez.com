@@ -26,9 +26,9 @@ from decimal import InvalidOperation
 from typing import Any
 
 from exceptions import ValidationError
+from interfaces import Measurable
 from interfaces import Serializable
-from interfaces.measurable import Measurable
-from interfaces.spatial import Spatial
+from interfaces import Spatial
 
 
 class Interval(list, Measurable, Spatial, Serializable[list[Any]]):

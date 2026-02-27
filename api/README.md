@@ -5,40 +5,96 @@ REST and worker backend for the geometry project: Lambda handlers, S3 bucket acc
 ## Purpose
 
 - **REST:** v1/galleries (list, get), v1/jobs (list, get, create, update, delete); CORS and path params; private endpoints via X-Auth/JWT.
-- **Persistence:** S3 bucket (data/), repositories per entity (repositories/), indexes for “newest first” listing (indexes/, Countdown).
-- **Async:** SQS queue for job run/report; worker Lambda (workers/) parses messages and runs tasks (tasks/).
+- **Persistence:** S3 bucket (data.py), repositories per entity (repositories.py), indexes for “newest first” listing (indexes.py, Countdown).
+- **Async:** SQS queue for job run/report; worker Lambda (workers.py) parses messages and runs tasks (tasks.py, tasks/).
 
 ## Requirements
 
 - Python ≥ 3.13
 
-## Folder contents
+## Structure
 
-| Type | Files / packages |
-|------|------------------|
-| **Handlers** | `api.py` |
-| **Core** | `exceptions.py`, `messages/` |
-| **Packages** | `api/api/`, `attributes/`, `data/`, `enums/`, `indexes/`, `interfaces/`, `models/`, `mutations/`, `queries/`, `repositories/`, `structs/`, `tasks/`, `workers/` |
-| **Models** | `models/` (base.py: Model; art_gallery.py: ArtGallery; job.py: Job; user.py: User) |
-| **Other** | `README.md`, `requirements.txt` |
+```
+api/
+├── __init__.py          # Package; exports handler (Lambda entry for API Gateway)
+├── api.py               # API Gateway: ApiRequest, ApiResponse, ROUTES, private, interceptor, handler
+├── workers.py           # SQS worker: ROUTES (Action→Task), WorkerRequest, WorkerResponse, handler
+├── attributes.py        # Value types: Path, Identifier, Email, Timestamp, etc.; geometry re-exports
+├── controllers.py       # Controller base, PrivateControllerMixin
+├── data.py              # Bucket, Page, Secret
+├── enums.py             # Action, Method, Status, Stage, Orientation
+├── exceptions.py        # GeometryException, ValidationError, UnauthorizedError, etc.
+├── indexes.py           # Index, ArtGalleryPublicIndex, JobsPrivateIndex
+├── interfaces.py        # Serializable, Measurable, Bounded, Spatial, Volume
+├── logger.py            # get_logger, log_extra
+├── messages.py          # Message, Queue
+├── models.py            # Model, User, Job, ArtGallery
+├── mutations.py         # Mutation base; mutations/galleries.py, mutations/jobs.py
+├── queries.py           # Query base; queries/galleries.py, queries/jobs.py
+├── repositories.py      # Repository, ArtGalleryRepository, JobsRepository
+├── serializers.py       # Serialized (parent), ModelDict, UserDict, JobDict, ArtGalleryDict
+├── settings.py          # Env config: DATA_BUCKET_NAME, QUEUE_NAME, JWT_*, etc.
+├── structs.py           # Sequence, Table
+├── tasks.py             # Task base; tasks/start.py, tasks/report.py
+├── validations.py       # Validation, PolygonValidation
+├── geometry/            # 2D geometry: Point, Segment, Polygon, Box, Ear, ConvexComponent, Walk
+│   ├── __init__.py
+│   ├── box.py
+│   ├── convex.py
+│   ├── ear.py
+│   ├── interval.py
+│   ├── point.py
+│   ├── polygon.py
+│   ├── segment.py
+│   └── walk.py
+├── models/
+│   └── user.py          # User model (auth); also defined in models.py
+├── mutations/
+│   ├── galleries.py      # ArtGalleryPublishMutation, ArtGalleryHideMutation
+│   └── jobs.py          # JobMutation, JobUpdateMutation
+├── queries/
+│   ├── galleries.py     # ArtGalleryListQuery, ArtGalleryDetailsQuery
+│   └── jobs.py          # JobListQuery, JobDetailsQuery
+└── tasks/
+    ├── start.py         # StartTask
+    └── report.py        # ReportTask
+```
+
+## Lambda entry points
+
+| Lambda   | Handler string   | Module / file   |
+|----------|------------------|-----------------|
+| API      | `api.handler`     | `__init__.py` → `api.api.handler` |
+| Worker   | `workers.handler` | `workers.py`    |
 
 ## Modules and packages
 
 | Module / package | Contents |
 |------------------|----------|
-| **api/** | Package; `api.handler` is the Lambda entry point. |
-| **api/api/** | `request.py`: `ApiRequest` (path as `Path`, normalized; method, headers, body, path_params, query_params, user). `response.py`: `Response`. `private.py`: `private` decorator (X-Auth/JWT). `interceptor.py`: `interceptor` decorator (event→ApiRequest, response dict). `urls.py`: `URLS` as `dict[Path, dict[Method, Query | Mutation]]` (keys e.g. `Path("v1/galleries/")`, `Path("v1/galleries")`). `handler.py`: `handler` (match path to URLS, set path_params from `path.id` for detail routes, merge params, dispatch). |
-| `exceptions.py` | `GeometryException`, `ValidationError`, `RecordNotFoundError`, `UnauthorizedError`, `ForbiddenError`, `InvalidActionError`, `PathMissingResourceIdError` (path without resource id), etc. |
-| **messages/** | `message.py`: `Message` (Serializable; action as `Action` from enums). `queue.py`: `Queue` (put, receive, delete, commit). |
-| **data/** | `bucket.py`: `Bucket` (exists, load, save, delete, search), `DATA_BUCKET_NAME`. `page.py`: `Page`. `secret.py`: `Secret.get(secret_id)`, `SECRETS_BUCKET_NAME` |
-| **models/** | `base.py`: `Model`. `art_gallery.py`: `ArtGallery`. `job.py`: `Job`. `user.py`: `User` (id, email non-nullable, to_dict/from_dict) |
-| **interfaces/** | `Serializable` (to_dict, from_dict), `Measurable` (abstract size) |
-| **enums/** | `action.py`: `Action` (START, REPORT; default START) with `parse()`. `method.py`: `Method` (GET, POST, OPTIONS, etc.) with `parse()`. `status.py`: `Status` (PENDING, SUCCESS, FAILED) with `parse()`. `orientation.py`: `Orientation`. |
-| **attributes/** | Value types: `Timestamp`, `Countdown`, `Identifier`, `Limit`, `Email`, `Url`, `Signature`, `Slug`, `Interval`, `Path` (str subclass; normalized API path with `.version`, `.resource`, `.id`; raises `PathMissingResourceIdError` when id missing). Geometry types (Box, Point, Polygon, Segment, Walk, etc.) re-exported from geometry. |
-| **structs/** | **Data structures.** `sequence.py`: `Sequence[T]` (list-like with modular slicing, shift, hash, add/sub/__and__/invert, serialize/unserialize). `table.py`: `Table[T]` (dict-like keyed by `hash(item)`; add/+=, pop/-=; `Serializable[dict]`; serialize→dict, unserialize from list of items or dict with key=hash(value) or raise). |
-| **indexes/** | `Indexed`, `Index[T]`, `PrivateIndex`, `ArtGalleryPublicIndex`, `JobsPrivateIndex` (REPOSITORY set in subclass; index modules: `gallery.py`, `jobs.py`) |
-| **repositories/** | `base.py`: `Repository[T]`. `private.py`: `PrivateRepository[T]`. `results.py`: `Results[T]`. `ArtGalleryRepository`, `JobsRepository`. |
-| **queries/** | `Query[T]`, `ArtGalleryListQuery`, `ArtGalleryDetailsQuery`, `JobListQuery`, `JobDetailsQuery` |
-| **mutations/** | `ArtGalleryPublishMutation`, `ArtGalleryHideMutation`, `JobMutation` (create only). Modules: `base.py`, `gallery_publish.py`, `gallery_unpublish.py`, `jobs.py`. Publish uses `ArtGallery.unserialize`; job create uses `Polygon.unserialize` and `Table.unserialize` inline. Object ids use `Identifier`. |
-| **tasks/** | `Task[T]`, `StartTask`, `ReportTask` (validate, execute, handle; report sets job success/failed from children, enqueues parent REPORT) |
-| **workers/** | `request.py`: `WorkerRequest` (action, job_id, user_email, body, message). `response.py`: `WorkerResponse`. `handler`: SQS event → dispatch by `Action` to StartTask/ReportTask, commit each message; returns `WorkerResponse`. `urls.py`: `TASK_BY_ACTION`. |
+| **api** (package) | `__init__.py` exports `handler`; Lambda entry for API Gateway. |
+| **api.py** | `ApiRequest`, `ApiResponse`, `ROUTES` (`dict[Path, dict[Method, Controller]]`), `private` decorator (X-Auth/JWT), `interceptor` decorator (event→ApiRequest, response dict), `handler` (match path to ROUTES, instantiate controller, call `controller.handler(body)`). |
+| **workers.py** | `ROUTES` (Action → Task), `WorkerRequest`, `WorkerResponse`, `handler`: SQS event → dispatch by Action to StartTask/ReportTask, commit each message; returns `WorkerResponse`. |
+| **controllers.py** | **Controller** (abstract), **ControllerRequest**, **ControllerResponse**, **PrivateControllerMixin**. `validate(body) -> ControllerRequest`, `execute(ControllerRequest) -> ControllerResponse`, `handler(body) -> ControllerResponse`. Queries, mutations, validations, and tasks extend Controller. |
+| **exceptions.py** | `GeometryException`, `ValidationError`, `RecordNotFoundError`, `UnauthorizedError`, `ForbiddenError`, `InvalidActionError`, `PathMissingResourceIdError`, etc. |
+| **messages.py** | `Message` (Serializable; action as `Action`). `Queue` (put, receive, delete, commit). |
+| **data.py** | `Bucket` (exists, load, save, delete, search), `Page`, `Secret`. Bucket and secret names from `settings`. |
+| **settings.py** | `DATA_BUCKET_NAME`, `SECRETS_BUCKET_NAME`, `QUEUE_NAME`, `LOG_LEVEL`, `JWT_SECRET_NAME`, `JWT_TEST_NAME`, `DEFAULT_LIMIT`, etc. |
+| **models.py** | `Model`, `User`, `Job`, `ArtGallery` (Serializable[Serialized] for S3/API). |
+| **models/user.py** | User model (auth); used by api.api.private, JobsRepository, mutation/query handlers. |
+| **serializers.py** | `Serialized` (parent TypedDict for Serializable[T]), `ModelDict`, `UserDict`, `JobDict`, `ArtGalleryDict`. |
+| **interfaces.py** | `Serializable[T]`, `Measurable`, `Bounded`, `Spatial`, `Volume`. |
+| **enums.py** | `Action` (START, REPORT), `Method` (GET, POST, …), `Status`, `Stage`, `Orientation` (with `parse()` where used). |
+| **attributes.py** | `Timestamp`, `Countdown`, `Identifier`, `Limit`, `Email`, `Url`, `Signature`, `Slug`, `Interval`, `Path` (normalized API path; `.version`, `.resource`, `.id`; raises `PathMissingResourceIdError` when id missing). Geometry types re-exported from `geometry` via `__getattr__`. |
+| **structs.py** | `Sequence[T]` (list-like; slicing, shift, hash, serialize/unserialize). `Table[T]` (dict-like keyed by `hash(item)`; Serializable[dict]). |
+| **repositories.py** | `Repository[T]`, `Results[T]`, `PrivateRepository[T]`, `ArtGalleryRepository`, `JobsRepository`. |
+| **indexes.py** | `Indexed`, `Index[T]`, `PrivateIndex`, `ArtGalleryPublicIndex`, `JobsPrivateIndex`. |
+| **queries.py** | `Query`, `ListQuery`, `DetailsQuery`; **queries/galleries.py**: `ArtGalleryListQuery`, `ArtGalleryDetailsQuery`; **queries/jobs.py**: `JobListQuery`, `JobDetailsQuery`. Registered in api.api ROUTES. |
+| **mutations.py** | `Mutation`; **mutations/galleries.py**: `ArtGalleryPublishMutation`, `ArtGalleryHideMutation`; **mutations/jobs.py**: `JobMutation`, `JobUpdateMutation`. Registered in api.api ROUTES. |
+| **validations.py** | `Validation`, `PolygonValidation`. Registered in api.api ROUTES. |
+| **tasks.py** | `Task` base; **tasks/start.py**: `StartTask`; **tasks/report.py**: `ReportTask`. Used by workers.py ROUTES. |
+| **geometry/** | `Point`, `Segment`, `Polygon`, `Box`, `Interval`, `Walk`, `Ear`, `ConvexComponent`. Spatial, Bounded, Measurable, Volume, Serializable. Used by models.ArtGallery and pipeline (ear clipping, visibility, guards). |
+
+## Other files
+
+- **README.md** (this file)
+- **requirements.txt** (boto3, botocore, PyJWT)

@@ -23,4 +23,5 @@ export * from "./adapters";
 export * from "./session";
 export * from "./job";
 export * from "./gallery";
+export * from "./polygon";
 export * from "./ReactQueryProvider";

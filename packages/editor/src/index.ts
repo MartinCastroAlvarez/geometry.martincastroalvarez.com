@@ -11,6 +11,6 @@
 export * from './Edge'
 export * from './Editor'
 export * from './Editor.skeleton'
-export * from './Toolbar'
+export * from './Polygon.skeleton'
 export * from './types'
 export * from './adapters'

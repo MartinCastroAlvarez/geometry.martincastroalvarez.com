@@ -2,47 +2,48 @@
  * Skeleton for the Art Gallery Editor canvas (boundary and obstacles).
  *
  * Context: Matches Editor layout: rounded canvas with grid background as in Editor.tsx.
- * ArtGallery (api/models/gallery.py) has boundary, obstacles, ears, convex_components, guards, visibility;
- * the editor edits boundary and obstacles. This skeleton mirrors the canvas area only.
- * Uses animate-pulse; no external skeleton library (same approach as time app).
+ * Size prop sets height only; width is 100%. Shows one polygon at center with random size and rotation.
  */
 
+import { useMemo, type CSSProperties } from "react";
+import { Grid } from "./Grid";
+import { PolygonSkeleton } from "./Polygon.skeleton";
+
 export interface EditorSkeletonProps {
-    width?: number;
-    height?: number;
+    /** Sets height (px). Width is 100%. Required for layout. */
+    size: number;
 }
 
-const DEFAULT_WIDTH = 850;
-const DEFAULT_HEIGHT = 550;
+/** Base polygon size as fraction of editor height. Variation ±25% from base. */
+const POLYGON_SIZE_FRACTION = 0.55;
+const SIZE_VARIATION = 0.25;
 
-export const EditorSkeleton = ({ width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT }: EditorSkeletonProps) => {
+function useRandomPolygon(editorHeight: number) {
+    return useMemo(() => {
+        const baseSize = editorHeight * POLYGON_SIZE_FRACTION;
+        const variation = baseSize * SIZE_VARIATION * (2 * Math.random() - 1);
+        const polygonSize = Math.max(20, baseSize + variation);
+        const rotation = Math.random() * 360;
+        return { size: polygonSize, rotation };
+    }, [editorHeight]);
+}
+
+export const EditorSkeleton = ({ size }: EditorSkeletonProps) => {
+    const height = size;
+    const { size: polygonSize, rotation } = useRandomPolygon(height);
+
+    const style: CSSProperties = {
+        position: "relative",
+        width: "100%",
+        height,
+        flexShrink: 0,
+        borderRadius: 12,
+        overflow: "hidden",
+    };
+
     return (
-        <div
-            role="presentation"
-            aria-hidden
-            style={{
-                position: "relative",
-                width,
-                height,
-                minWidth: width,
-                minHeight: height,
-                flexShrink: 0,
-                borderRadius: 12,
-                overflow: "hidden",
-            }}
-        >
-            <div
-                style={{
-                    position: "absolute",
-                    inset: 0,
-                    backgroundColor: "rgba(2, 6, 23, 0.85)",
-                    backgroundImage: `
-                        linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
-                        linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px)
-                    `,
-                    backgroundSize: "24px 24px",
-                }}
-            />
+        <div role="presentation" aria-hidden style={style}>
+            <Grid />
             <div
                 className="animate-pulse"
                 style={{
@@ -52,6 +53,7 @@ export const EditorSkeleton = ({ width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT 
                     backgroundColor: "rgba(148, 163, 184, 0.2)",
                 }}
             />
+            <PolygonSkeleton size={polygonSize} rotation={rotation} />
         </div>
     );
 };

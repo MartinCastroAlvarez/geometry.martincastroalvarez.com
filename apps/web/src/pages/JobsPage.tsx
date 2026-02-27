@@ -3,18 +3,20 @@
  *
  * Context: useJobs fetches jobs from API; shows loading state and record count.
  * Each job is a Link to /jobs/:id with a Badge for status (success/failed).
- * Protected by PrivateRoute.
- *
- * Example:
- *   const { jobs, isLoading } = useJobs();
- *   jobs?.records.map((job) => <Link to={`/jobs/${job.id}`}>...</Link>)
+ * Protected by PrivateRoute. Shows JobsPageSkeleton while session or jobs are loading.
  */
 import { Link } from "react-router-dom";
 import { Container, Title, Text, Button, Badge } from "@geometry/ui";
-import { useJobs } from "@geometry/data";
+import { useJobs, useSession } from "@geometry/data";
+import { JobsPageSkeleton } from "../skeletons";
 
 export const JobsPage = () => {
-    const { jobs, isLoading } = useJobs();
+    const { isLoading: sessionLoading } = useSession();
+    const { jobs, isLoading: jobsLoading } = useJobs();
+
+    if (sessionLoading || jobsLoading) {
+        return <JobsPageSkeleton />;
+    }
 
     return (
         <Container padded spaced size={12}>
@@ -23,10 +25,10 @@ export const JobsPage = () => {
                     My Jobs
                 </Title>
                 <Text center>
-                    {isLoading ? "Loading..." : `${jobs?.records.length ?? 0} job(s)`}
+                    {jobsLoading ? "Loading..." : `${jobs?.data.length ?? 0} job(s)`}
                 </Text>
             </Container>
-            {jobs?.records.map((job) => (
+            {jobs?.data.map((job) => (
                 <Container key={job.id} padded spaced size={12}>
                     <Link to={`/jobs/${job.id}`}>
                         <Button>

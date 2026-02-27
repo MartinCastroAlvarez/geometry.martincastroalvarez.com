@@ -24,12 +24,19 @@ Examples:
 from __future__ import annotations
 
 import logging
-import os
 from typing import Any
+
+from api.settings import LOG_LEVEL
 
 
 def get_logger(name: str) -> logging.Logger:
-    """Return a logger for the given module name."""
+    """
+    Return a logger for the given module name.
+
+    For example, to get a module logger:
+    >>> logger = get_logger(__name__)
+    >>> logger.info("message")
+    """
     return logging.getLogger(name)
 
 
@@ -42,6 +49,9 @@ def log_extra(
     """
     Build extra dict for structured logging (JSON-compatible).
     Use with logger.info("msg", extra=log_extra(request_id=..., path=...)).
+
+    For example, to add request context to a log line:
+    >>> logger.info("Request", extra=log_extra(request_id="req-1", path="/v1/galleries"))
     """
     extra: dict[str, Any] = dict(kwargs)
     if request_id is not None:
@@ -56,7 +66,10 @@ def log_extra(
 def configure_logging() -> None:
     """
     Configure root logger for Lambda. Call at Lambda cold start if needed.
-    CloudWatch captures stdout; Lambda runtime sets log level from env.
+    CloudWatch captures stdout; log level from settings.LOG_LEVEL (LogLevel enum).
+
+    For example, to set log level from LOG_LEVEL env at cold start:
+    >>> configure_logging()
     """
-    level = os.getenv("LOG_LEVEL", "INFO").upper()
-    logging.getLogger().setLevel(getattr(logging, level, logging.INFO))
+    level: int = getattr(logging, LOG_LEVEL.name, logging.INFO)
+    logging.getLogger().setLevel(level)

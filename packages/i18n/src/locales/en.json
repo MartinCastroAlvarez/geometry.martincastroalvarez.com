@@ -2,7 +2,7 @@
   "nav": {
     "login": "Login",
     "logout": "Logout",
-    "jobs": "Jobs",
+    "history": "History",
     "create": "Create"
   },
   "toolbar": {

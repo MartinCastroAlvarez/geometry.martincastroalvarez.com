@@ -29,7 +29,7 @@ from decimal import InvalidOperation
 from typing import TYPE_CHECKING
 from typing import Any
 
-from attributes.signature import Signature
+from attributes import Signature
 from exceptions import ValidationError
 from interfaces import Serializable
 

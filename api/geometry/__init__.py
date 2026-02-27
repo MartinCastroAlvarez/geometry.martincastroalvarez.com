@@ -23,7 +23,7 @@ Examples:
 >>> poly = Polygon.unserialize([[0,0], [1,0], [1,1], [0,1]])
 """
 
-from enums.orientation import Orientation
+from enums import Orientation
 from geometry.box import Box
 from geometry.convex import ConvexComponent
 from geometry.ear import Ear

@@ -27,14 +27,14 @@ import json
 from decimal import Decimal
 from typing import Any
 
-from attributes.signature import Signature
+from attributes import Signature
 from exceptions import ValidationError
 from geometry.box import Box
 from geometry.point import Point
 from geometry.walk import Walk
+from interfaces import Bounded
 from interfaces import Serializable
-from interfaces.bounded import Bounded
-from interfaces.spatial import Spatial
+from interfaces import Spatial
 
 
 class Segment(list, Spatial, Bounded, Serializable[list[Any]]):

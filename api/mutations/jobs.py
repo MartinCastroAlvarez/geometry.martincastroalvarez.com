@@ -12,8 +12,8 @@ idempotent job id from Signature(boundary+obstacles), saves to JobsRepository,
 enqueues START message, and adds entry to JobsPrivateIndex (Countdown key).
 JobUpdateMutation updates job meta (e.g. title); if meta contains "title"
 and the user has a published gallery for that job, the gallery title is
-updated. Both require authenticated user (PrivateMutation). Used by
-api.api.urls for POST and PATCH on v1/jobs and v1/jobs/.
+updated. Both require authenticated user (PrivateControllerMixin). Used by
+api.api (ROUTES) for POST and PATCH on v1/jobs and v1/jobs/.
 
 Examples:
 >>> POST v1/jobs with body { boundary, obstacles } -> JobMutation
@@ -28,7 +28,9 @@ from attributes import Countdown
 from attributes import Identifier
 from attributes import Signature
 from attributes import Title
+from controllers import PrivateControllerMixin
 from enums import Action
+from exceptions import PolygonValidationError
 from exceptions import UnauthorizedError
 from exceptions import ValidationError
 from geometry import Polygon
@@ -37,14 +39,15 @@ from indexes.jobs import JobsPrivateIndex
 from messages import Message
 from messages import Queue
 from models import Job
-from mutations.private import PrivateMutation
+from mutations.base import Mutation
 from mutations.request import JobMutationRequest
 from mutations.request import JobUpdateMutationRequest
 from mutations.response import JobMutationResponse
 from mutations.utils import gallery_id_from_job_and_user
-from repositories.gallery import ArtGalleryRepository
-from repositories.jobs import JobsRepository
+from repositories import ArtGalleryRepository
+from repositories import JobsRepository
 from structs import Table
+from validations.polygon import PolygonValidation
 
 from api.logger import get_logger
 
@@ -52,7 +55,7 @@ queue = Queue()
 logger = get_logger(__name__)
 
 
-class JobMutation(PrivateMutation[JobMutationRequest, JobMutationResponse]):
+class JobMutation(PrivateControllerMixin, Mutation):
     """Create job (idempotent id from boundary+obstacles), save, enqueue run, update job index."""
 
     def validate(self, body: dict[str, Any]) -> JobMutationRequest:
@@ -68,9 +71,15 @@ class JobMutation(PrivateMutation[JobMutationRequest, JobMutationResponse]):
             obstacles=Table.unserialize([Polygon.unserialize(obs) for obs in (obstacles or []) if isinstance(obs, list)]),
         )
 
-    def mutate(self, validated_input: JobMutationRequest) -> JobMutationResponse:
+    def execute(self, validated_input: JobMutationRequest) -> JobMutationResponse:
         boundary = validated_input["boundary"]
         obstacles = validated_input["obstacles"]
+        # Fail fast: run polygon validation and raise if any check fails.
+        validation = PolygonValidation()
+        validation_result = validation.execute({"boundary": boundary, "obstacles": obstacles})
+        failed = [k for k, v in validation_result.items() if not k.endswith(".note") and v == "failed"]
+        if failed:
+            raise PolygonValidationError("Polygon validation failed: " + ", ".join(failed))
         job_id = Identifier(Signature(f"{hash(boundary)}_{hash(obstacles)}"))
         job = Job(
             id=job_id,
@@ -96,7 +105,7 @@ class JobMutation(PrivateMutation[JobMutationRequest, JobMutationResponse]):
         return job.serialize()
 
 
-class JobUpdateMutation(PrivateMutation[JobUpdateMutationRequest, JobMutationResponse]):
+class JobUpdateMutation(PrivateControllerMixin, Mutation):
     """Update job metadata; sync title to gallery if published."""
 
     def validate(self, body: dict[str, Any]) -> JobUpdateMutationRequest:
@@ -118,7 +127,7 @@ class JobUpdateMutation(PrivateMutation[JobUpdateMutationRequest, JobMutationRes
             meta=meta_str,
         )
 
-    def mutate(self, validated_input: JobUpdateMutationRequest) -> JobMutationResponse:
+    def execute(self, validated_input: JobUpdateMutationRequest) -> JobMutationResponse:
         job_id = validated_input["job_id"]
         meta = validated_input["meta"]
         email = self.user.email

@@ -26,7 +26,7 @@ from decimal import Decimal
 from functools import cached_property
 from typing import Any
 
-from enums.orientation import Orientation
+from enums import Orientation
 from geometry.point import Point
 
 

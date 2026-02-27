@@ -10,13 +10,27 @@
  *   <Editor boundary={poly} obstacles={[]} width={400} height={300} onChange={(b, o) => setGeometry(b, o)} />
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Stage, Layer } from "react-konva";
-import { Point, Polygon } from "@geometry/domain";
+import { Polygon } from "@geometry/domain";
 import type { EditorVertex } from "./types";
 import { polygonToEditorVertices, editorVerticesToPolygon } from "./adapters";
+import { findCycles, signedArea, isInside } from "./utils";
 import { Edge } from "./Edge";
+import { Grid } from "./Grid";
 import { Vertex } from "./Vertex";
+
+function polyEquals(a: Polygon | undefined, b: Polygon | undefined): boolean {
+    if (a === b) return true;
+    if (!a || !b || a.points.length !== b.points.length) return false;
+    return a.points.every((p, i) => p.x === b.points[i].x && p.y === b.points[i].y);
+}
+
+function polyArrayEquals(a: Polygon[], b: Polygon[]): boolean {
+    if (a.length !== b.length) return false;
+    return a.every((p, i) => polyEquals(p, b[i]));
+}
+
 export interface EditorProps {
     boundary: Polygon;
     obstacles: Polygon[];
@@ -26,90 +40,22 @@ export interface EditorProps {
     readonly?: boolean;
 }
 
-/** Find cycles (closed polygons) from vertices and edges. Returns ordered vertex arrays. */
-const findCycles = (
-    vertices: EditorVertex[],
-    edges: [number, number][]
-): EditorVertex[][] => {
-    const n = vertices.length;
-    const adj: number[][] = Array.from({ length: n }, () => []);
-    for (const [a, b] of edges) {
-        if (a >= 0 && a < n && b >= 0 && b < n && a !== b) {
-            adj[a].push(b);
-            adj[b].push(a);
-        }
-    }
-
-    const cycles: EditorVertex[][] = [];
-    const used = new Set<string>();
-
-    for (let start = 0; start < n; start++) {
-        if (adj[start].length !== 2) continue;
-
-        const cycle: number[] = [];
-        let v = start;
-        let prev = -1;
-        let valid = true;
-
-        for (let i = 0; i <= n; i++) {
-            if (i > 0 && v === start) break;
-            cycle.push(v);
-            const nexts = adj[v].filter((u) => u !== prev);
-            if (nexts.length !== 1) {
-                valid = false;
-                break;
-            }
-            prev = v;
-            v = nexts[0];
-        }
-
-        if (!valid || v !== start || cycle.length < 3) continue;
-
-        const key = cycle.slice().sort((a, b) => a - b).join(",");
-        if (used.has(key)) continue;
-        used.add(key);
-
-        cycles.push(cycle.map((i) => vertices[i]));
-    }
-
-    return cycles;
-};
-
-/** Signed area of a polygon (positive = counterclockwise) */
-const signedArea = (vertices: EditorVertex[]): number => {
-    let area = 0;
-    const n = vertices.length;
-    for (let i = 0; i < n; i++) {
-        const j = (i + 1) % n;
-        area += vertices[i].x * vertices[j].y - vertices[j].x * vertices[i].y;
-    }
-    return area / 2;
-};
-
-/** Check if cycle A is inside cycle B (point-in-polygon) */
-const isInside = (a: EditorVertex[], b: EditorVertex[]): boolean => {
-    if (a.length === 0 || b.length === 0) return false;
-    const p = new Point(a[0].x, a[0].y);
-    const poly = editorVerticesToPolygon(b);
-    return poly.contains(p);
-};
-
 export const Editor = ({
-    boundary,
-    obstacles,
+    boundary: boundaryProp,
+    obstacles: obstaclesProp,
     width,
     height,
     onChange,
     readonly = false,
 }: EditorProps) => {
     const [vertices, setVertices] = useState<EditorVertex[]>(() => [
-        ...polygonToEditorVertices(boundary),
-        ...obstacles.flatMap((o) => polygonToEditorVertices(o)),
+        ...polygonToEditorVertices(boundaryProp),
+        ...obstaclesProp.flatMap((o) => polygonToEditorVertices(o)),
     ]);
     const [edges, setEdges] = useState<[number, number][]>(() => {
         const e: [number, number][] = [];
         let idx = 0;
-        for (const poly of [boundary, ...obstacles]) {
+        for (const poly of [boundaryProp, ...obstaclesProp]) {
             const pts = poly.points;
             for (let i = 0; i < pts.length; i++) {
                 const j = (i + 1) % pts.length;
@@ -122,14 +68,43 @@ export const Editor = ({
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
     const [selectedEdgeIndex, setSelectedEdgeIndex] = useState<number | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+    const SCROLL_PADDING = 80;
+    const contentBounds = useMemo(() => {
+        if (vertices.length === 0) {
+            return {
+                contentMinX: -SCROLL_PADDING,
+                contentMinY: -SCROLL_PADDING,
+                contentMaxX: width + SCROLL_PADDING,
+                contentMaxY: height + SCROLL_PADDING,
+                stageWidth: width + 2 * SCROLL_PADDING,
+                stageHeight: height + 2 * SCROLL_PADDING,
+            };
+        }
+        const xs = vertices.map((v) => v.x);
+        const ys = vertices.map((v) => v.y);
+        const contentMinX = Math.min(0, ...xs) - SCROLL_PADDING;
+        const contentMinY = Math.min(0, ...ys) - SCROLL_PADDING;
+        const contentMaxX = Math.max(width, ...xs) + SCROLL_PADDING;
+        const contentMaxY = Math.max(height, ...ys) + SCROLL_PADDING;
+        return {
+            contentMinX,
+            contentMinY,
+            contentMaxX,
+            contentMaxY,
+            stageWidth: contentMaxX - contentMinX,
+            stageHeight: contentMaxY - contentMinY,
+        };
+    }, [vertices, width, height]);
 
     useEffect(() => {
-        const bv = polygonToEditorVertices(boundary);
-        const hv = obstacles.flatMap((o) => polygonToEditorVertices(o));
+        const bv = polygonToEditorVertices(boundaryProp);
+        const hv = obstaclesProp.flatMap((o) => polygonToEditorVertices(o));
         const all = [...bv, ...hv];
         const e: [number, number][] = [];
         let idx = 0;
-        for (const poly of [boundary, ...obstacles]) {
+        for (const poly of [boundaryProp, ...obstaclesProp]) {
             const pts = poly.points;
             for (let i = 0; i < pts.length; i++) {
                 const j = (i + 1) % pts.length;
@@ -139,7 +114,7 @@ export const Editor = ({
         }
         setVertices(all);
         setEdges(e);
-    }, [boundary, obstacles]);
+    }, [boundaryProp, obstaclesProp]);
 
     const degree = useMemo(() => {
         const d: number[] = Array(vertices.length).fill(0);
@@ -154,38 +129,45 @@ export const Editor = ({
 
     const cycles = useMemo(() => findCycles(vertices, edges), [vertices, edges]);
 
-    const { boundaryPoly, holePolys } = useMemo(() => {
-        if (cycles.length === 0) return { boundaryPoly: null, holePolys: [] as Polygon[] };
+    const EMPTY_HOLES: Polygon[] = useMemo(() => [], []);
+
+    const { boundary, obstacles } = useMemo(() => {
+        if (cycles.length === 0) return { boundary: null, obstacles: EMPTY_HOLES };
         const withArea = cycles.map((c) => ({ cycle: c, area: Math.abs(signedArea(c)) }));
         withArea.sort((a, b) => b.area - a.area);
         const boundaryCycle = withArea[0].cycle;
-        const boundaryPoly = editorVerticesToPolygon(boundaryCycle);
-        const holePolys: Polygon[] = [];
+        const boundary = editorVerticesToPolygon(boundaryCycle);
+        const obstacles: Polygon[] = [];
         for (let i = 1; i < withArea.length; i++) {
             if (isInside(withArea[i].cycle, boundaryCycle)) {
-                holePolys.push(editorVerticesToPolygon(withArea[i].cycle));
+                obstacles.push(editorVerticesToPolygon(withArea[i].cycle));
             }
         }
-        return { boundaryPoly, holePolys };
-    }, [cycles]);
+        return { boundary, obstacles };
+    }, [cycles, EMPTY_HOLES]);
 
-    const notifyChange = useCallback(
-        (b?: Polygon, o?: Polygon[]) => {
-            onChange?.(b, o);
-        },
-        [onChange]
-    );
+    const lastNotifiedRef = useRef<{ boundary: Polygon | undefined; obstacles: Polygon[] } | null>(null);
 
     useEffect(() => {
-        if (boundaryPoly) {
-            notifyChange(boundaryPoly, holePolys);
-        } else {
-            notifyChange(undefined, undefined);
-        }
-    }, [boundaryPoly, holePolys, notifyChange]);
+        const b = boundary ?? undefined;
+        const o = obstacles;
+        const polygon = b ? b.points.map((p) => ({ x: p.x, y: p.y })) : undefined;
+        const obstaclesList = o.map((poly) => poly.points.map((p) => ({ x: p.x, y: p.y })));
+        console.warn("Editor onChange", { polygon, obstacles: obstaclesList });
+
+        const prev = lastNotifiedRef.current;
+        const same =
+            prev &&
+            polyEquals(b, prev.boundary) &&
+            polyArrayEquals(o, prev.obstacles);
+        if (same) return;
+        lastNotifiedRef.current = { boundary: b, obstacles: o };
+        onChange?.(b, o);
+    }, [boundary, obstacles, onChange]);
 
     const handleEdgeClick = useCallback(
         (edgeIndex: number, x: number, y: number) => {
+            console.warn("Editor edge click", { edgeIndex, x, y });
             if (readonly) return;
             if (selectedEdgeIndex === edgeIndex) {
                 const [a, b] = edges[edgeIndex];
@@ -214,6 +196,7 @@ export const Editor = ({
 
     const handleStageClick = useCallback(
         (e: { target: { getStage: () => unknown } }) => {
+            console.warn("Editor stage click");
             if (readonly) return;
             const stage = e.target.getStage();
             if (!stage || e.target !== stage) return;
@@ -236,6 +219,7 @@ export const Editor = ({
 
     const handleVertexClick = useCallback(
         (index: number) => {
+            console.warn("Editor vertex click", { index });
             if (readonly) return;
 
             if (selectedEdgeIndex !== null) {
@@ -295,7 +279,7 @@ export const Editor = ({
     );
 
     const handleKeyDown = useCallback(
-        (e: KeyboardEvent<HTMLDivElement>) => {
+        (e: React.KeyboardEvent<HTMLDivElement>) => {
             if (readonly) return;
             if (e.key !== "Delete" && e.key !== "Backspace") return;
 
@@ -319,6 +303,25 @@ export const Editor = ({
                 setVertices((prev) => prev.filter((_, i) => i !== idx));
                 setActiveIndex(null);
                 e.preventDefault();
+            }
+
+            const SCROLL_STEP = 40;
+            const el = scrollContainerRef.current;
+            if (!el) return;
+            const key = e.key as "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight";
+            switch (key) {
+                case "ArrowUp":
+                    el.scrollBy({ top: -SCROLL_STEP, behavior: "smooth" });
+                    break;
+                case "ArrowDown":
+                    el.scrollBy({ top: SCROLL_STEP, behavior: "smooth" });
+                    break;
+                case "ArrowLeft":
+                    el.scrollBy({ left: -SCROLL_STEP, behavior: "smooth" });
+                    break;
+                case "ArrowRight":
+                    el.scrollBy({ left: SCROLL_STEP, behavior: "smooth" });
+                    break;
             }
         },
         [readonly, selectedEdgeIndex, activeIndex]
@@ -364,28 +367,30 @@ export const Editor = ({
             }}
         >
             <div
+                ref={scrollContainerRef}
                 style={{
                     position: "absolute",
                     inset: 0,
-                    backgroundColor: "rgba(2, 6, 23, 0.85)",
-                    backgroundImage: `
-                        linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
-                        linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px)
-                    `,
-                    backgroundSize: "24px 24px",
-                }}
-            />
-            <Stage
-                width={width}
-                height={height}
-                onClick={handleStageClick}
-                style={{
-                    position: "relative",
-                    zIndex: 1,
-                    cursor,
-                    borderRadius: 10,
+                    overflow: "auto",
+                    minWidth: contentBounds.stageWidth,
+                    minHeight: contentBounds.stageHeight,
                 }}
             >
+                <Grid
+                    width={contentBounds.stageWidth}
+                    height={contentBounds.stageHeight}
+                />
+                <Stage
+                    width={contentBounds.stageWidth}
+                    height={contentBounds.stageHeight}
+                    onClick={handleStageClick}
+                    style={{
+                        position: "relative",
+                        zIndex: 1,
+                        cursor,
+                        borderRadius: 10,
+                    }}
+                >
                 <Layer>
                     {allEdges.map(({ start, end }, i) => (
                         <Edge
@@ -414,12 +419,22 @@ export const Editor = ({
                                     : undefined
                             }
                             draggable={!readonly}
-                            dragBounds={readonly ? undefined : { width, height }}
+                            contentBounds={
+                                readonly
+                                    ? undefined
+                                    : {
+                                          minX: contentBounds.contentMinX,
+                                          minY: contentBounds.contentMinY,
+                                          maxX: contentBounds.contentMaxX,
+                                          maxY: contentBounds.contentMaxY,
+                                      }
+                            }
                             readonly={readonly}
                         />
                     ))}
                 </Layer>
             </Stage>
+            </div>
         </div>
     );
 };

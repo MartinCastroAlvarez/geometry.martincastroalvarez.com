@@ -31,10 +31,10 @@ export const useJobs = (params?: { nextToken?: string; limit?: number }) => {
     const query = useQuery({
         queryKey: [...JOBS_QUERY_KEY, params?.nextToken ?? "", params?.limit ?? 20, token ?? ""],
         queryFn: async () => {
-            const data = await new GeometryApiClient(GEOMETRY_API_URL, token).getJobs(params);
+            const res = await new GeometryApiClient(GEOMETRY_API_URL, token).getJobs(params);
             return {
-                records: data.records.map((r) => toDomainJob(fromApiJob(r))),
-                next_token: data.next_token,
+                data: res.data.map((r) => toDomainJob(fromApiJob(r))),
+                next_token: res.next_token,
             };
         },
         enabled: !!token,
