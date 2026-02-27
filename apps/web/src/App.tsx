@@ -9,7 +9,7 @@
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Clock, Globe, Plus } from "lucide-react";
-import { Toaster, Nav, NavSkeleton, Container, Body, Buttons, Button, Toggle, Card } from "@geometry/ui";
+import { Toaster, Nav, NavSkeleton, Container, Body, Toolbar, Button, Toggle, Card } from "@geometry/ui";
 import { useSession, useLogout, useJobs } from "@geometry/data";
 import { useLocale, Language } from "@geometry/i18n";
 import { useAnalytics, GoogleAnalyticsActions, GoogleAnalyticsCategories } from "@geometry/analytics";
@@ -59,7 +59,7 @@ const App = () => {
                 <NavSkeleton />
             ) : (
             <Nav onClick={goHome}>
-                <Buttons right>
+                <Toolbar right>
                     <Button onClick={goEditor} icon={<Plus size={14} />} sm>
                         {t("nav.create")}
                     </Button>
@@ -79,7 +79,7 @@ const App = () => {
                             {t("nav.login")}
                         </Button>
                     )}
-                </Buttons>
+                </Toolbar>
             </Nav>
             )}
             <Container padded spaced size={12}>

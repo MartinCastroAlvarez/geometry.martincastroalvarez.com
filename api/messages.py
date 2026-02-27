@@ -28,7 +28,7 @@ from attributes import ReceiptHandle
 from botocore.exceptions import ClientError
 from enums import Action
 from exceptions import ConfigurationError
-from exceptions import ServiceUnavailableError
+from exceptions import InternalServerError
 from exceptions import ValidationError
 from interfaces import Serializable
 from logger import get_logger
@@ -125,7 +125,7 @@ class Queue:
             return response["QueueUrl"]
         except ClientError as err:
             logger.error("Queue.url | get_queue_url failed queue=%s error=%s", self.name, str(err))
-            raise ServiceUnavailableError(f"SQS service error: {str(err)}") from err
+            raise InternalServerError("Service temporarily unavailable") from err
 
     def put(self, message: Message, delay_seconds: int = 0) -> str:
         """
@@ -152,7 +152,7 @@ class Queue:
             raise ValidationError(f"Message is not JSON serializable: {str(err)}") from err
         except ClientError as err:
             logger.error("Queue.put() | send_message failed action=%s job_id=%s error=%s", message.action.value, message.job_id, str(err))
-            raise ServiceUnavailableError(f"SQS service error: {str(err)}") from err
+            raise InternalServerError("Service temporarily unavailable") from err
 
     def receive(
         self,
@@ -184,7 +184,7 @@ class Queue:
             return response.get("Messages", [])
         except ClientError as err:
             logger.error("Queue.receive() | receive_message failed error=%s", str(err))
-            raise ServiceUnavailableError(f"SQS service error: {str(err)}") from err
+            raise InternalServerError("Service temporarily unavailable") from err
 
     def delete(self, receipt_handle: ReceiptHandle | str) -> None:
         """
@@ -198,7 +198,7 @@ class Queue:
             self.client.delete_message(QueueUrl=self.url, ReceiptHandle=handle)
         except ClientError as err:
             logger.error("Queue.delete() | delete_message failed error=%s", str(err))
-            raise ServiceUnavailableError(f"SQS service error: {str(err)}") from err
+            raise InternalServerError("Service temporarily unavailable") from err
 
     def commit(self, message: Message) -> None:
         """

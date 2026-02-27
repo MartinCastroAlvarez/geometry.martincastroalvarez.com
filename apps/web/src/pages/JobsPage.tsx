@@ -8,18 +8,15 @@
 import { Link } from "react-router-dom";
 import { Container, Title, Text, Button, Badge } from "@geometry/ui";
 import { useJobs, useSession } from "@geometry/data";
-import { JobsPageSkeleton } from "../skeletons";
+import { WithJobsPageSkeleton } from "../skeletons";
 
 export const JobsPage = () => {
     const { isLoading: sessionLoading } = useSession();
     const { jobs, isLoading: jobsLoading } = useJobs();
 
-    if (sessionLoading || jobsLoading) {
-        return <JobsPageSkeleton />;
-    }
-
     return (
-        <Container padded spaced size={12}>
+        <WithJobsPageSkeleton loading={sessionLoading || jobsLoading}>
+            <Container padded spaced size={12}>
             <Container center>
                 <Title xl center>
                     My Jobs
@@ -37,6 +34,7 @@ export const JobsPage = () => {
                     </Link>
                 </Container>
             ))}
-        </Container>
+            </Container>
+        </WithJobsPageSkeleton>
     );
 };

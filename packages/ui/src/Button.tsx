@@ -1,12 +1,13 @@
 /**
- * Button and Buttons layout: primary action UI and optional confirm dialog.
+ * Button and Toolbar: primary action UI and optional confirm dialog.
  *
- * Context: Button supports sizes (xs/sm/lg), optional icon, and confirm (boolean or custom message).
- * When confirm is set, click opens a Confirm modal; on confirm the original onClick runs. Buttons
- * wraps children in a flex row with optional left/center/right alignment via Container.
+ * Context: Button supports sizes (xs/sm/lg), optional icon, confirm, and disabled. When disabled,
+ * the button uses reduced opacity, cursor-not-allowed, and onClick is not fired. When confirm is set,
+ * click opens a Confirm modal; on confirm the original onClick runs. Toolbar wraps children in a
+ * flex row with optional left/center/right alignment via Container.
  *
  * Example:
- *   <Buttons><Button onClick={save}>Save</Button></Buttons>
+ *   <Toolbar><Button onClick={save}>Save</Button></Toolbar>
  *   <Button confirm="Delete?" onClick={onDelete}>Delete</Button>
  */
 
@@ -15,24 +16,27 @@ import Confirm from "./Confirm";
 import { Container } from "./Container";
 import { useLocale } from "@geometry/i18n";
 
-interface ButtonsProps {
+interface ToolbarProps {
     children: React.ReactNode;
     left?: boolean;
     center?: boolean;
     right?: boolean;
 }
 
-export const Buttons: React.FC<ButtonsProps> = ({ children, left = false, center: _center = true, right = false }) => {
+export const Toolbar: React.FC<ToolbarProps> = ({ children, left = false, center: _center = true, right = false }) => {
     void _center;
     const justifyClass = right ? "justify-end" : left ? "justify-start" : "justify-center";
     return (
-        <Container middle spaced size={12} left={left} center={!left && !right} right={right} name="geometry-buttons">
+        <Container middle spaced size={12} left={left} center={!left && !right} right={right} name="geometry-toolbar">
             <div className={`flex flex-row flex-wrap items-center gap-2 w-full ${justifyClass}`}>
                 {children}
             </div>
         </Container>
     );
 };
+
+/** @deprecated Use Toolbar instead. */
+export const Buttons = Toolbar;
 
 interface ButtonProps {
     children?: React.ReactNode;
@@ -63,7 +67,7 @@ export const Button: React.FC<ButtonProps> = ({
     if (!children && !icon) return null;
 
     const baseClasses =
-        "inline-flex flex-row items-center justify-center gap-2 font-medium rounded-lg transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer border border-neutral-500 bg-white/5 hover:bg-white/15 hover:border-neutral-400 active:bg-white/20";
+        "inline-flex flex-row items-center justify-center gap-2 font-medium rounded-lg transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer border-2 border-gray-500 bg-white/5 hover:bg-white/15 hover:border-gray-400 active:bg-white/20";
 
     const getSizeClasses = (): string => {
         if (xs) return "py-1 px-6 text-xs";

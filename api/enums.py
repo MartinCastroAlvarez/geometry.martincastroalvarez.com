@@ -199,3 +199,41 @@ class Status(str, Enum):
             return cls(raw)
         except ValueError:
             raise ValidationError(f"status must be one of [{cls.PENDING.value!r}, {cls.FAILED.value!r}, {cls.SUCCESS.value!r}], got {raw!r}")
+
+
+class PolygonValidationCode(str, Enum):
+    """
+    Polygon validation codes for i18n. Exceptions may carry a string that can be
+    converted with PolygonValidationCode.parse(). Frontend uses these to show localized messages.
+    """
+
+    POLYGON_CONVEX_OK = "POLYGON_CONVEX_OK"
+    POLYGON_NOT_CONVEX = "POLYGON_NOT_CONVEX"
+    POLYGON_CCW_OK = "POLYGON_CCW_OK"
+    POLYGON_NOT_CCW = "POLYGON_NOT_CCW"
+    POLYGON_SIMPLE_OK = "POLYGON_SIMPLE_OK"
+    POLYGON_NOT_SIMPLE = "POLYGON_NOT_SIMPLE"
+    OBSTACLE_CONVEX_OK = "OBSTACLE_CONVEX_OK"
+    OBSTACLE_NOT_CONVEX = "OBSTACLE_NOT_CONVEX"
+    OBSTACLE_CW_OK = "OBSTACLE_CW_OK"
+    OBSTACLE_NOT_CW = "OBSTACLE_NOT_CW"
+    OBSTACLE_CONTAINED_OK = "OBSTACLE_CONTAINED_OK"
+    OBSTACLE_NOT_CONTAINED = "OBSTACLE_NOT_CONTAINED"
+    OBSTACLE_OVERLAPS = "OBSTACLE_OVERLAPS"
+    OBSTACLE_NO_OVERLAP = "OBSTACLE_NO_OVERLAP"
+    CHECK_SKIPPED = "CHECK_SKIPPED"
+
+    @classmethod
+    def parse(cls, value: str | None) -> PolygonValidationCode:
+        """
+        Coerce string to PolygonValidationCode; raises ValidationError if invalid.
+        Use when an exception contains a string that should be converted to a code.
+        """
+        if value is None or (isinstance(value, str) and not value.strip()):
+            raise ValidationError("polygon validation code is required and must be a non-empty string")
+        raw: str = value.strip().upper().replace("-", "_") if isinstance(value, str) else str(value).strip().upper().replace("-", "_")
+        try:
+            return cls(raw)
+        except ValueError:
+            allowed = ", ".join(repr(c.value) for c in cls)
+            raise ValidationError(f"polygon validation code must be one of [{allowed}], got {raw!r}")

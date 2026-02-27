@@ -201,6 +201,32 @@ class TestPolygonValidationExecute:
         assert "obstacles.0.overlaps" in result
         assert all(isinstance(result[k], str) for k in result)
 
+    def test_execute_includes_status_and_status_note(self):
+        """Response always has top-level 'status' and 'status.note' from sub-validations."""
+        v = PolygonValidation()
+        body = {"boundary": [[0, 0], [10, 0], [10, 10], [0, 10]], "obstacles": []}
+        result = v.handler(body)
+        assert "status" in result
+        assert "status.note" in result
+        assert result["status"] in ("success", "failed", "pending")
+        assert isinstance(result["status.note"], str)
+
+    def test_execute_status_success_when_all_checks_pass(self):
+        v = PolygonValidation()
+        body = {"boundary": [[0, 0], [10, 0], [10, 10], [0, 10]], "obstacles": []}
+        result = v.handler(body)
+        assert result["status"] == "success"
+        assert "passed" in result["status.note"].lower() or "all" in result["status.note"].lower()
+
+    def test_execute_status_failed_when_any_check_fails(self):
+        v = PolygonValidation()
+        # Clockwise rectangle -> ccw check fails
+        body = {"boundary": [[0, 0], [0, 10], [10, 10], [10, 0]], "obstacles": []}
+        result = v.handler(body)
+        assert result["status"] == "failed"
+        assert "polygon.ccw" in result
+        assert result["polygon.ccw"] == "failed"
+
 
 class TestPolygonValidationHandler:
     """Test full handler flow."""

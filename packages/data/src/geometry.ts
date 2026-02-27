@@ -11,13 +11,13 @@
  *   const jobs = await client.getJobs({ limit: 10 });
  */
 
+import type { Summary } from "@geometry/domain";
 import { GEOMETRY_API_URL } from "./constants";
 import type {
     ListResponse,
     DetailsResponse,
     GeometryApiJob,
     GeometryApiArtGallery,
-    PolygonValidationResponse,
 } from "./types";
 
 export type {
@@ -25,8 +25,8 @@ export type {
     DetailsResponse,
     GeometryApiJob,
     GeometryApiArtGallery,
-    PolygonValidationResponse,
 } from "./types";
+export type { Summary } from "@geometry/domain";
 
 function request(
     url: string,
@@ -46,7 +46,17 @@ async function requestOrThrow(
 ): Promise<Response> {
     const response = await request(url, jwtToken, options);
     if (!response.ok) {
-        throw new Error(`Geometry API error: ${response.status} ${response.statusText}`);
+        if (response.status === 503) {
+            throw new Error("SERVICE_UNAVAILABLE");
+        }
+        let message = `${response.status} ${response.statusText}`;
+        try {
+            const body = (await response.json()) as { error?: { message?: string } };
+            if (body?.error?.message) message = body.error.message;
+        } catch {
+            // ignore JSON parse failure, use status text
+        }
+        throw new Error(message);
     }
     return response;
 }
@@ -110,27 +120,30 @@ export class GeometryApiClient {
     async createJob(
         boundary: Array<{ x: number; y: number }>,
         obstacles: Array<Array<{ x: number; y: number }>>,
+        title?: string,
     ): Promise<GeometryApiJob> {
         if (this.jwtToken == null || this.jwtToken === "") requireToken("createJob");
+        const body: { boundary: { points: typeof boundary }; obstacles: Array<{ points: typeof boundary }>; title?: string } = {
+            boundary: { points: boundary },
+            obstacles: obstacles.map((obs) => ({ points: obs })),
+        };
+        if (title != null && title !== "") body.title = title;
         const response = await requestOrThrow(`${this.baseUrl}/v1/jobs`, this.jwtToken, {
             method: "POST",
-            body: JSON.stringify({
-                boundary: { points: boundary },
-                obstacles: obstacles.map((obs) => ({ points: obs })),
-            }),
+            body: JSON.stringify(body),
         });
         return response.json();
     }
 
     /**
-     * Validate polygon (boundary and obstacles). Returns a dict of status and note keys
-     * (e.g. "polygon.convex", "polygon.convex.note", "obstacles.0.contained").
+     * Validate polygon (boundary and obstacles). Returns Summary with "status", "status.note",
+     * and per-check keys (e.g. "polygon.convex", "polygon.convex.note").
      * Public endpoint; token optional (not required for validation).
      */
     async validatePolygon(
         boundary: Array<{ x: number; y: number }>,
         obstacles: Array<Array<{ x: number; y: number }>>,
-    ): Promise<PolygonValidationResponse> {
+    ): Promise<Summary> {
         const response = await requestOrThrow(`${this.baseUrl}/v1/polygon`, this.jwtToken, {
             method: "POST",
             body: JSON.stringify({
@@ -138,7 +151,7 @@ export class GeometryApiClient {
                 obstacles: obstacles.map((obs) => ({ points: obs })),
             }),
         });
-        return response.json();
+        return response.json() as Promise<Summary>;
     }
 
     async getArtGalleries(params?: { nextToken?: string; limit?: number }): Promise<ListResponse<GeometryApiArtGallery>> {

@@ -234,6 +234,10 @@ class GeometryStack extends Stack {
     galleryIdResource.addMethod('GET', lambdaIntegration)
     galleryIdResource.addMethod('OPTIONS', lambdaIntegration)
 
+    const polygonResource = v1Resource.addResource('polygon')
+    polygonResource.addMethod('POST', lambdaIntegration)
+    polygonResource.addMethod('OPTIONS', lambdaIntegration)
+
     const jobsResource = v1Resource.addResource('jobs')
     jobsResource.addMethod('GET', lambdaIntegration)
     jobsResource.addMethod('POST', lambdaIntegration)

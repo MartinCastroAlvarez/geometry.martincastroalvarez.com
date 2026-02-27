@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@aws-cdk/cloud-assembly-api':
+        specifier: ^2.0.1
+        version: 2.2.0(@aws-cdk/cloud-assembly-schema@50.4.0)
       '@tailwindcss/postcss':
         specifier: ^4.1.18
         version: 4.2.1
@@ -245,6 +248,9 @@ importers:
       '@geometry/i18n':
         specifier: workspace:*
         version: link:../i18n
+      lucide-react:
+        specifier: ^0.562.0
+        version: 0.562.0(react@18.3.1)
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -276,6 +282,15 @@ packages:
 
   '@aws-cdk/asset-node-proxy-agent-v6@2.1.0':
     resolution: {integrity: sha512-7bY3J8GCVxLupn/kNmpPc5VJz8grx+4RKfnnJiO1LG+uxkZfANZG3RMHhE+qQxxwkyQ9/MfPtTpf748UhR425A==}
+
+  '@aws-cdk/cloud-assembly-api@2.2.0':
+    resolution: {integrity: sha512-u1iNQd7BNxTuSdIjbhoxqOxsYqi3kqj+SST0g1V1g24e/XY3FoiP8SFbiVd/+uLVNVY6mLGJ6+Mx3J5ZEkTFrg==}
+    engines: {node: '>= 18.0.0'}
+    peerDependencies:
+      '@aws-cdk/cloud-assembly-schema': '>=53.0.0'
+    bundledDependencies:
+      - jsonschema
+      - semver
 
   '@aws-cdk/cloud-assembly-schema@50.4.0':
     resolution: {integrity: sha512-9Cplwc5C+SNe3hMfqZET7gXeM68tiH2ytQytCi+zz31Bn7O3GAgAnC2dYe+HWnZAgVH788ZkkBwnYXkeqx7v4g==}
@@ -1321,6 +1336,10 @@ snapshots:
   '@aws-cdk/asset-awscli-v1@2.2.263': {}
 
   '@aws-cdk/asset-node-proxy-agent-v6@2.1.0': {}
+
+  '@aws-cdk/cloud-assembly-api@2.2.0(@aws-cdk/cloud-assembly-schema@50.4.0)':
+    dependencies:
+      '@aws-cdk/cloud-assembly-schema': 50.4.0
 
   '@aws-cdk/cloud-assembly-schema@50.4.0': {}
 

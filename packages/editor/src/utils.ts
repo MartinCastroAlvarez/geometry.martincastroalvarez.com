@@ -7,10 +7,10 @@ import type { EditorVertex } from "./types";
 import { editorVerticesToPolygon } from "./adapters";
 
 /** Find cycles (closed polygons) from vertices and edges. Returns ordered vertex arrays. */
-export function findCycles(
+export const findCycles = (
     vertices: EditorVertex[],
     edges: [number, number][]
-): EditorVertex[][] {
+): EditorVertex[][] => {
     const n = vertices.length;
     const adj: number[][] = Array.from({ length: n }, () => []);
     for (const [a, b] of edges) {
@@ -53,10 +53,10 @@ export function findCycles(
     }
 
     return cycles;
-}
+};
 
 /** Signed area of a polygon (positive = counterclockwise) */
-export function signedArea(vertices: EditorVertex[]): number {
+export const signedArea = (vertices: EditorVertex[]): number => {
     let area = 0;
     const n = vertices.length;
     for (let i = 0; i < n; i++) {
@@ -64,12 +64,12 @@ export function signedArea(vertices: EditorVertex[]): number {
         area += vertices[i].x * vertices[j].y - vertices[j].x * vertices[i].y;
     }
     return area / 2;
-}
+};
 
 /** Check if cycle A is inside cycle B (point-in-polygon) */
-export function isInside(a: EditorVertex[], b: EditorVertex[]): boolean {
+export const isInside = (a: EditorVertex[], b: EditorVertex[]): boolean => {
     if (a.length === 0 || b.length === 0) return false;
     const p = new Point(a[0].x, a[0].y);
     const poly = editorVerticesToPolygon(b);
     return poly.contains(p);
-}
+};

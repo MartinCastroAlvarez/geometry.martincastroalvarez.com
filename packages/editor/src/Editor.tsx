@@ -20,6 +20,8 @@ import { Edge } from "./Edge";
 import { Grid } from "./Grid";
 import { Vertex } from "./Vertex";
 
+const STAGE_DOUBLE_CLICK_MS = 300;
+
 function polyEquals(a: Polygon | undefined, b: Polygon | undefined): boolean {
     if (a === b) return true;
     if (!a || !b || a.points.length !== b.points.length) return false;
@@ -31,32 +33,39 @@ function polyArrayEquals(a: Polygon[], b: Polygon[]): boolean {
     return a.every((p, i) => polyEquals(p, b[i]));
 }
 
+const emptyPolygon = new Polygon([]);
+
 export interface EditorProps {
-    boundary: Polygon;
-    obstacles: Polygon[];
+    /** Boundary polygon; can be empty (no points). Defaults to empty polygon if omitted. */
+    boundary?: Polygon;
+    /** Obstacles (holes); can be empty array. Defaults to [] if omitted. */
+    obstacles?: Polygon[];
     width: number;
     height: number;
     onChange?: (boundary?: Polygon, obstacles?: Polygon[]) => void;
-    readonly?: boolean;
+    /** Called when the number of vertices changes; use to know if there is at least one point (e.g. to show toolbar). */
+    onVerticesChange?: (hasVertices: boolean) => void;
 }
 
 export const Editor = ({
-    boundary: boundaryProp,
-    obstacles: obstaclesProp,
+    boundary: boundaryProp = emptyPolygon,
+    obstacles: obstaclesProp = [],
     width,
     height,
     onChange,
-    readonly = false,
+    onVerticesChange,
 }: EditorProps) => {
+    const boundaryNorm = boundaryProp ?? emptyPolygon;
+    const obstaclesNorm = obstaclesProp ?? [];
     const [vertices, setVertices] = useState<EditorVertex[]>(() => [
-        ...polygonToEditorVertices(boundaryProp),
-        ...obstaclesProp.flatMap((o) => polygonToEditorVertices(o)),
+        ...polygonToEditorVertices(boundaryNorm),
+        ...obstaclesNorm.flatMap((o) => polygonToEditorVertices(o)),
     ]);
     const [edges, setEdges] = useState<[number, number][]>(() => {
         const e: [number, number][] = [];
         let idx = 0;
-        for (const poly of [boundaryProp, ...obstaclesProp]) {
-            const pts = poly.points;
+        for (const poly of [boundaryNorm, ...obstaclesNorm]) {
+            const pts = poly.points ?? [];
             for (let i = 0; i < pts.length; i++) {
                 const j = (i + 1) % pts.length;
                 e.push([idx + i, idx + j]);
@@ -67,8 +76,29 @@ export const Editor = ({
     });
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
     const [selectedEdgeIndex, setSelectedEdgeIndex] = useState<number | null>(null);
+    /** Index of the tip of the current open chain; null when chain is closed or no chain. */
+    const [lastVertexIndex, setLastVertexIndex] = useState<number | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const lastStageClickTimeRef = useRef<number>(0);
+    const pendingStageSingleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const [containerSize, setContainerSize] = useState({ width, height });
+    useEffect(() => {
+        const el = containerRef.current;
+        if (!el) return;
+        const ro = new ResizeObserver((entries) => {
+            const { width: w, height: h } = entries[0]?.contentRect ?? {};
+            if (w != null && h != null && w > 0 && h > 0) {
+                setContainerSize({ width: w, height: h });
+            }
+        });
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, []);
+
+    const effectiveWidth = containerSize.width;
+    const effectiveHeight = containerSize.height;
 
     const SCROLL_PADDING = 80;
     const contentBounds = useMemo(() => {
@@ -76,18 +106,18 @@ export const Editor = ({
             return {
                 contentMinX: -SCROLL_PADDING,
                 contentMinY: -SCROLL_PADDING,
-                contentMaxX: width + SCROLL_PADDING,
-                contentMaxY: height + SCROLL_PADDING,
-                stageWidth: width + 2 * SCROLL_PADDING,
-                stageHeight: height + 2 * SCROLL_PADDING,
+                contentMaxX: effectiveWidth + SCROLL_PADDING,
+                contentMaxY: effectiveHeight + SCROLL_PADDING,
+                stageWidth: effectiveWidth,
+                stageHeight: effectiveHeight,
             };
         }
         const xs = vertices.map((v) => v.x);
         const ys = vertices.map((v) => v.y);
         const contentMinX = Math.min(0, ...xs) - SCROLL_PADDING;
         const contentMinY = Math.min(0, ...ys) - SCROLL_PADDING;
-        const contentMaxX = Math.max(width, ...xs) + SCROLL_PADDING;
-        const contentMaxY = Math.max(height, ...ys) + SCROLL_PADDING;
+        const contentMaxX = Math.max(effectiveWidth, ...xs) + SCROLL_PADDING;
+        const contentMaxY = Math.max(effectiveHeight, ...ys) + SCROLL_PADDING;
         return {
             contentMinX,
             contentMinY,
@@ -96,16 +126,23 @@ export const Editor = ({
             stageWidth: contentMaxX - contentMinX,
             stageHeight: contentMaxY - contentMinY,
         };
-    }, [vertices, width, height]);
+    }, [vertices, effectiveWidth, effectiveHeight]);
 
+    const isFirstMountRef = useRef(true);
     useEffect(() => {
-        const bv = polygonToEditorVertices(boundaryProp);
-        const hv = obstaclesProp.flatMap((o) => polygonToEditorVertices(o));
+        if (isFirstMountRef.current) {
+            isFirstMountRef.current = false;
+            return;
+        }
+        const b = boundaryProp ?? emptyPolygon;
+        const o = obstaclesProp ?? [];
+        const bv = polygonToEditorVertices(b);
+        const hv = o.flatMap((poly) => polygonToEditorVertices(poly));
         const all = [...bv, ...hv];
         const e: [number, number][] = [];
         let idx = 0;
-        for (const poly of [boundaryProp, ...obstaclesProp]) {
-            const pts = poly.points;
+        for (const poly of [b, ...o]) {
+            const pts = poly.points ?? [];
             for (let i = 0; i < pts.length; i++) {
                 const j = (i + 1) % pts.length;
                 e.push([idx + i, idx + j]);
@@ -114,6 +151,7 @@ export const Editor = ({
         }
         setVertices(all);
         setEdges(e);
+        setLastVertexIndex(null);
     }, [boundaryProp, obstaclesProp]);
 
     const degree = useMemo(() => {
@@ -128,6 +166,14 @@ export const Editor = ({
     }, [vertices.length, edges]);
 
     const cycles = useMemo(() => findCycles(vertices, edges), [vertices, edges]);
+
+    useEffect(() => {
+        if (lastVertexIndex === null) return;
+        const tipId = vertices[lastVertexIndex]?.id;
+        if (!tipId) return;
+        const isInCycle = cycles.some((c) => c.some((v) => v.id === tipId));
+        if (isInCycle) setLastVertexIndex(null);
+    }, [cycles, vertices, lastVertexIndex]);
 
     const EMPTY_HOLES: Polygon[] = useMemo(() => [], []);
 
@@ -151,9 +197,6 @@ export const Editor = ({
     useEffect(() => {
         const b = boundary ?? undefined;
         const o = obstacles;
-        const polygon = b ? b.points.map((p) => ({ x: p.x, y: p.y })) : undefined;
-        const obstaclesList = o.map((poly) => poly.points.map((p) => ({ x: p.x, y: p.y })));
-        console.warn("Editor onChange", { polygon, obstacles: obstaclesList });
 
         const prev = lastNotifiedRef.current;
         const same =
@@ -165,10 +208,12 @@ export const Editor = ({
         onChange?.(b, o);
     }, [boundary, obstacles, onChange]);
 
+    useEffect(() => {
+        onVerticesChange?.(vertices.length > 0);
+    }, [vertices.length, onVerticesChange]);
+
     const handleEdgeClick = useCallback(
         (edgeIndex: number, x: number, y: number) => {
-            console.warn("Editor edge click", { edgeIndex, x, y });
-            if (readonly) return;
             if (selectedEdgeIndex === edgeIndex) {
                 const [a, b] = edges[edgeIndex];
                 const newVertex: EditorVertex = {
@@ -191,19 +236,12 @@ export const Editor = ({
             }
             containerRef.current?.focus();
         },
-        [readonly, selectedEdgeIndex, edges, vertices.length]
+        [selectedEdgeIndex, edges, vertices.length]
     );
 
-    const handleStageClick = useCallback(
-        (e: { target: { getStage: () => unknown } }) => {
-            console.warn("Editor stage click");
-            if (readonly) return;
-            const stage = e.target.getStage();
-            if (!stage || e.target !== stage) return;
+    const addVertexAt = useCallback(
+        (pos: { x: number; y: number }, connectToLast: boolean) => {
             setSelectedEdgeIndex(null);
-            const pos = (stage as { getPointerPosition: () => { x: number; y: number } | null })
-                .getPointerPosition?.();
-            if (!pos) return;
             const newVertex: EditorVertex = {
                 id: `v-${Date.now()}-${pos.x}-${pos.y}`,
                 x: pos.x,
@@ -211,20 +249,52 @@ export const Editor = ({
             };
             const newIndex = vertices.length;
             setVertices((prev) => [...prev, newVertex]);
+            const canConnect = connectToLast && lastVertexIndex !== null && degree[lastVertexIndex] < 2;
+            if (canConnect) {
+                setEdges((prev) => [...prev, [lastVertexIndex!, newIndex]]);
+            }
+            setLastVertexIndex(newIndex);
             setActiveIndex(newIndex);
             containerRef.current?.focus();
         },
-        [readonly, vertices.length]
+        [vertices.length, lastVertexIndex, degree]
+    );
+
+    const handleStageClick = useCallback(
+        (e: { target: { getStage: () => unknown } }) => {
+            const stage = e.target.getStage();
+            if (!stage || e.target !== stage) return;
+            const pos = (stage as { getPointerPosition: () => { x: number; y: number } | null })
+                .getPointerPosition?.();
+            if (!pos) return;
+            const now = Date.now();
+            if (pendingStageSingleRef.current !== null) {
+                clearTimeout(pendingStageSingleRef.current);
+                pendingStageSingleRef.current = null;
+            }
+            if (now - lastStageClickTimeRef.current < STAGE_DOUBLE_CLICK_MS) {
+                lastStageClickTimeRef.current = 0;
+                addVertexAt(pos, false);
+                return;
+            }
+            lastStageClickTimeRef.current = now;
+            pendingStageSingleRef.current = setTimeout(() => {
+                pendingStageSingleRef.current = null;
+                addVertexAt(pos, true);
+            }, STAGE_DOUBLE_CLICK_MS);
+        },
+        [addVertexAt]
     );
 
     const handleVertexClick = useCallback(
         (index: number) => {
-            console.warn("Editor vertex click", { index });
-            if (readonly) return;
-
             if (selectedEdgeIndex !== null) {
                 const [a, b] = edges[selectedEdgeIndex];
                 if (index === a || index === b) {
+                    setSelectedEdgeIndex(null);
+                    return;
+                }
+                if (degree[index] >= 1) {
                     setSelectedEdgeIndex(null);
                     return;
                 }
@@ -254,7 +324,15 @@ export const Editor = ({
                     edges.map(([a, b]) => key(a, b))
                 );
                 if (!existing.has(key(activeIndex, index))) {
+                    const newEdges: [number, number][] = [...edges, [activeIndex, index]];
                     setEdges((prev) => [...prev, [activeIndex, index]]);
+                    setLastVertexIndex(index);
+                    const cyclesAfter = findCycles(vertices, newEdges);
+                    const tipId = vertices[activeIndex]?.id;
+                    const indexId = vertices[index]?.id;
+                    if (tipId && indexId && cyclesAfter.some((c) => c.some((v) => v.id === tipId || v.id === indexId))) {
+                        setLastVertexIndex(null);
+                    }
                 }
                 setActiveIndex(index);
                 containerRef.current?.focus();
@@ -263,24 +341,24 @@ export const Editor = ({
             setActiveIndex(index);
             containerRef.current?.focus();
         },
-        [readonly, activeIndex, degree, edges, selectedEdgeIndex]
+        [activeIndex, degree, edges, selectedEdgeIndex]
     );
 
-    const handleVertexDrag = useCallback(
-        (index: number, x: number, y: number) => {
-            if (readonly) return;
-            setVertices((prev) => {
-                const next = [...prev];
-                next[index] = { ...next[index], x, y };
-                return next;
-            });
-        },
-        [readonly]
-    );
+    const handleVertexDrag = useCallback((index: number, x: number, y: number) => {
+        setVertices((prev) => {
+            const next = [...prev];
+            next[index] = { ...next[index], x, y };
+            return next;
+        });
+    }, []);
+
+    const handleVertexDragEnd = useCallback((index: number) => {
+        setActiveIndex(index);
+        containerRef.current?.focus();
+    }, []);
 
     const handleKeyDown = useCallback(
         (e: React.KeyboardEvent<HTMLDivElement>) => {
-            if (readonly) return;
             if (e.key !== "Delete" && e.key !== "Backspace") return;
 
             if (selectedEdgeIndex !== null) {
@@ -302,6 +380,11 @@ export const Editor = ({
                 );
                 setVertices((prev) => prev.filter((_, i) => i !== idx));
                 setActiveIndex(null);
+                setLastVertexIndex((prev) => {
+                    if (prev === null) return null;
+                    if (prev === idx) return null;
+                    return prev > idx ? prev - 1 : prev;
+                });
                 e.preventDefault();
             }
 
@@ -324,10 +407,29 @@ export const Editor = ({
                     break;
             }
         },
-        [readonly, selectedEdgeIndex, activeIndex]
+        [selectedEdgeIndex, activeIndex]
     );
 
-    const cursor = readonly ? "default" : "crosshair";
+    useEffect(() => () => {
+        if (pendingStageSingleRef.current !== null) clearTimeout(pendingStageSingleRef.current);
+    }, []);
+
+    const cursor = "crosshair";
+
+    const vertexContentBounds = useMemo(
+        () => ({
+            minX: contentBounds.contentMinX,
+            minY: contentBounds.contentMinY,
+            maxX: contentBounds.contentMaxX,
+            maxY: contentBounds.contentMaxY,
+        }),
+        [
+            contentBounds.contentMinX,
+            contentBounds.contentMinY,
+            contentBounds.contentMaxX,
+            contentBounds.contentMaxY,
+        ]
+    );
 
     const allEdges = useMemo(() => {
         const result: { start: EditorVertex; end: EditorVertex; closed: boolean }[] = [];
@@ -356,9 +458,7 @@ export const Editor = ({
                 onKeyDown={handleKeyDown}
                 style={{
                 position: "relative",
-                width,
-                height,
-                minWidth: width,
+                width: "100%",
                 minHeight: height,
                 flexShrink: 0,
                 borderRadius: 12,
@@ -397,39 +497,23 @@ export const Editor = ({
                             key={`edge-${i}`}
                             start={start}
                             end={end}
+                            edgeIndex={i}
                             selected={selectedEdgeIndex === i}
-                            onClick={!readonly ? (x, y) => handleEdgeClick(i, x, y) : undefined}
-                            readonly={readonly}
+                            onClick={handleEdgeClick}
                         />
                     ))}
                     {vertices.map((v, i) => (
                         <Vertex
                             key={v.id}
                             vertex={v}
+                            index={i}
                             isFirst={i === 0}
                             isActive={activeIndex === i}
-                            onClick={() => handleVertexClick(i)}
-                            onDragMove={!readonly ? (x, y) => handleVertexDrag(i, x, y) : undefined}
-                            onDragEnd={
-                                !readonly
-                                    ? () => {
-                                          setActiveIndex(i);
-                                          containerRef.current?.focus();
-                                      }
-                                    : undefined
-                            }
-                            draggable={!readonly}
-                            contentBounds={
-                                readonly
-                                    ? undefined
-                                    : {
-                                          minX: contentBounds.contentMinX,
-                                          minY: contentBounds.contentMinY,
-                                          maxX: contentBounds.contentMaxX,
-                                          maxY: contentBounds.contentMaxY,
-                                      }
-                            }
-                            readonly={readonly}
+                            onClick={handleVertexClick}
+                            onDragMove={handleVertexDrag}
+                            onDragEnd={handleVertexDragEnd}
+                            draggable
+                            contentBounds={vertexContentBounds}
                         />
                     ))}
                 </Layer>

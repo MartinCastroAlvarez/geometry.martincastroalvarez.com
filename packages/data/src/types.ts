@@ -106,3 +106,12 @@ export interface GeometryApiArtGallery {
 
 /** Polygon validation response: keys like "polygon.convex", "polygon.convex.note", "obstacles.0.contained"; values are status ("pending"|"success"|"failed") or note strings. */
 export type PolygonValidationResponse = Record<string, string>;
+
+/** API error response shape (e.g. 400 ValidationError). */
+export interface ApiErrorResponse {
+    error: {
+        code: number;
+        type: string;
+        message: string;
+    };
+}

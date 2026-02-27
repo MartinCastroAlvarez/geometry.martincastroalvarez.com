@@ -5,32 +5,31 @@
  * When onClick is provided, click/tap pass (x, y) of the pointer so the parent can insert a new vertex on the edge.
  *
  * Example:
- *   <Edge start={v1} end={v2} selected onClick={(x, y) => handleEdgeClick(edgeIndex, x, y)} />
+ *   <Edge start={v1} end={v2} edgeIndex={i} selected onClick={handleEdgeClick} />
  */
 
+import { memo, useState } from "react";
 import { Line } from "react-konva";
 import type { EditorVertex } from "./types";
 import { editorColors } from "./colors";
 
-import { useState } from "react";
-
 export interface EdgeProps {
     start: EditorVertex;
     end: EditorVertex;
+    edgeIndex: number;
     closed?: boolean;
     selected?: boolean;
-    onClick?: (x: number, y: number) => void;
-    readonly?: boolean;
+    onClick?: (edgeIndex: number, x: number, y: number) => void;
 }
 
-export const Edge = ({ start, end, selected = false, onClick, readonly = false }: EdgeProps) => {
+const EdgeComponent = ({ start, end, edgeIndex, selected = false, onClick }: EdgeProps) => {
     const [isHovered, setIsHovered] = useState(false);
     const stroke = selected
         ? editorColors.vertexActive
-        : isHovered && !readonly
+        : isHovered
           ? editorColors.strokeHover
           : editorColors.edge;
-    const strokeWidth = selected ? 4 : isHovered && !readonly ? 3 : 2;
+    const strokeWidth = selected ? 4 : isHovered ? 3 : 2;
 
     return (
         <Line
@@ -40,20 +39,22 @@ export const Edge = ({ start, end, selected = false, onClick, readonly = false }
             hitStrokeWidth={20}
             lineCap="round"
             lineJoin="round"
-            cursor={!readonly ? "pointer" : undefined}
+            cursor="pointer"
             onClick={
                 onClick
                     ? (e) => {
+                          e.cancelBubble = true;
                           const pos = e.target.getStage()?.getPointerPosition?.();
-                          if (pos) onClick(pos.x, pos.y);
+                          if (pos) onClick(edgeIndex, pos.x, pos.y);
                       }
                     : undefined
             }
             onTap={
                 onClick
                     ? (e) => {
+                          e.cancelBubble = true;
                           const pos = e.target.getStage()?.getPointerPosition?.();
-                          if (pos) onClick(pos.x, pos.y);
+                          if (pos) onClick(edgeIndex, pos.x, pos.y);
                       }
                     : undefined
             }
@@ -62,3 +63,5 @@ export const Edge = ({ start, end, selected = false, onClick, readonly = false }
         />
     );
 };
+
+export const Edge = memo(EdgeComponent);

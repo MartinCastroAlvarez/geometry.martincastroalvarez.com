@@ -1,6 +1,8 @@
 /**
  * Skeleton for Home (galleries list). Grid 2×4 of EditorSkeleton.
+ * WithHomePageSkeleton shows skeleton when loading, otherwise renders children.
  */
+import type { ReactNode } from "react";
 import { Container } from "@geometry/ui";
 import { EditorSkeleton } from "@geometry/editor";
 
@@ -21,3 +23,7 @@ export const HomePageSkeleton = () => (
         </Container>
     </Container>
 );
+
+export function WithHomePageSkeleton({ loading, children }: { loading: boolean; children: ReactNode }) {
+    return loading ? <HomePageSkeleton /> : <>{children}</>;
+}

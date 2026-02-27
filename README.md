@@ -147,6 +147,8 @@ Required test coverage of 90% reached. Total coverage: 92.81%
 - **Deploy:** `pnpm run deploy` (update → build:all → CDK deploy → CloudFront invalidation via `pnpm run publish`).
 - **Publish (invalidation only):** `pnpm run publish` (invalidates CloudFront using `GeometryDistributionId` from `outputs.json`).
 - **Test:** `pnpm run test` (runs `test:lab`). Use `pnpm run test:lab:1` … `pnpm run test:lab:10` for `lab/example1.py` … `lab/example10.py`.
+- **Logs (API Lambda):** `pnpm run logs:api` — prints the last 100 CloudWatch log events for `geometry-api-handler` (uses `AWS_PROFILE='martin'`).
+- **Logs (worker Lambda):** `pnpm run logs:worker` — prints the last 100 CloudWatch log events for `geometry-worker-handler` (uses `AWS_PROFILE='martin'`).
 
 ### Deploy steps (what `pnpm run deploy` does)
 

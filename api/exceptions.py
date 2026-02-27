@@ -248,6 +248,19 @@ class PathMissingResourceIdError(GeometryException):
         super().__init__(message)
 
 
+class PolygonNotSimpleError(GeometryException):
+    """
+    Raised when a polygon is not simple: a vertex has other than exactly 2 edges.
+    In a simple closed polygon every vertex has exactly 2 edges; 1 edge means a
+    dangling end, 3+ edges mean a branch or self-touch.
+    """
+
+    code: http.HTTPStatus = http.HTTPStatus.BAD_REQUEST
+
+    def __init__(self, message: str = "Polygon is not simple: every vertex must have exactly 2 edges"):
+        super().__init__(message)
+
+
 class PolygonValidationError(GeometryException):
     """
     Raised when polygon validation fails (e.g. boundary not convex, obstacle not contained).
@@ -260,4 +273,157 @@ class PolygonValidationError(GeometryException):
     code: http.HTTPStatus = http.HTTPStatus.BAD_REQUEST
 
     def __init__(self, message: str = "Polygon validation failed"):
+        super().__init__(message)
+
+
+class InternalServerError(GeometryException):
+    """
+    Raised for infrastructure or unexpected errors. User-facing message must not
+    expose internal details (e.g. S3, SQS). Used when re-raising after catching
+    ServiceUnavailableError or generic Exception in the interceptor.
+    """
+
+    code: http.HTTPStatus = http.HTTPStatus.INTERNAL_SERVER_ERROR
+
+    def __init__(self, message: str = "An error occurred"):
+        super().__init__(message)
+
+
+class AuthHeaderRequiredError(UnauthorizedError):
+    """X-Auth header is required."""
+
+    def __init__(self, message: str = "Auth header is required"):
+        super().__init__(message)
+
+
+class TokenExpiredError(UnauthorizedError):
+    """JWT token has expired."""
+
+    def __init__(self, message: str = "Token has expired"):
+        super().__init__(message)
+
+
+class InvalidTokenError(UnauthorizedError):
+    """JWT token is invalid."""
+
+    def __init__(self, message: str = "Invalid token"):
+        super().__init__(message)
+
+
+class TokenMissingEmailClaimError(UnauthorizedError):
+    """JWT token missing email claim."""
+
+    def __init__(self, message: str = "Token missing email claim"):
+        super().__init__(message)
+
+
+class BoundaryRequiredError(ValidationError):
+    """Boundary is required and must be a list of points."""
+
+    def __init__(self, message: str = "boundary is required and must be a list of points"):
+        super().__init__(message)
+
+
+class ObstaclesMustBeListError(ValidationError):
+    """Obstacles must be a list of obstacle polygons."""
+
+    def __init__(self, message: str = "obstacles must be a list of obstacle polygons"):
+        super().__init__(message)
+
+
+class TitleMustBeStringError(ValidationError):
+    """Title must be a string."""
+
+    def __init__(self, message: str = "title must be a string"):
+        super().__init__(message)
+
+
+class MetaRequiredError(ValidationError):
+    """Meta is required."""
+
+    def __init__(self, message: str = "meta is required"):
+        super().__init__(message)
+
+
+class MetaMustBeDictError(ValidationError):
+    """Meta must be a dict."""
+
+    def __init__(self, message: str = "meta must be a dict"):
+        super().__init__(message)
+
+
+class MetaKeysMustBeStringsError(ValidationError):
+    """Meta keys must be strings."""
+
+    def __init__(self, message: str = "meta keys must be strings"):
+        super().__init__(message)
+
+
+class MetaValuesMustBeStringsError(ValidationError):
+    """Meta values must be strings."""
+
+    def __init__(self, message: str = "meta values must be strings"):
+        super().__init__(message)
+
+
+class JobNotFinishedToPublishError(ValidationError):
+    """Job must be successfully finished to publish."""
+
+    def __init__(self, message: str = "Job must be successfully finished to publish"):
+        super().__init__(message)
+
+
+class UserNotAuthenticatedError(UnauthorizedError):
+    """User must be authenticated."""
+
+    def __init__(self, message: str = "User must be authenticated"):
+        super().__init__(message)
+
+
+class ValidationBoundaryRequiredError(ValidationError):
+    """Boundary is required (validation endpoint)."""
+
+    def __init__(self, message: str = "boundary is required"):
+        super().__init__(message)
+
+
+class ValidationBoundaryMustBeListError(ValidationError):
+    """Boundary must be a list of points or an object with key 'points'."""
+
+    def __init__(self, message: str = "boundary must be a list of points or an object with key 'points'"):
+        super().__init__(message)
+
+
+class ValidationObstaclesMustBeListError(ValidationError):
+    """Obstacles must be a list of obstacle polygons (validation endpoint)."""
+
+    def __init__(self, message: str = "obstacles must be a list of obstacle polygons"):
+        super().__init__(message)
+
+
+class PolygonItemMustBePointError(ValidationError):
+    """Polygon item at index must be a Point."""
+
+    def __init__(self, message: str = "Polygon item must be a Point"):
+        super().__init__(message)
+
+
+class PolygonBoxRequiresOnePointError(ValidationError):
+    """Polygon.box requires at least one point."""
+
+    def __init__(self, message: str = "Polygon.box requires at least one point"):
+        super().__init__(message)
+
+
+class PolygonUnserializeExpectsListError(ValidationError):
+    """Polygon.unserialize expects a list of points."""
+
+    def __init__(self, message: str = "Polygon.unserialize expects a list of points"):
+        super().__init__(message)
+
+
+class PolygonsDoNotShareEdgeError(ValidationError):
+    """Polygons do not share an edge."""
+
+    def __init__(self, message: str = "Polygons do not share an edge"):
         super().__init__(message)

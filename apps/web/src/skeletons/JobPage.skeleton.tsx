@@ -1,6 +1,8 @@
 /**
  * Skeleton for single Job page. Reuses @geometry/ui skeletons.
+ * WithJobPageSkeleton shows skeleton when loading, otherwise renders children.
  */
+import type { ReactNode } from "react";
 import { Container, TitleSkeleton, BadgeSkeleton, InputSkeleton, ButtonSkeleton } from "@geometry/ui";
 
 export const JobPageSkeleton = () => (
@@ -23,3 +25,7 @@ export const JobPageSkeleton = () => (
         </Container>
     </Container>
 );
+
+export function WithJobPageSkeleton({ loading, children }: { loading: boolean; children: ReactNode }) {
+    return loading ? <JobPageSkeleton /> : <>{children}</>;
+}

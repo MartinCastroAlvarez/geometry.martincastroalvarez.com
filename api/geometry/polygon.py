@@ -30,7 +30,11 @@ from decimal import Decimal
 from typing import Any
 
 from enums import Orientation
-from exceptions import ValidationError
+from exceptions import PolygonBoxRequiresOnePointError
+from exceptions import PolygonItemMustBePointError
+from exceptions import PolygonNotSimpleError
+from exceptions import PolygonsDoNotShareEdgeError
+from exceptions import PolygonUnserializeExpectsListError
 from geometry.box import Box
 from geometry.point import Point
 from geometry.segment import Segment
@@ -57,8 +61,17 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[list[Any]]
             value = list(value) if value is not None else []
         for i, item in enumerate(value):
             if not isinstance(item, Point):
-                raise ValidationError(f"Polygon item at index {i} must be a Point, got {type(item).__name__}")
+                raise PolygonItemMustBePointError(f"Polygon item at index {i} must be a Point, got {type(item).__name__}")
         super().__init__(value)
+        n: int = len(self)
+        if n >= 2 and any(self.degree(p) != 2 for p in self):
+            raise PolygonNotSimpleError(
+                "Polygon is not simple: at least one vertex has only 1 edge (not a closed polygon) " "or 3 or more edges (branch or self-touch)."
+            )
+
+    def degree(self, point: Point) -> int:
+        """Return 2 times the number of times the point appears as a vertex."""
+        return 2 * len([p for p in self if (p.x, p.y) == (point.x, point.y)])
 
     @property
     def edges(self) -> Sequence[Segment]:
@@ -72,7 +85,7 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[list[Any]]
     def box(self) -> Box:
         """Axis-aligned bounding box of the polygon vertices."""
         if not self:
-            raise ValidationError("Polygon.box requires at least one point")
+            raise PolygonBoxRequiresOnePointError("Polygon.box requires at least one point")
         xs = [p.x for p in self]
         ys = [p.y for p in self]
         min_x, max_x = min(xs), max(xs)
@@ -203,7 +216,7 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[list[Any]]
     def unserialize(cls, data: list[Any]) -> Polygon:
         """Build Polygon from list of point coords; each point validated via Point.unserialize."""
         if not isinstance(data, list):
-            raise ValidationError("Polygon.unserialize expects a list of points")
+            raise PolygonUnserializeExpectsListError("Polygon.unserialize expects a list of points")
         return cls([Point.unserialize(p) for p in data])
 
     def __and__(self, other: Polygon) -> Polygon:
@@ -213,12 +226,12 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[list[Any]]
         n: int = len(self)
         m: int = len(other)
         if n < 2 or m < 2:
-            raise ValidationError("Polygons do not share an edge")
+            raise PolygonsDoNotShareEdgeError("Polygons do not share an edge")
         self_edges: set[frozenset] = {frozenset({self[i], self[(i + 1) % n]}) for i in range(n)}
         other_edges: set[frozenset] = {frozenset({other[j], other[(j + 1) % m]}) for j in range(m)}
         shared: set[frozenset] = self_edges & other_edges
         if not shared:
-            raise ValidationError("Polygons do not share an edge")
+            raise PolygonsDoNotShareEdgeError("Polygons do not share an edge")
         edge_key: frozenset = shared.pop()
         a, b = edge_key
         return Polygon([a, b])

@@ -29,7 +29,9 @@ from controllers import Controller
 from controllers import ControllerRequest
 from controllers import ControllerResponse
 from enums import Status
-from exceptions import ValidationError
+from exceptions import ValidationBoundaryMustBeListError
+from exceptions import ValidationBoundaryRequiredError
+from exceptions import ValidationObstaclesMustBeListError
 from geometry import Polygon
 from structs import Table
 
@@ -72,6 +74,22 @@ def _normalize_result(result: ValidationResult) -> dict[str, str]:
     return out
 
 
+def _overall_status(merged: ValidationResult) -> Status:
+    """
+    Compute overall status from all status keys in merged result.
+    Uses only keys whose value is a Status (not *.note string keys).
+    SUCCESS only if every such value is Status.SUCCESS; else PENDING if any is PENDING; else FAILED.
+    """
+    status_values = [v for v in merged.values() if isinstance(v, Status)]
+    if not status_values:
+        return Status.PENDING
+    if all(s == Status.SUCCESS for s in status_values):
+        return Status.SUCCESS
+    if any(s == Status.PENDING for s in status_values):
+        return Status.PENDING
+    return Status.FAILED
+
+
 class Validation(Controller):
     """
     Base validation: validate (shallow), execute (deep validations), handler from Controller.
@@ -111,13 +129,13 @@ class PolygonValidation(Validation):
         boundary: Any = body.get("boundary")
         obstacles: Any = body.get("obstacles")
         if boundary is None:
-            raise ValidationError("boundary is required")
+            raise ValidationBoundaryRequiredError("boundary is required")
         if isinstance(boundary, dict) and "points" in boundary:
             boundary = boundary["points"]
         if not isinstance(boundary, list):
-            raise ValidationError("boundary must be a list of points or an object with key 'points'")
+            raise ValidationBoundaryMustBeListError("boundary must be a list of points or an object with key 'points'")
         if obstacles is not None and not isinstance(obstacles, list):
-            raise ValidationError("obstacles must be a list of obstacle polygons")
+            raise ValidationObstaclesMustBeListError("obstacles must be a list of obstacle polygons")
         obstacle_list: list[Any] = obstacles or []
         obstacle_polys: list[Polygon] = []
         for obs in obstacle_list:
@@ -242,7 +260,7 @@ class PolygonValidation(Validation):
         return result
 
     def execute(self, validated_input: ValidationRequest) -> ValidationResponse:
-        """Run deep validations by merging all validate_* results; keep execute simple."""
+        """Run deep validations by merging all validate_* results; add status and status.note."""
         req: PolygonValidationRequest = cast(PolygonValidationRequest, validated_input)
         boundary: Polygon = req["boundary"]
         obstacles: Table[Polygon] = req["obstacles"]
@@ -256,7 +274,11 @@ class PolygonValidation(Validation):
             self.validate_obstacles_contained(boundary, obstacles),
             self.validate_obstacles_overlaps(obstacles),
         ]
-        out: PolygonValidationResponse = {}
+        merged: ValidationResult = {}
         for r in results:
-            out.update(_normalize_result(r))
+            merged.update(r)
+        overall: Status = _overall_status(merged)
+        merged["status"] = overall
+        merged["status.note"] = "All validations passed." if overall == Status.SUCCESS else "One or more validations failed or are pending."
+        out: PolygonValidationResponse = _normalize_result(merged)
         return cast(ValidationResponse, out)

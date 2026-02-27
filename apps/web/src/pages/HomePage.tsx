@@ -5,14 +5,15 @@
  * the app shows a consistent loading state. Can be extended for marketing or galleries list.
  */
 import { useSession } from "@geometry/data";
-import { HomePageSkeleton } from "../skeletons";
+import { Container } from "@geometry/ui";
+import { WithHomePageSkeleton } from "../skeletons";
 
 export const HomePage = () => {
     const { isLoading: sessionLoading } = useSession();
 
-    if (sessionLoading) {
-        return <HomePageSkeleton />;
-    }
-
-    return null;
+    return (
+        <WithHomePageSkeleton loading={sessionLoading}>
+            <Container padded spaced size={12} />
+        </WithHomePageSkeleton>
+    );
 };

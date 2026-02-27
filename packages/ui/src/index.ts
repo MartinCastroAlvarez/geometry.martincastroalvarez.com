@@ -5,6 +5,7 @@
 
 export * from './Toast'
 export * from './Button'
+export * from './Problem'
 export * from './Button.skeleton'
 export * from './Toggle'
 export * from './Confirm'

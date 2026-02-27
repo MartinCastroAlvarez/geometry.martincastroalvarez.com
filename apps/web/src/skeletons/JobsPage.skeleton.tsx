@@ -1,6 +1,8 @@
 /**
  * Skeleton for Jobs list page. Grid 2×4 of EditorSkeleton (same as HomePage).
+ * WithJobsPageSkeleton shows skeleton when loading, otherwise renders children.
  */
+import type { ReactNode } from "react";
 import { Container } from "@geometry/ui";
 import { EditorSkeleton } from "@geometry/editor";
 
@@ -21,3 +23,7 @@ export const JobsPageSkeleton = () => (
         </Container>
     </Container>
 );
+
+export function WithJobsPageSkeleton({ loading, children }: { loading: boolean; children: ReactNode }) {
+    return loading ? <JobsPageSkeleton /> : <>{children}</>;
+}

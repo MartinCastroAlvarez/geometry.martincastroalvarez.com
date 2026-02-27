@@ -1,9 +1,29 @@
 {
+  "errors": {
+    "failedToFetch": "Connection error",
+    "serviceUnavailable": "Service temporarily unavailable"
+  },
   "nav": {
     "login": "Login",
     "logout": "Logout",
     "history": "History",
     "create": "Create"
+  },
+  "editor": {
+    "validate": "Validate",
+    "submit": "Submit",
+    "untitledGallery": "Untitled Gallery",
+    "tips": {
+      "clickToAdd": "Click on the canvas to add a point; click elsewhere to connect points and form a shape.",
+      "doubleClickHole": "Double-click on the canvas to start a new shape (e.g. a hole) without connecting to the previous point.",
+      "clickEdgeToSplit": "Click an edge to select it, then click it again to add a vertex and split the edge.",
+      "connectTwoVertices": "Click one vertex, then another to connect them with a new edge.",
+      "largestIsBoundary": "The largest closed shape is the room boundary; smaller closed shapes inside it become obstacles.",
+      "dragVertices": "Drag vertices to move them and adjust the polygon.",
+      "deleteKey": "Select a vertex or edge, then press Delete or Backspace to remove it.",
+      "arrowKeysScroll": "Use the arrow keys to scroll the canvas when the drawing is larger than the view.",
+      "validateThenSubmit": "Draw your room boundary and any obstacles, then click Validate and, if valid, Submit to create the job."
+    }
   },
   "toolbar": {
     "vertices": "vertices",
@@ -20,5 +40,22 @@
   },
   "common": {
     "defaultConfirmMessage": "Are you sure?"
+  },
+  "validation": {
+    "POLYGON_CONVEX_OK": "Polygon is convex.",
+    "POLYGON_NOT_CONVEX": "Polygon is not convex.",
+    "POLYGON_CCW_OK": "Polygon is counter-clockwise.",
+    "POLYGON_NOT_CCW": "Polygon is not counter-clockwise.",
+    "POLYGON_SIMPLE_OK": "Polygon is simple (no self-intersection).",
+    "POLYGON_NOT_SIMPLE": "Polygon is not simple (self-intersects).",
+    "OBSTACLE_CONVEX_OK": "Obstacle is convex.",
+    "OBSTACLE_NOT_CONVEX": "Obstacle is not convex.",
+    "OBSTACLE_CW_OK": "Obstacle is clockwise.",
+    "OBSTACLE_NOT_CW": "Obstacle is not clockwise.",
+    "OBSTACLE_CONTAINED_OK": "Obstacle is fully inside the boundary.",
+    "OBSTACLE_NOT_CONTAINED": "Obstacle is not fully inside the boundary.",
+    "OBSTACLE_OVERLAPS": "Obstacle overlaps another obstacle.",
+    "OBSTACLE_NO_OVERLAP": "Obstacle does not overlap others.",
+    "CHECK_SKIPPED": "Check skipped (invalid or earlier error)."
   }
 }

@@ -16,6 +16,7 @@
   "dependencies": {
     "@geometry/domain": "workspace:*",
     "@geometry/i18n": "workspace:*",
+    "lucide-react": "^0.562.0",
     "sonner": "^2.0.7"
   },
   "peerDependencies": {

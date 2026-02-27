@@ -684,6 +684,23 @@ class TestPolygon:
         p = Polygon([])
         assert list(p.edges) == []
 
+    def test_degree_vertex_in_polygon(self):
+        """Each vertex in a simple polygon has degree 2 (appears once)."""
+        p = Polygon([Point([0, 0]), Point([1, 0]), Point([0.5, 1])])
+        assert p.degree(Point([0, 0])) == 2
+        assert p.degree(Point([1, 0])) == 2
+        assert p.degree(Point([0.5, 1])) == 2
+
+    def test_degree_point_not_vertex_returns_zero(self):
+        """Point not in polygon has degree 0."""
+        p = Polygon([Point([0, 0]), Point([1, 0]), Point([0.5, 1])])
+        assert p.degree(Point([2, 2])) == 0
+
+    def test_degree_single_point_polygon(self):
+        """Single-vertex polygon: that point has degree 2."""
+        p = Polygon([Point([0, 0])])
+        assert p.degree(Point([0, 0])) == 2
+
     def test_box_empty_raises(self):
         with pytest.raises(ValidationError, match="at least one point"):
             Polygon().box

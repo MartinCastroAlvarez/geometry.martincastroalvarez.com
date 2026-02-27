@@ -38,10 +38,15 @@ from controllers import Controller
 from controllers import PrivateControllerMixin
 from data import Secret
 from enums import Method
+from exceptions import AuthHeaderRequiredError
+from exceptions import ConfigurationError
 from exceptions import GeometryException
+from exceptions import InternalServerError
+from exceptions import InvalidTokenError
 from exceptions import MethodNotAllowedError
 from exceptions import PathMissingResourceIdError
-from exceptions import UnauthorizedError
+from exceptions import TokenExpiredError
+from exceptions import TokenMissingEmailClaimError
 from interfaces import Serializable
 from logger import get_logger
 from logger import log_extra
@@ -181,7 +186,7 @@ def private(func: Callable) -> Callable:
             token: str | None = request.headers.get(X_AUTH_HEADER.lower()) or request.headers.get(X_AUTH_HEADER)
             if not token:
                 logger.warning("private.wrapper() | auth failed %s header missing path=%s", X_AUTH_HEADER, request.path)
-                raise UnauthorizedError(f"{X_AUTH_HEADER} header is required")
+                raise AuthHeaderRequiredError(f"{X_AUTH_HEADER} header is required")
             if secrets.compare_digest(token, jwt_test):
                 request.user = User.test()
             else:
@@ -189,14 +194,14 @@ def private(func: Callable) -> Callable:
                     payload = jwt.decode(token, jwt_secret, algorithms=[JWT_ALGORITHM])
                 except jwt.ExpiredSignatureError:
                     logger.warning("private.wrapper() | auth failed token expired path=%s", request.path)
-                    raise UnauthorizedError("Token has expired")
+                    raise TokenExpiredError("Token has expired")
                 except jwt.InvalidTokenError:
                     logger.warning("private.wrapper() | auth failed invalid token path=%s", request.path)
-                    raise UnauthorizedError("Invalid token")
+                    raise InvalidTokenError("Invalid token")
                 email_raw = payload.get("email")
                 if not email_raw:
                     logger.warning("private.wrapper() | auth failed token missing email claim path=%s", request.path)
-                    raise UnauthorizedError("Token missing email claim")
+                    raise TokenMissingEmailClaimError("Token missing email claim")
                 email = Email(email_raw)
                 request.user = User(
                     email=email,
@@ -273,7 +278,11 @@ def interceptor(
                 extra={**extra, "elapsed_ms": elapsed_ms, "error": str(e)},
             )
             origin = _request_origin(event)
-            response: ApiResponse = ApiResponse.unserialize(e)
+            # Do not expose configuration or internal details to the client.
+            if type(e) is ConfigurationError:
+                response = ApiResponse.unserialize(InternalServerError("An error occurred"))
+            else:
+                response = ApiResponse.unserialize(e)
             response.origin = origin
             return response.serialize()
 
@@ -288,7 +297,8 @@ def interceptor(
                 extra={**extra, "elapsed_ms": elapsed_ms},
             )
             origin = _request_origin(event)
-            response = ApiResponse.unserialize(e)
+            # Do not leak internal details (S3, SQS, stack traces); return generic error.
+            response = ApiResponse.unserialize(InternalServerError("An error occurred"))
             response.origin = origin
             return response.serialize()
 

@@ -32,9 +32,12 @@
     "test:lab:7": "cd lab && python3 example7.py",
     "test:lab:8": "cd lab && python3 example8.py",
     "test:lab:9": "cd lab && python3 example9.py",
-    "test:lab:10": "cd lab && python3 example10.py"
+    "test:lab:10": "cd lab && python3 example10.py",
+    "logs:api": "AWS_PROFILE='martin' aws logs filter-log-events --log-group-name /aws/lambda/geometry-api-handler --limit 100 --start-time $(( ($(date +%s) - 180) * 1000 )) --output text",
+    "logs:worker": "AWS_PROFILE='martin' aws logs filter-log-events --log-group-name /aws/lambda/geometry-worker-handler --limit 100 --start-time $(( ($(date +%s) - 180) * 1000 )) --output text"
   },
   "devDependencies": {
+    "@aws-cdk/cloud-assembly-api": "^2.0.1",
     "@tailwindcss/postcss": "^4.1.18",
     "@types/node": "^22.0.0",
     "autoprefixer": "^10.4.23",

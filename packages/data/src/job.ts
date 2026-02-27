@@ -108,13 +108,29 @@ export const useCreateJob = () => {
         mutationFn: ({
             boundary,
             obstacles,
+            title,
         }: {
             boundary: Array<{ x: number; y: number }>;
             obstacles: Array<Array<{ x: number; y: number }>>;
-        }) => new GeometryApiClient(GEOMETRY_API_URL, token).createJob(boundary, obstacles),
+            title?: string;
+        }) => new GeometryApiClient(GEOMETRY_API_URL, token).createJob(boundary, obstacles, title),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: JOBS_QUERY_KEY });
         },
+    });
+    return { ...mutation, isLoading: mutation.isPending };
+};
+
+export const useValidatePolygon = () => {
+    const token = useAuthentication();
+    const mutation = useMutation({
+        mutationFn: ({
+            boundary,
+            obstacles,
+        }: {
+            boundary: Array<{ x: number; y: number }>;
+            obstacles: Array<Array<{ x: number; y: number }>>;
+        }) => new GeometryApiClient(GEOMETRY_API_URL, token).validatePolygon(boundary, obstacles),
     });
     return { ...mutation, isLoading: mutation.isPending };
 };

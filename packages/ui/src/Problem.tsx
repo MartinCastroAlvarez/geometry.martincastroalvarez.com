@@ -1,0 +1,34 @@
+/**
+ * Problem message: danger styling with warning icon.
+ *
+ * Context: Similar to Badge but with danger Tailwind class. Shows a warning icon
+ * (lucide-react TriangleAlert) and the given text. If children (text) is missing
+ * or empty, returns null and hides.
+ *
+ * Example:
+ *   <Problem>{errorMessage}</Problem>
+ */
+
+import React from "react";
+import { TriangleAlert } from "lucide-react";
+
+interface ProblemProps {
+    /** Required; component hides when missing or empty. */
+    children?: React.ReactNode;
+}
+
+const bannerClasses = "flex flex-row items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-red-500/20 text-red-300 border border-red-500/40";
+
+export const Problem: React.FC<ProblemProps> = ({ children }) => {
+    if (children == null) return null;
+    if (typeof children === "string" && children.trim() === "") return null;
+
+    return (
+        <div className="geometry-problem w-full flex justify-center" role="alert">
+            <div className={bannerClasses}>
+                <TriangleAlert className="shrink-0 size-4" aria-hidden />
+                <span>{children}</span>
+            </div>
+        </div>
+    );
+};

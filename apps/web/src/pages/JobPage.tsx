@@ -11,7 +11,7 @@ import { useParams, Link } from "react-router-dom";
 import { Container, Title, Text, Button, Input, Badge } from "@geometry/ui";
 import { useJob, usePublish, useUnpublish, useUpdateJob, useSession } from "@geometry/data";
 import { useAnalytics, GoogleAnalyticsActions, GoogleAnalyticsCategories } from "@geometry/analytics";
-import { JobPageSkeleton } from "../skeletons";
+import { WithJobPageSkeleton } from "../skeletons";
 
 export const JobPage = () => {
     const { id } = useParams<{ id: string }>();
@@ -35,23 +35,23 @@ export const JobPage = () => {
         }
     }, [id, jobLoading, job, track]);
 
-    if (!id) return <Text>Job ID required</Text>;
-    if (sessionLoading || jobLoading || !job) return <JobPageSkeleton />;
+    if (!id) return <Container padded spaced size={12}><Text>Job ID required</Text></Container>;
 
-    const handlePublish = () => publish.mutate(id);
-    const handleUnpublish = () => unpublish.mutate(id);
+    const handlePublish = () => publish.mutate(id!);
+    const handleUnpublish = () => unpublish.mutate(id!);
     const handleUpdateTitle = () => {
-        if (title.trim()) updateJob.mutate({ jobId: id, meta: { title: title.trim() } });
+        if (title.trim() && id) updateJob.mutate({ jobId: id, meta: { title: title.trim() } });
     };
 
     return (
-        <Container padded spaced size={12}>
+        <WithJobPageSkeleton loading={sessionLoading || jobLoading || !job}>
+            <Container padded spaced size={12}>
             <Container center>
                 <Title xl center>
-                    Job {job.id.slice(0, 12)}...
+                    Job {job!.id.slice(0, 12)}...
                 </Title>
-                <Badge danger={job.status === "failed"} success={job.status === "success"}>
-                    {job.status}
+                <Badge danger={job!.status === "failed"} success={job!.status === "success"}>
+                    {job!.status}
                 </Badge>
             </Container>
             <Container padded spaced size={12}>
@@ -65,7 +65,7 @@ export const JobPage = () => {
                 />
             </Container>
             <Container padded spaced size={12}>
-                {job.status === "success" && (
+                {job!.status === "success" && (
                     <>
                         <Button onClick={handlePublish} disabled={publish.isPending}>
                             {publish.isPending ? "Publishing..." : "Publish"}
@@ -81,6 +81,7 @@ export const JobPage = () => {
                     <Button>Back to Jobs</Button>
                 </Link>
             </Container>
-        </Container>
+            </Container>
+        </WithJobPageSkeleton>
     );
 };

@@ -10,7 +10,7 @@ import { useParams } from "react-router-dom";
 import { Container, Title, Text } from "@geometry/ui";
 import { useArtGallery } from "@geometry/data";
 import { useAnalytics, GoogleAnalyticsActions, GoogleAnalyticsCategories } from "@geometry/analytics";
-import { GalleryPageSkeleton } from "../skeletons";
+import { WithGalleryPageSkeleton } from "../skeletons";
 
 export const GalleryPage = () => {
     const { id } = useParams<{ id: string }>();
@@ -27,17 +27,18 @@ export const GalleryPage = () => {
         }
     }, [id, isLoading, gallery, track]);
 
-    if (!id) return <Text>Gallery ID required</Text>;
-    if (isLoading || !gallery) return <GalleryPageSkeleton />;
+    if (!id) return <Container padded spaced size={12}><Text>Gallery ID required</Text></Container>;
 
     return (
-        <Container padded spaced size={12}>
+        <WithGalleryPageSkeleton loading={isLoading || !gallery}>
+            <Container padded spaced size={12}>
             <Container center>
                 <Title xl center>
-                    {gallery.title ?? "Untitled Art Gallery"}
+                    {gallery!.title ?? "Untitled Art Gallery"}
                 </Title>
-                <Text center>ID: {gallery.id}</Text>
+                <Text center>ID: {gallery!.id}</Text>
             </Container>
-        </Container>
+            </Container>
+        </WithGalleryPageSkeleton>
     );
 };

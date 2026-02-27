@@ -17,4 +17,5 @@ export * from './Gallery';
 export * from './ConvexComponent';
 export * from './Ear';
 export * from './Guard';
+export * from './Summary';
 export * from './types';

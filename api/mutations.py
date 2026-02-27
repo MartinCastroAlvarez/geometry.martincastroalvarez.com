@@ -35,9 +35,16 @@ from controllers import ControllerRequest
 from controllers import ControllerResponse
 from controllers import PrivateControllerMixin
 from enums import Action
+from exceptions import BoundaryRequiredError
+from exceptions import JobNotFinishedToPublishError
+from exceptions import MetaKeysMustBeStringsError
+from exceptions import MetaMustBeDictError
+from exceptions import MetaRequiredError
+from exceptions import MetaValuesMustBeStringsError
+from exceptions import ObstaclesMustBeListError
 from exceptions import PolygonValidationError
-from exceptions import UnauthorizedError
-from exceptions import ValidationError
+from exceptions import TitleMustBeStringError
+from exceptions import UserNotAuthenticatedError
 from geometry import Polygon
 from indexes import ArtGalleryPublicIndex
 from indexes import Indexed
@@ -75,10 +82,11 @@ class ArtGalleryHideMutationRequest(MutationRequest):
 
 
 class JobMutationRequest(MutationRequest):
-    """Create job: boundary and obstacles; id is hash (idempotent)."""
+    """Create job: boundary and obstacles; id is hash (idempotent). Optional title (default: Untitled Gallery)."""
 
     boundary: Polygon
     obstacles: Table[Polygon]
+    title: str
 
 
 class JobUpdateMutationRequest(MutationRequest):
@@ -180,12 +188,17 @@ class JobMutation(PrivateControllerMixin, Mutation):
         boundary = body.get("boundary")
         obstacles = body.get("obstacles")
         if not boundary or not isinstance(boundary, list):
-            raise ValidationError("boundary is required and must be a list of points")
+            raise BoundaryRequiredError("boundary is required and must be a list of points")
         if obstacles is not None and not isinstance(obstacles, list):
-            raise ValidationError("obstacles must be a list of obstacle polygons")
+            raise ObstaclesMustBeListError("obstacles must be a list of obstacle polygons")
+        title = body.get("title")
+        if title is not None and not isinstance(title, str):
+            raise TitleMustBeStringError("title must be a string")
+        title_str = str(title).strip() if title else "Untitled Gallery"
         return JobMutationRequest(
             boundary=Polygon.unserialize(boundary),
             obstacles=Table.unserialize([Polygon.unserialize(obs) for obs in (obstacles or []) if isinstance(obs, list)]),
+            title=title_str,
         )
 
     def execute(self, validated_input: JobMutationRequest) -> JobMutationResponse:
@@ -198,18 +211,20 @@ class JobMutation(PrivateControllerMixin, Mutation):
         if failed:
             raise PolygonValidationError("Polygon validation failed: " + ", ".join(failed))
         job_id = Identifier(Signature(f"{hash(boundary)}_{hash(obstacles)}"))
+        title = validated_input.get("title") or "Untitled Gallery"
         job = Job(
             id=job_id,
             stdin={
                 "boundary": boundary.serialize(),
                 "obstacles": [poly.serialize() for poly in obstacles],
             },
+            meta={"title": title},
         )
         repo = JobsRepository(user=self.user)
         repo.save(job)
         email = self.user.email
         if email is None:
-            raise UnauthorizedError("User must be authenticated")
+            raise UserNotAuthenticatedError("User must be authenticated")
         queue.put(Message(action=Action.START, job_id=job.id, user_email=email))
         index = JobsPrivateIndex(user_email=email)
         index.save(
@@ -235,15 +250,15 @@ class JobUpdateMutation(PrivateControllerMixin, Mutation):
         super().validate(body)
         meta = body.get("meta")
         if meta is None:
-            raise ValidationError("meta is required")
+            raise MetaRequiredError("meta is required")
         if not isinstance(meta, dict):
-            raise ValidationError("meta must be a dict")
+            raise MetaMustBeDictError("meta must be a dict")
         meta_str: dict[str, str] = {}
         for k, v in meta.items():
             if not isinstance(k, str):
-                raise ValidationError("meta keys must be strings")
+                raise MetaKeysMustBeStringsError("meta keys must be strings")
             if v is not None and not isinstance(v, str):
-                raise ValidationError("meta values must be strings")
+                raise MetaValuesMustBeStringsError("meta values must be strings")
             meta_str[k] = str(v) if v is not None else ""
         return JobUpdateMutationRequest(
             job_id=Identifier(body.get("id")),
@@ -255,7 +270,7 @@ class JobUpdateMutation(PrivateControllerMixin, Mutation):
         meta = validated_input["meta"]
         email = self.user.email
         if email is None:
-            raise UnauthorizedError("User must be authenticated")
+            raise UserNotAuthenticatedError("User must be authenticated")
         repo_job = JobsRepository(user=self.user)
         job = repo_job.get(job_id)
         job.meta = {**job.meta, **meta}
@@ -291,7 +306,7 @@ class ArtGalleryPublishMutation(PrivateControllerMixin, Mutation):
         repo_job = JobsRepository(user=self.user)
         job = repo_job.get(job_id)
         if not job.is_finished():
-            raise ValidationError("Job must be successfully finished to publish")
+            raise JobNotFinishedToPublishError("Job must be successfully finished to publish")
         gallery_id = gallery_id_from_job_and_user(job_id, self.user.email)
         title: str = job.meta.get("title", "Untitled Art Gallery") if isinstance(job.meta.get("title"), str) else "Untitled Art Gallery"
         data: dict[str, Any] = {

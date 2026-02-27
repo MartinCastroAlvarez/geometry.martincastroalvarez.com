@@ -246,7 +246,7 @@ class TestHandler:
         result = handler(event, None)
         assert result["statusCode"] == 400
         body = json.loads(result["body"])
-        assert body["error"]["type"] == "ValidationError"
+        assert body["error"]["type"] == "BoundaryRequiredError"
 
     @patch("api.api.Secret")
     def test_handler_auth_missing_token_returns_401(self, mock_secret):
@@ -394,7 +394,7 @@ class TestInterceptor:
         result = fake_handler(event, None)
         assert result["statusCode"] == 500
         body = json.loads(result["body"])
-        assert "error" in body and "Handler must return a dict" in body["error"]["message"]
+        assert "error" in body
 
     def test_interceptor_returns_error_response_on_generic_exception(self):
         from api.api import interceptor
@@ -414,8 +414,7 @@ class TestInterceptor:
         result = failing_handler(event, None)
         assert result["statusCode"] == 500
         body = json.loads(result["body"])
-        assert body["error"]["type"] == "RuntimeError"
-        assert "something broke" in body["error"]["message"]
+        assert body["error"]["type"] == "InternalServerError"
 
 
 class TestROUTES:

@@ -16,15 +16,15 @@ import { ArtGallery, Point, Polygon } from "@geometry/domain";
 import type { Job, Gallery } from "@geometry/domain";
 import type { ApiUser, ApiJob, ApiArtGallery, ApiPolygon } from "./types";
 
-export function toDomainUser(api: ApiUser): { email: string | null; name: string | null; avatarUrl: string | null } {
+export const toDomainUser = (api: ApiUser): { email: string | null; name: string | null; avatarUrl: string | null } => {
     return {
         email: api.email ?? null,
         name: api.name ?? null,
         avatarUrl: api.avatarUrl ?? null,
     };
-}
+};
 
-export function toDomainJob(api: ApiJob): Job {
+export const toDomainJob = (api: ApiJob): Job => {
     return {
         id: api.id,
         status: api.status,
@@ -32,9 +32,9 @@ export function toDomainJob(api: ApiJob): Job {
         meta: api.meta ?? {},
         stdout: api.stdout ?? {},
     };
-}
+};
 
-export function toDomainArtGallery(api: ApiArtGallery): Gallery {
+export const toDomainArtGallery = (api: ApiArtGallery): Gallery => {
     const perimeter = new Polygon(api.boundary.points.map((p) => new Point(p.x, p.y)));
     const holes = Object.values(api.obstacles).map(
         (obs) => new Polygon((obs?.points ?? []).map((p) => new Point(p.x, p.y)))
@@ -46,9 +46,9 @@ export function toDomainArtGallery(api: ApiArtGallery): Gallery {
         title: api.title,
         artGallery,
     };
-}
+};
 
-export function fromApiJob(raw: unknown): ApiJob {
+export const fromApiJob = (raw: unknown): ApiJob => {
     const d = raw as Record<string, unknown>;
     return {
         id: String(d.id ?? ""),
@@ -63,14 +63,14 @@ export function fromApiJob(raw: unknown): ApiJob {
         created_at: String(d.created_at ?? ""),
         updated_at: String(d.updated_at ?? ""),
     };
-}
+};
 
 /** Convert domain Polygon to API wire format (array of { x, y }) for validatePolygon and createJob. */
-export function polygonToApiFormat(poly: Polygon): Array<{ x: number; y: number }> {
+export const polygonToApiFormat = (poly: Polygon): Array<{ x: number; y: number }> => {
     return poly.points.map((p) => p.toDict());
-}
+};
 
-export function fromApiArtGallery(raw: unknown): ApiArtGallery {
+export const fromApiArtGallery = (raw: unknown): ApiArtGallery => {
     const d = raw as Record<string, unknown>;
     const boundary = (d.boundary as ApiPolygon) ?? { points: [] };
     const obstacles = (d.obstacles as Record<string, ApiPolygon>) ?? {};
@@ -89,4 +89,4 @@ export function fromApiArtGallery(raw: unknown): ApiArtGallery {
         created_at: String(d.created_at ?? ""),
         updated_at: String(d.updated_at ?? ""),
     };
-}
+};

@@ -1,9 +1,29 @@
 {
+  "errors": {
+    "failedToFetch": "Error de conexión",
+    "serviceUnavailable": "Servicio no disponible temporalmente"
+  },
   "nav": {
     "login": "Acceder",
     "logout": "Salir",
     "history": "Historial",
     "create": "Crear"
+  },
+  "editor": {
+    "validate": "Validar",
+    "submit": "Enviar",
+    "untitledGallery": "Galería Sin Título",
+    "tips": {
+      "clickToAdd": "Hacé click en el canvas para agregar un punto; hacé click en otro lugar para conectar puntos y formar una figura.",
+      "doubleClickHole": "Hacé doble click en el canvas para empezar una nueva figura (ej. un agujero) sin conectar con el punto anterior.",
+      "clickEdgeToSplit": "Hacé click en una arista para seleccionarla, luego hacé click de nuevo para agregar un vértice y partir la arista.",
+      "connectTwoVertices": "Hacé click en un vértice y después en otro para conectarlos con una nueva arista.",
+      "largestIsBoundary": "La figura cerrada más grande es el borde de la habitación; las figuras cerradas más chicas adentro son obstáculos.",
+      "dragVertices": "Arrastrá los vértices para moverlos y ajustar el polígono.",
+      "deleteKey": "Seleccioná un vértice o arista y presioná Delete o Backspace para eliminarlo.",
+      "arrowKeysScroll": "Usá las flechas del teclado para desplazar el canvas cuando el dibujo es más grande que la vista.",
+      "validateThenSubmit": "Dibujá el borde de la habitación y los obstáculos, luego hacé click en Validar y, si es válido, Enviar para crear el trabajo."
+    }
   },
   "toolbar": {
     "vertices": "vértices",
@@ -20,5 +40,22 @@
   },
   "common": {
     "defaultConfirmMessage": "¿Estás seguro?"
+  },
+  "validation": {
+    "POLYGON_CONVEX_OK": "El polígono es convexo.",
+    "POLYGON_NOT_CONVEX": "El polígono no es convexo.",
+    "POLYGON_CCW_OK": "El polígono es en sentido antihorario.",
+    "POLYGON_NOT_CCW": "El polígono no es en sentido antihorario.",
+    "POLYGON_SIMPLE_OK": "El polígono es simple (sin autointersección).",
+    "POLYGON_NOT_SIMPLE": "El polígono no es simple (se autointerseca).",
+    "OBSTACLE_CONVEX_OK": "El obstáculo es convexo.",
+    "OBSTACLE_NOT_CONVEX": "El obstáculo no es convexo.",
+    "OBSTACLE_CW_OK": "El obstáculo es en sentido horario.",
+    "OBSTACLE_NOT_CW": "El obstáculo no es en sentido horario.",
+    "OBSTACLE_CONTAINED_OK": "El obstáculo está dentro del borde.",
+    "OBSTACLE_NOT_CONTAINED": "El obstáculo no está completamente dentro del borde.",
+    "OBSTACLE_OVERLAPS": "El obstáculo se superpone con otro.",
+    "OBSTACLE_NO_OVERLAP": "El obstáculo no se superpone con otros.",
+    "CHECK_SKIPPED": "Comprobación omitida (inválido o error previo)."
   }
 }
