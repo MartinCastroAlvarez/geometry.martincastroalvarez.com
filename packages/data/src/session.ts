@@ -3,19 +3,17 @@ import { useQuery } from "@tanstack/react-query";
 import { User } from "@geometry/domain";
 import { AUTH_REDIRECT_URL } from "./constants";
 import { authApiClient } from "./auth";
-import { UserModel } from "./models";
+import { toDomainUser } from "./adapters";
 
 export const sessionQueryKey = ["session"] as const;
 
-export function useSession() {
+export const useSession = () => {
     return useQuery({
         queryKey: sessionQueryKey,
         queryFn: async () => {
             const data = await authApiClient.getSession();
             if (data === null) return null;
-            const apiUser = UserModel.fromApi(data);
-            const domain = UserModel.toDomain(apiUser);
-            return User.fromDict(domain);
+            return User.fromDict(toDomainUser(data));
         },
         staleTime: 15 * 60 * 1000, // 15 minutes - session changes infrequently
         retry: (failureCount, error) => {
@@ -26,11 +24,11 @@ export function useSession() {
             return failureCount < 3;
         },
     });
-}
+};
 
-export function useLogout() {
+export const useLogout = () => {
     return useCallback(() => {
         const returnUrl = encodeURIComponent(window.location.href);
         window.location.href = `${AUTH_REDIRECT_URL}?text=${returnUrl}`;
     }, []);
-}
+};

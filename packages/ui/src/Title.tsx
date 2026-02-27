@@ -33,7 +33,7 @@ export const Title: React.FC<TitleProps> = ({
 
     return (
         <Container center name="geometry-title">
-            <div onClick={onClick} style={maxWidthStyle} className={`display-block w-full mx-auto text-x-text font-semibold font-title leading-relaxed tracking-normal ${sizeClass} ${alignmentClass} ${truncateClass}`}>
+            <div onClick={onClick} style={maxWidthStyle} className={`display-block w-full mx-auto text-white font-semibold font-title leading-relaxed tracking-normal ${sizeClass} ${alignmentClass} ${truncateClass}`}>
                 {children}
             </div>
         </Container>

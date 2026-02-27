@@ -3,7 +3,7 @@
     "login": "Login",
     "logout": "Logout",
     "jobs": "Jobs",
-    "newArtGallery": "Nueva Galería de Arte"
+    "create": "Crear"
   },
   "toolbar": {
     "vertices": "vértices",

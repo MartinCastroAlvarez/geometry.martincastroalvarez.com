@@ -1,22 +1,8 @@
 import { SESSION_API_URL } from "./constants";
-import { getAuthToken } from "./cookies";
+import { fetchWithAuth } from "./cookies";
+import type { SessionResponse } from "./types";
 
-async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
-    const token = getAuthToken();
-    const headers = new Headers(options.headers);
-    headers.set("Content-Type", "application/json");
-    if (token) {
-        headers.set("X-Auth", token);
-    }
-    const response = await fetch(url, { ...options, headers });
-    return response;
-}
-
-export interface SessionResponse {
-    email: string | null;
-    name: string | null;
-    avatarUrl: string | null;
-}
+export type { SessionResponse } from "./types";
 
 export class AuthApiClient {
     private baseUrl: string;

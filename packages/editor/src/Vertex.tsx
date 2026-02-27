@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Circle } from "react-konva";
-import type { EditorVertex } from "./models";
+import type { EditorVertex } from "./types";
 import { editorColors } from "./colors";
 
 export interface VertexProps {

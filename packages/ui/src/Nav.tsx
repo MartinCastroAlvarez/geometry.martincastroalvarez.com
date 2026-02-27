@@ -1,9 +1,9 @@
 import { Container } from "./Container";
-import { Image } from "./Image";
+import { Logo } from "./Logo";
+import { Title } from "./Title";
 import { useDevice } from "./useDevice";
 
-const SRC = "https://media.martincastroalvarez.com/icon/geometry/favicon.ico";
-const SIZE = 32;
+const LOGO_SIZE = 24;
 
 interface NavProps {
     children?: React.ReactNode;
@@ -15,9 +15,12 @@ export const Nav = ({ children, onClick }: NavProps) => {
     const colSize = isMobile ? 12 : 6;
 
     return (
-        <Container padded spaced middle name="geometry-nav">
-            <Container onClick={onClick} middle spaced size={colSize} left>
-                <Image src={SRC} size={SIZE} rounded />
+        <Container padded spaced middle rounded solid name="geometry-nav">
+            <Container onClick={onClick} spaced size={colSize} left>
+                <div className="flex flex-row items-center gap-3">
+                    <Logo size={LOGO_SIZE} />
+                    <Title lg>Art Gallery</Title>
+                </div>
             </Container>
             <Container middle spaced size={colSize} right>
                 {children}

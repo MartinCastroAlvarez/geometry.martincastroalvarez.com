@@ -1,6 +1,5 @@
-import React from "react";
+import React, { forwardRef } from "react";
 
-/** NOTE: Do NOT add style or className props. Nothing should control the style or class names of wrapped HTML from outside. */
 interface ContainerProps {
     name?: string;
     size?: number;
@@ -8,7 +7,6 @@ interface ContainerProps {
     spaced?: boolean;
     rounded?: boolean;
     solid?: boolean;
-    overflowVisible?: boolean;
     left?: boolean;
     center?: boolean;
     right?: boolean;
@@ -46,14 +44,13 @@ const colSpanClasses: Record<number, string> = {
     9: "col-span-9", 10: "col-span-10", 11: "col-span-11", 12: "col-span-12",
 };
 
-export const Container: React.FC<ContainerProps> = ({
+export const Container = forwardRef<HTMLDivElement, ContainerProps>(({
     name = "geometry-container",
     size = 12,
     padded = false,
     spaced = false,
     rounded = false,
     solid = false,
-    overflowVisible = false,
     left = false,
     center = true,
     right = false,
@@ -64,8 +61,8 @@ export const Container: React.FC<ContainerProps> = ({
     onClick, onDoubleClick, onContextMenu,
     onFocus, onBlur, onKeyDown, onKeyUp, onKeyPress,
     onTouchStart, onTouchEnd, onTouchMove,
-    onDragStart, onDragEnd, onDrag, onDragEnter, onDragLeave, onDragOver, onDrop,
-}) => {
+    onDragStart, onDragEnd, onDrag,     onDragEnter, onDragLeave, onDragOver, onDrop,
+}, ref) => {
     if (size < 0 || size > 12) throw new Error(`Container size must be between 0 and 12, received: ${size}`);
     if (size === 0) return null;
 
@@ -77,7 +74,7 @@ export const Container: React.FC<ContainerProps> = ({
     });
 
     const classes: string[] = [name];
-    classes.push(overflowVisible ? "overflow-visible" : "overflow-hidden");
+    classes.push("overflow-hidden");
 
     if (hasContainerChildren) {
         classes.push("grid", "grid-cols-12", "w-full");
@@ -97,7 +94,7 @@ export const Container: React.FC<ContainerProps> = ({
     if (padded) classes.push("p-4");
     if (spaced) classes.push("gap-2");
     if (rounded) classes.push("rounded-xl");
-    if (solid) classes.push("bg-x-surface", "text-x-text", "border", "border-x-border");
+    if (solid) classes.push("bg-slate-900/60", "text-slate-100");
     if (left) classes.push("text-left");
     else if (right) classes.push("text-right");
     else if (center) classes.push("text-center");
@@ -107,6 +104,7 @@ export const Container: React.FC<ContainerProps> = ({
 
     return (
         <div
+            ref={ref}
             className={finalClassName}
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
@@ -135,6 +133,6 @@ export const Container: React.FC<ContainerProps> = ({
             {children}
         </div>
     );
-};
+});
 
 Container.displayName = "Container";

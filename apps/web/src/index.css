@@ -1,79 +1,51 @@
 @import "tailwindcss";
 
-/* ===== GEOMETRY PALETTE: Warm minimal ===== */
 @theme {
-  /* Surfaces */
-  --color-x-surface: rgba(255, 250, 245, 0.12);
-  --color-x-surface-strong: rgba(255, 250, 245, 0.18);
-  /* Text */
-  --color-x-text: #f5f0e8;
-  --color-x-text-muted: #c4b8a8;
-  --color-x-dark: #a89888;
-  /* Legacy aliases (Container solid, etc.) */
-  --color-x-white: #faf8f5;
-  --color-x-gray: rgba(255, 250, 245, 0.15);
-  /* Borders */
-  --color-x-border: rgba(255, 250, 245, 0.08);
-  --color-x-border-subtle: rgba(255, 250, 245, 0.04);
-}
-
-/* .geometry-body: diagonal gradient (warm brown to dark) */
-@layer components {
-    .geometry-body {
-        min-height: 100vh;
-        background: linear-gradient(to bottom right, #4a2c1a 0%, #1a0f08 100%);
-    }
+  --font-title: "Oswald", sans-serif;
 }
 
 /* Ensure Tailwind scans the UI package (workspace) for dynamic classes */
 @source "../../packages/ui/src";
 
-/* Safelist Container props */
-@source inline("p-4 gap-2 rounded-xl rounded-lg rounded-full overflow-hidden overflow-visible bg-x-gray bg-x-white bg-x-surface bg-x-surface-strong text-x-dark text-x-text text-x-text-muted border border-x-gray border-x-border grid grid-cols-12 w-full flex flex-col col-span-1 col-span-2 col-span-3 col-span-4 col-span-5 col-span-6 col-span-7 col-span-8 col-span-9 col-span-10 col-span-11 col-span-12 cursor-pointer");
+/* Safelist: dynamic classes from packages that Tailwind may not detect */
+@source inline("p-4 gap-2 gap-3 gap-4 gap-6 rounded-xl rounded-2xl rounded-lg rounded-full overflow-hidden overflow-visible grid grid-cols-12 w-full flex flex-col flex-row flex-wrap items-center justify-start justify-center justify-end col-span-1 col-span-2 col-span-3 col-span-4 col-span-5 col-span-6 col-span-7 col-span-8 col-span-9 col-span-10 col-span-11 col-span-12 cursor-pointer py-1 py-0.5 py-1.5 px-2.5 px-3 px-6 px-8 px-10 text-[11px] text-xs text-sm mr-2 shrink-0 flex-nowrap font-title max-w-md placeholder:text-white/40 bg-red-500/20 text-red-300 border-red-500/40 bg-green-500/20 text-green-300 border-green-500/40 bg-white/10 text-white/80 border-white/20 [&_svg]:inline-block [&_svg]:align-middle hover:bg-white/15 hover:border-neutral-400 hover:border-white/20 active:bg-white/20 border-neutral-500");
 
 :root {
-  /* Editor colors (read by Konva canvas) - warm palette */
-  --editor-bg: rgba(26, 15, 8, 0.85);
-  --editor-border: rgba(255, 250, 245, 0.06);
-  --editor-vertex: #d4a574;
-  --editor-vertex-active: #e8b87c;
-  --editor-vertex-first: #c9a060;
-  --editor-edge: rgba(255, 255, 255, 0.35);
-  --editor-edge-closed: #c9a060;
-  --editor-stroke: rgba(26, 15, 8, 0.9);
-  --editor-stroke-hover: #f5f0e8;
+  /* Editor colors (read by Konva canvas) - carbon/neutral palette */
+  --editor-bg: rgba(2, 6, 23, 0.85);
+  --editor-border: rgba(255, 255, 255, 0.12);
+  --editor-vertex: #a3a3a3;
+  --editor-vertex-active: #d4d4d4;
+  --editor-vertex-first: #737373;
+  --editor-edge: rgba(163, 163, 163, 0.65);
+  --editor-edge-closed: #737373;
+  --editor-stroke: rgba(2, 6, 23, 0.9);
+  --editor-stroke-hover: #ffffff;
 
   font-family: Inter, system-ui, -apple-system, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: #f5f0e8;
-  background-color: transparent;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-html {
+html,
+body,
+#root {
   height: 100%;
-  min-height: 100vh;
 }
 
 body {
   margin: 0;
-  height: 100%;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
   min-width: 320px;
+  background: rgb(2 6 23);
+  color: white;
 }
 
 #root {
   width: 100%;
-  height: 100%;
-  min-height: 100vh;
-  flex: 1;
   display: flex;
   flex-direction: column;
   text-align: left;

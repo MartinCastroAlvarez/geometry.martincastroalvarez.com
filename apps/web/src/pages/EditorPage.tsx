@@ -35,19 +35,15 @@ export const EditorPage = () => {
     );
 
     return (
-        <Container padded spaced size={12}>
-            <Container size={12} center overflowVisible>
-                <div ref={editorRef} className="col-span-12 w-full">
-                    <Editor
-                        boundary={gallery.perimeter}
-                        obstacles={gallery.holes}
-                        width={editorSize.width}
-                        height={editorSize.height}
-                        onChange={handleChange}
-                        readonly={false}
-                    />
-                </div>
-            </Container>
+        <Container ref={editorRef} name="geometry-editor-wrapper w-full max-h-[70vh]" size={12}>
+            <Editor
+                boundary={gallery.perimeter}
+                obstacles={gallery.holes}
+                width={editorSize.width}
+                height={editorSize.height}
+                onChange={handleChange}
+                readonly={false}
+            />
         </Container>
     );
 };

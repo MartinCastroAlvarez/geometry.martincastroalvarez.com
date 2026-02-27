@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useDebounce } from "./useDebounce";
 
 type DeviceInfo = {
@@ -25,9 +25,8 @@ const TABLET_BREAKPOINT = 900;
 export const useDevice = (): DeviceInfo => {
     const [width, setWidth] = useState(typeof window !== "undefined" ? window.innerWidth : MOBILE_BREAKPOINT);
 
-    const handleResize = useDebounce(() => {
-        setWidth(window.innerWidth);
-    }, 200);
+    const setWidthFromWindow = useCallback(() => setWidth(window.innerWidth), []);
+    const handleResize = useDebounce(setWidthFromWindow, 200);
 
     useEffect(() => {
         window.addEventListener("resize", handleResize);

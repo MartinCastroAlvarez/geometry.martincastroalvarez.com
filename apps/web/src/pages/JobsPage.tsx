@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Container, Title, Text, Button } from "@geometry/ui";
+import { Container, Title, Text, Button, Badge } from "@geometry/ui";
 import { useJobs } from "@geometry/data";
 
 export const JobsPage = () => {
@@ -19,7 +19,7 @@ export const JobsPage = () => {
                 <Container key={job.id} padded spaced size={12}>
                     <Link to={`/jobs/${job.id}`}>
                         <Button>
-                            Job {job.id.slice(0, 8)}... ({job.status})
+                            Job {job.id.slice(0, 8)}... <Badge danger={job.status === "failed"} success={job.status === "success"}>{job.status}</Badge>
                         </Button>
                     </Link>
                 </Container>

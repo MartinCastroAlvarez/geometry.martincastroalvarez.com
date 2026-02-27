@@ -1,9 +1,9 @@
 /** Read editor colors from CSS variables (defined in app's index.css). Fallbacks match app palette. */
-function getVar(name: string, fallback: string): string {
+const getVar = (name: string, fallback: string): string => {
     if (typeof document === "undefined") return fallback;
     const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     return value || fallback;
-}
+};
 
 export const editorColors = {
     get bg() {
@@ -13,19 +13,19 @@ export const editorColors = {
         return getVar("--editor-border", "rgba(100, 116, 139, 0.5)");
     },
     get vertex() {
-        return getVar("--editor-vertex", "#0f62fe");
+        return getVar("--editor-vertex", "#a3a3a3");
     },
     get vertexActive() {
-        return getVar("--editor-vertex-active", "#f59e0b");
+        return getVar("--editor-vertex-active", "#d4d4d4");
     },
     get vertexFirst() {
-        return getVar("--editor-vertex-first", "#22c55e");
+        return getVar("--editor-vertex-first", "#737373");
     },
     get edge() {
-        return getVar("--editor-edge", "#64748b");
+        return getVar("--editor-edge", "rgba(163, 163, 163, 0.65)");
     },
     get edgeClosed() {
-        return getVar("--editor-edge-closed", "#22c55e");
+        return getVar("--editor-edge-closed", "#737373");
     },
     get stroke() {
         return getVar("--editor-stroke", "#1a1a1a");

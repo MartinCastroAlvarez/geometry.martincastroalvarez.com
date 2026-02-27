@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Stage, Layer } from "react-konva";
 import { Point, Polygon } from "@geometry/domain";
-import { EditorModel, type EditorVertex } from "./models";
+import type { EditorVertex } from "./types";
+import { polygonToEditorVertices, editorVerticesToPolygon } from "./adapters";
 import { Edge } from "./Edge";
 import { Vertex } from "./Vertex";
 export interface EditorProps {
@@ -14,10 +15,10 @@ export interface EditorProps {
 }
 
 /** Find cycles (closed polygons) from vertices and edges. Returns ordered vertex arrays. */
-function findCycles(
+const findCycles = (
     vertices: EditorVertex[],
     edges: [number, number][]
-): EditorVertex[][] {
+): EditorVertex[][] => {
     const n = vertices.length;
     const adj: number[][] = Array.from({ length: n }, () => []);
     for (const [a, b] of edges) {
@@ -60,10 +61,10 @@ function findCycles(
     }
 
     return cycles;
-}
+};
 
 /** Signed area of a polygon (positive = counterclockwise) */
-function signedArea(vertices: EditorVertex[]): number {
+const signedArea = (vertices: EditorVertex[]): number => {
     let area = 0;
     const n = vertices.length;
     for (let i = 0; i < n; i++) {
@@ -71,15 +72,15 @@ function signedArea(vertices: EditorVertex[]): number {
         area += vertices[i].x * vertices[j].y - vertices[j].x * vertices[i].y;
     }
     return area / 2;
-}
+};
 
 /** Check if cycle A is inside cycle B (point-in-polygon) */
-function isInside(a: EditorVertex[], b: EditorVertex[]): boolean {
+const isInside = (a: EditorVertex[], b: EditorVertex[]): boolean => {
     if (a.length === 0 || b.length === 0) return false;
     const p = new Point(a[0].x, a[0].y);
-    const poly = EditorModel.toDomain(b);
+    const poly = editorVerticesToPolygon(b);
     return poly.contains(p);
-}
+};
 
 export const Editor = ({
     boundary,
@@ -90,8 +91,8 @@ export const Editor = ({
     readonly = false,
 }: EditorProps) => {
     const [vertices, setVertices] = useState<EditorVertex[]>(() => [
-        ...EditorModel.fromDomain(boundary),
-        ...obstacles.flatMap((o) => EditorModel.fromDomain(o)),
+        ...polygonToEditorVertices(boundary),
+        ...obstacles.flatMap((o) => polygonToEditorVertices(o)),
     ]);
     const [edges, setEdges] = useState<[number, number][]>(() => {
         const e: [number, number][] = [];
@@ -111,8 +112,8 @@ export const Editor = ({
     const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        const bv = EditorModel.fromDomain(boundary);
-        const hv = obstacles.flatMap((o) => EditorModel.fromDomain(o));
+        const bv = polygonToEditorVertices(boundary);
+        const hv = obstacles.flatMap((o) => polygonToEditorVertices(o));
         const all = [...bv, ...hv];
         const e: [number, number][] = [];
         let idx = 0;
@@ -146,11 +147,11 @@ export const Editor = ({
         const withArea = cycles.map((c) => ({ cycle: c, area: Math.abs(signedArea(c)) }));
         withArea.sort((a, b) => b.area - a.area);
         const boundaryCycle = withArea[0].cycle;
-        const boundaryPoly = EditorModel.toDomain(boundaryCycle);
+        const boundaryPoly = editorVerticesToPolygon(boundaryCycle);
         const holePolys: Polygon[] = [];
         for (let i = 1; i < withArea.length; i++) {
             if (isInside(withArea[i].cycle, boundaryCycle)) {
-                holePolys.push(EditorModel.toDomain(withArea[i].cycle));
+                holePolys.push(editorVerticesToPolygon(withArea[i].cycle));
             }
         }
         return { boundaryPoly, holePolys };
@@ -333,12 +334,12 @@ export const Editor = ({
 
     return (
         <div
-            ref={containerRef}
-            tabIndex={-1}
-            role="application"
-            aria-label="Geometry editor"
-            onKeyDown={handleKeyDown}
-            style={{
+                ref={containerRef}
+                tabIndex={-1}
+                role="application"
+                aria-label="Geometry editor"
+                onKeyDown={handleKeyDown}
+                style={{
                 position: "relative",
                 width,
                 height,
@@ -354,10 +355,10 @@ export const Editor = ({
                 style={{
                     position: "absolute",
                     inset: 0,
-                    backgroundColor: "rgba(26, 15, 8, 0.85)",
+                    backgroundColor: "rgba(2, 6, 23, 0.85)",
                     backgroundImage: `
-                        linear-gradient(to right, rgba(255, 250, 245, 0.04) 1px, transparent 1px),
-                        linear-gradient(to bottom, rgba(255, 250, 245, 0.04) 1px, transparent 1px)
+                        linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+                        linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px)
                     `,
                     backgroundSize: "24px 24px",
                 }}
@@ -388,7 +389,7 @@ export const Editor = ({
                         <Vertex
                             key={v.id}
                             vertex={v}
-                            isFirst={false}
+                            isFirst={i === 0}
                             isActive={activeIndex === i}
                             onClick={() => handleVertexClick(i)}
                             onDragMove={!readonly ? (x, y) => handleVertexDrag(i, x, y) : undefined}

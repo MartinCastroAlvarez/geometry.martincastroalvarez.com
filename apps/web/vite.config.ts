@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 import { execSync } from 'node:child_process'
 
-function getJwtTest(): string {
+const getJwtTest = (): string => {
     if (process.env.VITE_JWT_TEST) return process.env.VITE_JWT_TEST
     try {
         const spyPath = path.resolve(__dirname, '../../spy.sh')
@@ -14,7 +14,7 @@ function getJwtTest(): string {
     } catch {
         return ''
     }
-}
+};
 
 export default defineConfig({
     define: {

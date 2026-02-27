@@ -2,6 +2,8 @@ export * from './Point';
 export * from './User';
 export * from './Polygon';
 export * from './ArtGallery';
+export * from './Job';
+export * from './Gallery';
 export * from './ConvexComponent';
 export * from './Ear';
 export * from './Guard';

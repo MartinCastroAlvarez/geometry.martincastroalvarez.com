@@ -1,5 +1,5 @@
 import { useParams, Link } from "react-router-dom";
-import { Container, Title, Text, Button } from "@geometry/ui";
+import { Container, Title, Text, Button, Input, Badge } from "@geometry/ui";
 import { useJob, usePublish, useUnpublish, useUpdateJob } from "@geometry/data";
 import { useState, useEffect } from "react";
 
@@ -29,16 +29,18 @@ export const JobPage = () => {
                 <Title xl center>
                     Job {job.id.slice(0, 12)}...
                 </Title>
-                <Text center>Status: {job.status}</Text>
+                <Badge danger={job.status === "failed"} success={job.status === "success"}>
+                    {job.status}
+                </Badge>
             </Container>
             <Container padded spaced size={12}>
-                <input
+                <Input
                     type="text"
                     placeholder="Title"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     onBlur={handleUpdateTitle}
-                    className="bg-x-surface text-x-text border border-x-border rounded-lg px-3 py-2 w-full max-w-md placeholder:text-x-text-muted focus:outline-none focus:border-x-text-muted"
+                    className="max-w-md"
                 />
             </Container>
             <Container padded spaced size={12}>
