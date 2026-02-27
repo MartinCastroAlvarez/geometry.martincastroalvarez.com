@@ -3,7 +3,7 @@
  *
  * Context: PrivateRoute uses useSession; when not loading and no user, calls
  * useLogout() (redirect to login). Public routes: / (Home), /:id (Gallery).
- * Protected: /jobs, /jobs/:id, /editor.
+ * Protected: /jobs, /jobs/:id, /design.
  *
  * Example:
  *   <Route path="/jobs" element={<PrivateRoute><JobsPage /></PrivateRoute>} />
@@ -28,7 +28,7 @@ export const AppRoutes = () => (
         <Route path="/" element={<HomePage />} />
         <Route path="/jobs" element={<PrivateRoute><JobsPage /></PrivateRoute>} />
         <Route path="/jobs/:id" element={<PrivateRoute><JobPage /></PrivateRoute>} />
-        <Route path="/editor" element={<PrivateRoute><EditorPage /></PrivateRoute>} />
+        <Route path="/design" element={<PrivateRoute><EditorPage /></PrivateRoute>} />
         <Route path="/:id" element={<GalleryPage />} />
     </Routes>
 );

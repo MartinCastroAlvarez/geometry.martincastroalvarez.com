@@ -18,10 +18,10 @@ missing email claim it raises UnauthorizedError. OPTIONS is skipped for
 CORS preflight. Used by all routes that need a logged-in user (jobs, publish/hide).
 
 Examples:
-    @interceptor
-    @private
-    def handler(request: ApiRequest, context): ...
-    # request.user is User.test() or User from JWT; UnauthorizedError if invalid
+>>> @interceptor
+>>> @private
+>>> def handler(request: ApiRequest, context): ...
+>>> # request.user is User.test() or User from JWT; UnauthorizedError if invalid
 """
 
 from __future__ import annotations

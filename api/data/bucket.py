@@ -17,10 +17,10 @@ next_token for pagination. All key/prefix validation and ClientError
 handling are done here; callers get typed results and exceptions.
 
 Examples:
-    bucket = Bucket()
-    bucket.save("data/galleries/abc.json", {"id": "abc", "boundary": []})
-    data = bucket.load("data/galleries/abc.json")
-    page = bucket.search(prefix="data/galleries/", limit=20, next_token=token)
+>>> bucket = Bucket()
+>>> bucket.save("data/galleries/abc.json", {"id": "abc", "boundary": []})
+>>> data = bucket.load("data/galleries/abc.json")
+>>> page = bucket.search(prefix="data/galleries/", limit=20, next_token=token)
 """
 
 from __future__ import annotations

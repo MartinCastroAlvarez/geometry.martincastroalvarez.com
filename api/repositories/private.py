@@ -15,10 +15,10 @@ are stored under their email slug. Index and repository use the same
 user for consistency.
 
 Examples:
-    class JobsRepository(PrivateRepository[Job]):
-        NAME = "jobs"
-        MODEL = Job
-    repo = JobsRepository(user=request.user)
+>>> class JobsRepository(PrivateRepository[Job]):
+>>> NAME = "jobs"
+>>> MODEL = Job
+>>> repo = JobsRepository(user=request.user)
 """
 
 from __future__ import annotations

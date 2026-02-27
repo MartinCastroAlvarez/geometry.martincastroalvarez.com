@@ -16,9 +16,9 @@ from_timestamp to build from time types. Used by ArtGalleryPublicIndex
 and JobsPrivateIndex as index_id (e.g. Countdown.from_timestamp(gallery.created_at)).
 
 Examples:
-    key = Countdown.from_timestamp(Timestamp.now())
-    key = Countdown.from_datetime(datetime.utcnow())
-    index.save(Indexed(index_id=Identifier(key), real_id=record.id))
+>>> key = Countdown.from_timestamp(Timestamp.now())
+>>> key = Countdown.from_datetime(datetime.utcnow())
+>>> index.save(Indexed(index_id=Identifier(key), real_id=record.id))
 """
 
 from __future__ import annotations

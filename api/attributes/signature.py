@@ -16,9 +16,9 @@ non-string is converted with str(value); empty string is hashed as ":empty:".
 Implements __hash__ to return self so it can be used as a hash value.
 
 Examples:
-    s = Signature("point:1:2")
-    s = Signature([1, 2])
-    id = Identifier(Signature(email))
+>>> s = Signature("point:1:2")
+>>> s = Signature([1, 2])
+>>> id = Identifier(Signature(email))
 """
 
 from __future__ import annotations

@@ -16,9 +16,9 @@ mutate() parameter. Path params (e.g. id) are merged into body by the
 handler before validate.
 
 Examples:
-    def validate(self, body) -> JobMutationRequest:
-        return JobMutationRequest(boundary=..., obstacles=...)
-    def mutate(self, validated_input: ArtGalleryPublishMutationRequest): ...
+>>> def validate(self, body) -> JobMutationRequest:
+>>> return JobMutationRequest(boundary=..., obstacles=...)
+>>> def mutate(self, validated_input: ArtGalleryPublishMutationRequest): ...
 """
 
 from __future__ import annotations

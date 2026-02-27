@@ -16,9 +16,9 @@ Spatial. Used for point-in-polygon, segment intersection, and
 visibility/guard logic.
 
 Examples:
-    box.contains(point)
-    segment.intersects(other_segment)
-    polygon.contains(point)
+>>> box.contains(point)
+>>> segment.intersects(other_segment)
+>>> polygon.contains(point)
 """
 
 from __future__ import annotations

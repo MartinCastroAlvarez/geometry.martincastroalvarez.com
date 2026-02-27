@@ -16,12 +16,12 @@ Used by JobMutation (put after create), StartTask and ReportTask (put REPORT),
 and worker handler (receive, process, commit). SQS errors raise ServiceUnavailableError.
 
 Examples:
-    queue = Queue()
-    queue.put(Message(action=Action.START, job_id=job_id, user_email=user.email))
-    for raw in queue.receive(max_messages=5):
-        msg = Message.unserialize({**json.loads(raw["body"]), "receipt_handle": raw["receiptHandle"]})
-        process(msg)
-        queue.commit(msg)
+>>> queue = Queue()
+>>> queue.put(Message(action=Action.START, job_id=job_id, user_email=user.email))
+>>> for raw in queue.receive(max_messages=5):
+>>> msg = Message.unserialize({**json.loads(raw["body"]), "receipt_handle": raw["receiptHandle"]})
+>>> process(msg)
+>>> queue.commit(msg)
 """
 
 from __future__ import annotations

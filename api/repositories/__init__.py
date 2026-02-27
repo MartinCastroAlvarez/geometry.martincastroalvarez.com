@@ -15,9 +15,9 @@ search results (records, next_token). Used by mutations, queries,
 indexes (to load full record by real_id), and worker tasks.
 
 Examples:
-    from repositories import ArtGalleryRepository, JobsRepository, Results
-    repo = ArtGalleryRepository()
-    job_repo = JobsRepository(user=user)
+>>> from repositories import ArtGalleryRepository, JobsRepository, Results
+>>> repo = ArtGalleryRepository()
+>>> job_repo = JobsRepository(user=user)
 """
 
 from repositories.base import Repository

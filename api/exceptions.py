@@ -17,13 +17,13 @@ ValidationError (400), NotFoundError/RecordNotFoundError (404), UnauthorizedErro
 StorageError is for invalid S3 data; ValidationError is for bad request input.
 
 Examples:
-    raise ValidationError("id is required")
-    raise RecordNotFoundError("Job xyz not found")
-    try:
-        ...
-    except GeometryException as e:
-        print(e.code.value, str(e))
-    response = ApiResponse.unserialize(e)
+>>> raise ValidationError("id is required")
+>>> raise RecordNotFoundError("Job xyz not found")
+>>> try:
+>>> ...
+>>> except GeometryException as e:
+>>> print(e.code.value, str(e))
+>>> response = ApiResponse.unserialize(e)
 """
 
 import http

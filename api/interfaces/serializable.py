@@ -16,10 +16,10 @@ Validation and coercion belong in unserialize. Used everywhere data is
 persisted or sent over the API.
 
 Examples:
-    data = my_model.serialize()
-    obj = MyModel.unserialize(data)
-    s = point.serialize()
-    obj = Point.unserialize(s)
+>>> data = my_model.serialize()
+>>> obj = MyModel.unserialize(data)
+>>> s = point.serialize()
+>>> obj = Point.unserialize(s)
 """
 
 from __future__ import annotations

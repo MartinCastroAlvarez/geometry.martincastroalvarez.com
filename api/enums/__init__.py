@@ -16,9 +16,9 @@ Orientation is geometric turn direction (COLLINEAR, CLOCKWISE, COUNTER_CLOCKWISE
 All have parse() or value coercion where used in request/response.
 
 Examples:
-    Method.parse(request.http_method)
-    Action.parse(body.get("action"))
-    Status.parse(job_data.get("status"))
+>>> Method.parse(request.http_method)
+>>> Action.parse(body.get("action"))
+>>> Status.parse(job_data.get("status"))
 """
 
 from enums.action import Action

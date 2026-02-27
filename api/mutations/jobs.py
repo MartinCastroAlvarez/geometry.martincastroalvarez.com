@@ -16,8 +16,8 @@ updated. Both require authenticated user (PrivateMutation). Used by
 api.api.urls for POST and PATCH on v1/jobs and v1/jobs/.
 
 Examples:
-    POST v1/jobs with body { boundary, obstacles } -> JobMutation
-    PATCH v1/jobs/:id with body { meta: { title: "..." } } -> JobUpdateMutation
+>>> POST v1/jobs with body { boundary, obstacles } -> JobMutation
+>>> PATCH v1/jobs/:id with body { meta: { title: "..." } } -> JobUpdateMutation
 """
 
 from __future__ import annotations

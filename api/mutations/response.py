@@ -15,8 +15,8 @@ which the interceptor JSON-serializes as the API response body. Used for
 typing and documentation of API contract.
 
 Examples:
-    def mutate(self, validated_input) -> JobMutationResponse:
-        return job.serialize()
+>>> def mutate(self, validated_input) -> JobMutationResponse:
+>>> return job.serialize()
 """
 
 from __future__ import annotations

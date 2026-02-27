@@ -16,9 +16,9 @@ boxes of Segment and Polygon, and for fast intersection tests before
 detailed geometry. unserialize expects a dict with the four corner keys.
 
 Examples:
-    box = Box(bottom_left=p1, top_left=p2, bottom_right=p3, top_right=p4)
-    box.contains(point)
-    interval_x = box.x
+>>> box = Box(bottom_left=p1, top_left=p2, bottom_right=p3, top_right=p4)
+>>> box.contains(point)
+>>> interval_x = box.x
 """
 
 from __future__ import annotations

@@ -16,9 +16,9 @@ JobUpdateMutation, StartTask, ReportTask, and job list/details queries.
 Worker tasks load job, update stdout/stderr/status, and save.
 
 Examples:
-    job = Job(id=Identifier("abc"), stdin={"boundary": ...})
-    job = Job.unserialize(data)
-    if job.is_finished(): ...
+>>> job = Job(id=Identifier("abc"), stdin={"boundary": ...})
+>>> job = Job.unserialize(data)
+>>> if job.is_finished(): ...
 """
 
 from __future__ import annotations

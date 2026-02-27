@@ -15,9 +15,9 @@ different emails slugify to the same string. Used for user identity, owner_email
 and in JWT payloads and task messages.
 
 Examples:
-    Email("user@example.com")
-    user_email.slug  # URL-safe id for paths/indexes
-    Email("invalid")  # ValidationError
+>>> Email("user@example.com")
+>>> user_email.slug  # URL-safe id for paths/indexes
+>>> Email("invalid")  # ValidationError
 """
 
 from __future__ import annotations

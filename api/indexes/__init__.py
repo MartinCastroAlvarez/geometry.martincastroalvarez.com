@@ -16,9 +16,9 @@ Stale index entries (missing data) are read-repaired on search/all. Repository
 is used to load full records by real_id.
 
 Examples:
-    index = ArtGalleryPublicIndex()
-    records, next_token = index.search(limit=Limit(10))
-    index = JobsPrivateIndex(user_email=user.email)
+>>> index = ArtGalleryPublicIndex()
+>>> records, next_token = index.search(limit=Limit(10))
+>>> index = JobsPrivateIndex(user_email=user.email)
 """
 
 from indexes.base import Index

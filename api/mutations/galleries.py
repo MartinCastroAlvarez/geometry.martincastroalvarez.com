@@ -16,8 +16,8 @@ Both take job_id (from path/body). Used for POST and DELETE on v1/jobs/
 (resource = publish/hide gallery for that job).
 
 Examples:
-    POST v1/jobs/:id -> publish gallery from job
-    DELETE v1/jobs/:id -> hide gallery
+>>> POST v1/jobs/:id -> publish gallery from job
+>>> DELETE v1/jobs/:id -> hide gallery
 """
 
 from __future__ import annotations
@@ -60,6 +60,7 @@ class ArtGalleryPublishMutation(PrivateMutation[ArtGalleryPublishMutationRequest
             "id": str(gallery_id),
             "owner_email": str(self.user.email),
             "owner_job_id": str(job_id),
+            "owner_image_url": str(self.user.avatar_url) if self.user.avatar_url is not None else None,
             "title": title,
             "created_at": str(job.created_at),
             "updated_at": str(job.updated_at),

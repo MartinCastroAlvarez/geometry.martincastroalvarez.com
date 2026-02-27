@@ -14,7 +14,7 @@ from WorkerRequest and passes it to task.handle(body). Used for typing
 and for building the validated input passed to execute().
 
 Examples:
-    TaskRequest(job_id=Identifier("abc"), user_email=Email("u@e.com"))
+>>> TaskRequest(job_id=Identifier("abc"), user_email=Email("u@e.com"))
 """
 
 from __future__ import annotations

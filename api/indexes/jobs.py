@@ -14,8 +14,8 @@ JobMutation (save to index after create). Only the owning user can list
 or access their jobs via this index.
 
 Examples:
-    index = JobsPrivateIndex(user_email=Email("user@example.com"))
-    records, next_token = index.search(limit=Limit(20))
+>>> index = JobsPrivateIndex(user_email=Email("user@example.com"))
+>>> records, next_token = index.search(limit=Limit(20))
 """
 
 from __future__ import annotations

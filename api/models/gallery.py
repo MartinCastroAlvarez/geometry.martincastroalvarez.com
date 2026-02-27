@@ -1,5 +1,5 @@
 """
-ArtGallery model: boundary, obstacles, ears, convex_components, guards, visibility; owner_email, owner_job_id.
+ArtGallery model: boundary, obstacles, ears, convex_components, guards, visibility; owner_email, owner_job_id, owner_image_url.
 
 Title
 -----
@@ -9,15 +9,15 @@ Context
 -------
 ArtGallery is the main gallery entity: boundary (Polygon), obstacles
 (Table[Polygon]), and computed pipeline outputs (ears, convex_components,
-guards, visibility). owner_email and owner_job_id link to the creating
-user and job. title is a Title. Serialized shape includes all fields for
-S3 and API. Used by ArtGalleryRepository, ArtGalleryPublicIndex,
+guards, visibility). owner_email, owner_job_id and owner_image_url (Url | None)
+link to the creating user and job. title is a Title. Serialized shape includes
+all fields for S3 and API. Used by ArtGalleryRepository, ArtGalleryPublicIndex,
 ArtGalleryPublishMutation, ArtGalleryHideMutation, and list/details queries.
 
 Examples:
-    data = gallery.serialize()
-    gallery = ArtGallery.unserialize(data)
-    repo.save(gallery)
+>>> data = gallery.serialize()
+>>> gallery = ArtGallery.unserialize(data)
+>>> repo.save(gallery)
 """
 
 from __future__ import annotations
@@ -28,9 +28,10 @@ from typing import Any
 
 from attributes import Email
 from attributes import Identifier
-from attributes import Title
 from attributes import Point
 from attributes import Timestamp
+from attributes import Title
+from attributes import Url
 from geometry import ConvexComponent
 from geometry import Ear
 from geometry import Polygon
@@ -47,6 +48,7 @@ class ArtGalleryDict(ModelDict):
     obstacles: dict[str, Any]
     owner_email: str
     owner_job_id: str
+    owner_image_url: str | None
     title: str
     ears: dict[str, Any]
     convex_components: dict[str, Any]
@@ -70,6 +72,7 @@ class ArtGallery(Model):
     owner_email: Email
     owner_job_id: Identifier
     title: Title
+    owner_image_url: Url | None = None
     created_at: Timestamp = field(default_factory=Timestamp.now)
     updated_at: Timestamp = field(default_factory=Timestamp.now)
     obstacles: Table[Polygon] = field(default_factory=Table)
@@ -86,12 +89,15 @@ class ArtGallery(Model):
 
     @classmethod
     def unserialize(cls, data: Any) -> ArtGallery:
+        raw_owner_image_url = data.get("owner_image_url")
+        owner_image_url = Url(raw_owner_image_url) if raw_owner_image_url else None
         return cls(
             id=Identifier(data.get("id")),
             boundary=Polygon.unserialize(data.get("boundary") or []),
             obstacles=Table.unserialize([Polygon.unserialize(v) for v in data.get("obstacles", {}).values()]),
             owner_email=Email(data.get("owner_email")),
             owner_job_id=Identifier(data.get("owner_job_id")),
+            owner_image_url=owner_image_url,
             title=Title(data.get("title", "Untitled Art Gallery")),
             created_at=Timestamp(data.get("created_at")),
             updated_at=Timestamp(data.get("updated_at")),
@@ -108,6 +114,7 @@ class ArtGallery(Model):
             "obstacles": self.obstacles.serialize(),
             "owner_email": str(self.owner_email),
             "owner_job_id": str(self.owner_job_id),
+            "owner_image_url": str(self.owner_image_url) if self.owner_image_url is not None else None,
             "title": str(self.title),
             "created_at": str(self.created_at),
             "updated_at": str(self.updated_at),

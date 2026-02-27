@@ -15,9 +15,9 @@ or above max_length, ValidationError is raised. Default min_length=1,
 max_length=200. Use min_length=0 for optional display names (e.g. User).
 
 Examples:
-    Title("My Gallery", min_length=1, max_length=100)
-    Title("", min_length=1, max_length=100)  # ValidationError
-    Title("", min_length=0, max_length=200)  # allowed for optional name
+>>> Title("My Gallery", min_length=1, max_length=100)
+>>> Title("", min_length=1, max_length=100)  # ValidationError
+>>> Title("", min_length=0, max_length=200)  # allowed for optional name
 """
 
 from __future__ import annotations

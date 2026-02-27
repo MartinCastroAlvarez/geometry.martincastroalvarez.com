@@ -17,7 +17,7 @@ exception it logs, appends failed result with traceback, and does not
 commit (SQS retry). Returns WorkerResponse(results=...).
 
 Examples:
-    handler(event, context)  # event = SQS event with Records
+>>> handler(event, context)  # event = SQS event with Records
 """
 
 from __future__ import annotations

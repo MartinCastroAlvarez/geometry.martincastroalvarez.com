@@ -17,10 +17,10 @@ email, name, avatar_url and is used for auth and private repos. Used by
 repositories, indexes, mutations, and queries.
 
 Examples:
-    from models import ArtGallery, Job, User
-    gallery = ArtGallery.unserialize(data)
-    job = Job.unserialize(data)
-    user = request.user
+>>> from models import ArtGallery, Job, User
+>>> gallery = ArtGallery.unserialize(data)
+>>> job = Job.unserialize(data)
+>>> user = request.user
 """
 
 from models.base import Model

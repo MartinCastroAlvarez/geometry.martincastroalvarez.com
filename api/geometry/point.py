@@ -16,9 +16,9 @@ everywhere coordinates are needed: polygon vertices, segment endpoints,
 guards, and visibility polygons.
 
 Examples:
-    p = Point.unserialize(["1", "2"])
-    p.x, p.y
-    seg = p.to(Point.unserialize(["0", "0"]))
+>>> p = Point.unserialize(["1", "2"])
+>>> p.x, p.y
+>>> seg = p.to(Point.unserialize(["0", "0"]))
 """
 
 from __future__ import annotations

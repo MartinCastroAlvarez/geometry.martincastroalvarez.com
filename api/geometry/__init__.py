@@ -18,9 +18,9 @@ enum for collinear/clockwise/counter-clockwise. Used by models.ArtGallery
 and by the pipeline (ear clipping, visibility, guard placement).
 
 Examples:
-    from geometry import Point, Polygon, Segment, Box
-    p = Point.unserialize([1, 2])
-    poly = Polygon.unserialize([[0,0], [1,0], [1,1], [0,1]])
+>>> from geometry import Point, Polygon, Segment, Box
+>>> p = Point.unserialize([1, 2])
+>>> poly = Polygon.unserialize([[0,0], [1,0], [1,1], [0,1]])
 """
 
 from enums.orientation import Orientation

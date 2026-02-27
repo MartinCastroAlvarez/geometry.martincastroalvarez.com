@@ -2,13 +2,21 @@
  * Auth token handling and authenticated fetch for the data layer.
  *
  * Context: All API calls (session, geometry, jobs, galleries) need a JWT. The token is
- * resolved in order: (1) VITE_JWT_TEST env (local dev via spy.sh), (2) "jwt" cookie (production).
- * This file is the single place that reads the token and attaches it to outgoing requests.
+ * resolved in order: (1) token from AuthenticationProvider (e.g. jwtToken={import.meta.env.VITE_JWT_TEST}),
+ * (2) "jwt" cookie (production). Use <AuthenticationProvider jwtToken={...}> in the app to pass env.
  *
  * Example:
- *   const token = getAuthToken();           // from env or cookie
+ *   <AuthenticationProvider jwtToken={import.meta.env.VITE_JWT_TEST}>...</AuthenticationProvider>
+ *   const token = getAuthToken(); // or useAuthToken() in React
  *   const res = await fetchWithAuth('/v1/jobs');  // sends X-Auth: <token>
  */
+
+let devAuthToken: string | null = null;
+
+/** Used by AuthenticationProvider to sync jwtToken into the data layer. Not part of public API. */
+export const setDevAuthToken = (token: string | null): void => {
+    devAuthToken = token;
+};
 
 export const fetchWithAuth = async (url: string, options: RequestInit = {}): Promise<Response> => {
     const token = getAuthToken();
@@ -21,9 +29,7 @@ export const fetchWithAuth = async (url: string, options: RequestInit = {}): Pro
 };
 
 export const getAuthToken = (): string | null => {
-    const meta = import.meta as unknown as { env?: { VITE_JWT_TEST?: string } };
-    const fromEnv = meta?.env?.VITE_JWT_TEST;
-    if (fromEnv) return fromEnv;
+    if (devAuthToken) return devAuthToken;
     const JWT_COOKIE_NAME = "jwt";
     const encodedName = encodeURIComponent(JWT_COOKIE_NAME) + "=";
     const cookies = document.cookie.split(";");

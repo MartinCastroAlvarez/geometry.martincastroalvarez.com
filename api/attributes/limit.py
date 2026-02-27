@@ -14,9 +14,9 @@ Index.search, and Repository.search to cap page size and S3 MaxKeys. Subclasses
 int so it can be passed to APIs that expect an int (e.g. MaxKeys=limit).
 
 Examples:
-    limit = Limit(20)
-    limit = Limit(body.get("limit"))  # or Limit(20) if missing
-    bucket.search(prefix="data/", limit=Limit(10), next_token=token)
+>>> limit = Limit(20)
+>>> limit = Limit(body.get("limit"))  # or Limit(20) if missing
+>>> bucket.search(prefix="data/", limit=Limit(10), next_token=token)
 """
 
 from __future__ import annotations

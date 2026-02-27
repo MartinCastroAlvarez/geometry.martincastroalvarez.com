@@ -16,8 +16,8 @@ are logged and appended with error; failed task execution does not commit
 so SQS can retry. TASK_BY_ACTION in workers.urls maps Action to Task class.
 
 Examples:
-    from workers import handler, WorkerRequest, WorkerResponse
-    result = handler(sqs_event, context)
+>>> from workers import handler, WorkerRequest, WorkerResponse
+>>> result = handler(sqs_event, context)
 """
 
 from workers.handler import handler

@@ -14,8 +14,8 @@ details handlers return the serialized entity. Used for typing and
 documentation of API response shape.
 
 Examples:
-    ListQueryResponse[ArtGalleryDict]
-    DetailsQueryResponse[JobDict]
+>>> ListQueryResponse[ArtGalleryDict]
+>>> DetailsQueryResponse[JobDict]
 """
 
 from __future__ import annotations

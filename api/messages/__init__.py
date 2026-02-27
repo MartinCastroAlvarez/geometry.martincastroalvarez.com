@@ -16,11 +16,11 @@ queue. Used by JobMutation (put START), StartTask (put REPORT), ReportTask
 (put REPORT for parent), and workers.handler (receive, commit).
 
 Examples:
-    queue.put(Message(action=Action.START, job_id=id, user_email=email))
-    for raw in queue.receive(max_messages=5):
-        msg = Message.unserialize({**json.loads(raw["body"]), "receipt_handle": raw["receiptHandle"]})
-        ...
-        queue.commit(msg)
+>>> queue.put(Message(action=Action.START, job_id=id, user_email=email))
+>>> for raw in queue.receive(max_messages=5):
+>>> msg = Message.unserialize({**json.loads(raw["body"]), "receipt_handle": raw["receiptHandle"]})
+>>> ...
+>>> queue.commit(msg)
 """
 
 from .message import Message

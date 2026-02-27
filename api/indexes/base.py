@@ -16,10 +16,10 @@ requires user for repository. Subclasses set NAME and REPOSITORY. Used by
 ArtGalleryPublicIndex and JobsPrivateIndex.
 
 Examples:
-    index = ArtGalleryPublicIndex()
-    records, next_token = index.search(limit=Limit(10))
-    record = index.get(Identifier("gallery-123"))
-    index.save(Indexed(index_id=key, real_id=record.id))
+>>> index = ArtGalleryPublicIndex()
+>>> records, next_token = index.search(limit=Limit(10))
+>>> record = index.get(Identifier("gallery-123"))
+>>> index.save(Indexed(index_id=key, real_id=record.id))
 """
 
 from __future__ import annotations

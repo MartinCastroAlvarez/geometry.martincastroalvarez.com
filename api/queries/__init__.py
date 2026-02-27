@@ -15,9 +15,9 @@ repositories and require id (from path). Job queries use PrivateQuery
 in api.api.urls. All return dicts that the interceptor JSON-serializes.
 
 Examples:
-    from queries import ArtGalleryListQuery, JobDetailsQuery
-    query = ArtGalleryListQuery()
-    result = query.handle(body={"limit": 20})
+>>> from queries import ArtGalleryListQuery, JobDetailsQuery
+>>> query = ArtGalleryListQuery()
+>>> result = query.handle(body={"limit": 20})
 """
 
 from queries.galleries import ArtGalleryDetailsQuery

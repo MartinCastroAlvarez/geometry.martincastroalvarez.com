@@ -16,8 +16,8 @@ into JSON error bodies. Request and response types are used for typing and
 serialization. URLS maps path prefixes and HTTP methods to handler classes.
 
 Examples:
-    from api.api import handler, ApiRequest, ApiResponse, URLS
-    response_dict = handler(api_gateway_event, context)
+>>> from api.api import handler, ApiRequest, ApiResponse, URLS
+>>> response_dict = handler(api_gateway_event, context)
 """
 
 from api.api.handler import handler

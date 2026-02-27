@@ -15,9 +15,9 @@ search (Indexed.unserialize(data); repository.get(indexed.real_id)).
 Identifier type is used for both fields.
 
 Examples:
-    entry = Indexed(index_id="123", real_id="gal_abc")
-    data = entry.serialize()
-    entry = Indexed.unserialize(data)
+>>> entry = Indexed(index_id="123", real_id="gal_abc")
+>>> data = entry.serialize()
+>>> entry = Indexed.unserialize(data)
 """
 
 from __future__ import annotations

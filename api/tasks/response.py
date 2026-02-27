@@ -15,8 +15,8 @@ and serializes for the Lambda return value. Used by workers.handler and
 WorkerResponse.serialize().
 
 Examples:
-    return {"status": Status.SUCCESS, "job_id": job_id}
-    return {"status": Status.FAILED, "error": str(e), "traceback": [...]}
+>>> return {"status": Status.SUCCESS, "job_id": job_id}
+>>> return {"status": Status.FAILED, "error": str(e), "traceback": [...]}
 """
 
 from __future__ import annotations

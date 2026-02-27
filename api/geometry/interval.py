@@ -14,9 +14,9 @@ support inclusive bounds. Used by Box for x and y extent and in
 intersection logic. Constructor and __setitem__ enforce start <= end.
 
 Examples:
-    i = Interval([Decimal("0"), Decimal("10")])
-    i.contains(Decimal("5"))
-    i.intersects(Interval([Decimal("5"), Decimal("15")]))
+>>> i = Interval([Decimal("0"), Decimal("10")])
+>>> i.contains(Decimal("5"))
+>>> i.intersects(Interval([Decimal("5"), Decimal("15")]))
 """
 
 from __future__ import annotations

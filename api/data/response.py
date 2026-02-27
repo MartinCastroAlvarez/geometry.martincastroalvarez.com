@@ -16,10 +16,10 @@ response and validate shape; invalid or non-dict response is handled with
 StorageError. Keeps S3 contract explicit and documentable.
 
 Examples:
-    response: ListObjectsV2Response = client.list_objects_v2(...)
-    for obj in response.get("Contents", []):
-        keys.append(obj["Key"])
-    next_token = response.get("NextContinuationToken", "")
+>>> response: ListObjectsV2Response = client.list_objects_v2(...)
+>>> for obj in response.get("Contents", []):
+>>> keys.append(obj["Key"])
+>>> next_token = response.get("NextContinuationToken", "")
 """
 
 from __future__ import annotations

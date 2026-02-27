@@ -15,9 +15,9 @@ the owning user can see their jobs. The API handler instantiates with
 user=request.user for routes registered as PrivateQuery.
 
 Examples:
-    class JobListQuery(PrivateQuery[...], ListQuery[...]):
-        def query(self, validated_input): ...
-    handler = JobListQuery(user=request.user)
+>>> class JobListQuery(PrivateQuery[...], ListQuery[...]):
+>>> def query(self, validated_input): ...
+>>> handler = JobListQuery(user=request.user)
 """
 
 from __future__ import annotations

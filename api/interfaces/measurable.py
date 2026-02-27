@@ -14,8 +14,8 @@ segment Euclidean length). Used for type hints and where code needs to
 compare or aggregate sizes across different geometry types.
 
 Examples:
-    segment.size  # Euclidean length
-    interval.size  # end - start
+>>> segment.size  # Euclidean length
+>>> interval.size  # end - start
 """
 
 from __future__ import annotations

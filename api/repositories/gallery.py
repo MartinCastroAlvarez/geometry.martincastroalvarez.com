@@ -14,9 +14,9 @@ ArtGalleryDetailsQuery, ArtGalleryListQuery (via index.get), and
 JobUpdateMutation (when syncing gallery title). MODEL is ArtGallery.
 
 Examples:
-    repo = ArtGalleryRepository()
-    gallery = repo.get(Identifier("gallery_abc"))
-    repo.save(gallery)
+>>> repo = ArtGalleryRepository()
+>>> gallery = repo.get(Identifier("gallery_abc"))
+>>> repo.save(gallery)
 """
 
 from __future__ import annotations

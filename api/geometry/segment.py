@@ -16,9 +16,9 @@ endpoint. Hash is canonical (min point, max point). Used for polygon
 edges and intersection tests in visibility and guard placement.
 
 Examples:
-    s = Segment([Point.unserialize(["0","0"]), Point.unserialize(["1","1"])])
-    s.midpoint
-    s.intersects(other_segment)
+>>> s = Segment([Point.unserialize(["0","0"]), Point.unserialize(["1","1"])])
+>>> s.midpoint
+>>> s.intersects(other_segment)
 """
 
 from __future__ import annotations

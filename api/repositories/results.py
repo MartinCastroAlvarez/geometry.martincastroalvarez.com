@@ -14,10 +14,10 @@ serialized) and next_token string for API response. Used by
 Repository.search and by query handlers that return list responses.
 
 Examples:
-    results = repo.search(next_token=token, limit=Limit(20))
-    for record in results:
-        process(record)
-    return {"records": [r.serialize() for r in results.records], "next_token": results.next_token}
+>>> results = repo.search(next_token=token, limit=Limit(20))
+>>> for record in results:
+>>> process(record)
+>>> return {"records": [r.serialize() for r in results.records], "next_token": results.next_token}
 """
 
 from __future__ import annotations

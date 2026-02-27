@@ -12,15 +12,20 @@ import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { ReactQueryProvider } from '@geometry/data'
 import { LocaleProvider } from '@geometry/i18n'
+import { AnalyticsProvider } from '@geometry/analytics'
 import App from './App.tsx'
 import './index.css'
+
+const googleTagId = typeof import.meta.env.VITE_GOOGLE_TAG_ID === 'string' ? import.meta.env.VITE_GOOGLE_TAG_ID : null
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
         <ReactQueryProvider>
-            <BrowserRouter>
+            <BrowserRouter future={{ v7_startTransition: true }}>
                 <LocaleProvider>
-                    <App />
+                    <AnalyticsProvider googleTagId={googleTagId}>
+                        <App />
+                    </AnalyticsProvider>
                 </LocaleProvider>
             </BrowserRouter>
         </ReactQueryProvider>

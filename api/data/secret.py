@@ -16,9 +16,9 @@ Used by the private decorator for JWT verification and test token comparison.
 Do not log or expose returned values.
 
 Examples:
-    secret = Secret.get(Secret.JWT_SECRET_NAME)
-    test_token = Secret.get(Secret.JWT_TEST_NAME)
-    jwt.decode(token, secret, algorithms=["HS256"])
+>>> secret = Secret.get(Secret.JWT_SECRET_NAME)
+>>> test_token = Secret.get(Secret.JWT_TEST_NAME)
+>>> jwt.decode(token, secret, algorithms=["HS256"])
 """
 
 from __future__ import annotations

@@ -14,8 +14,8 @@ loads a single gallery by id from ArtGalleryRepository. Both are public
 (details). Response records are serialized ArtGallery dicts.
 
 Examples:
-    GET v1/galleries?limit=20 -> ArtGalleryListQuery
-    GET v1/galleries/:id -> ArtGalleryDetailsQuery
+>>> GET v1/galleries?limit=20 -> ArtGalleryListQuery
+>>> GET v1/galleries/:id -> ArtGalleryDetailsQuery
 """
 
 from __future__ import annotations

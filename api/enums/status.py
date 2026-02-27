@@ -14,9 +14,9 @@ ReportTask and StartTask return values, and WorkerResponse. Job methods
 is_pending(), is_failed(), is_finished() are convenience checks on status.
 
 Examples:
-    status = Status.parse(data.get("status"))
-    job.status = Status.SUCCESS
-    return {"status": Status.FAILED, "error": str(e)}
+>>> status = Status.parse(data.get("status"))
+>>> job.status = Status.SUCCESS
+>>> return {"status": Status.FAILED, "error": str(e)}
 """
 
 from __future__ import annotations

@@ -16,10 +16,10 @@ back for arithmetic. The canonical format includes microseconds and Z.
 Used by Model, Job, ArtGallery, User and by indexes (Countdown).
 
 Examples:
-    ts = Timestamp.now()
-    ts = Timestamp("2025-02-22T12:00:00Z")
-    ts = Timestamp(None)  # same as now()
-    dt = ts.to_datetime()
+>>> ts = Timestamp.now()
+>>> ts = Timestamp("2025-02-22T12:00:00Z")
+>>> ts = Timestamp(None)  # same as now()
+>>> dt = ts.to_datetime()
 """
 
 from __future__ import annotations

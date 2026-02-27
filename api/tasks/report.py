@@ -17,7 +17,7 @@ parent_id. Used for aggregation after child jobs complete. TaskRequest
 has job_id and user_email.
 
 Examples:
-    REPORT message for job_id -> load job, merge children, save, notify parent
+>>> REPORT message for job_id -> load job, merge children, save, notify parent
 """
 
 from __future__ import annotations

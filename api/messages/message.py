@@ -16,9 +16,9 @@ plus receipt_handle for commit. Used by Queue.put, WorkerRequest.message,
 and queue.commit(message).
 
 Examples:
-    msg = Message(action=Action.START, job_id="abc123", user_email=Email("u@e.com"))
-    queue.put(msg)
-    msg = Message.unserialize({"action": "start", "job_id": "x", "user_email": "y", "receipt_handle": "rh"})
+>>> msg = Message(action=Action.START, job_id="abc123", user_email=Email("u@e.com"))
+>>> queue.put(msg)
+>>> msg = Message.unserialize({"action": "start", "job_id": "x", "user_email": "y", "receipt_handle": "rh"})
 """
 
 from __future__ import annotations

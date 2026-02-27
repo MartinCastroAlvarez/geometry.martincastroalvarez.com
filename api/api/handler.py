@@ -17,8 +17,8 @@ and PrivateMutation receive the authenticated User; public handlers get
 a default instance. OPTIONS is handled for CORS and returns an empty dict.
 
 Examples:
-    handler(request, context)  # called by interceptor after ApiRequest is built
-    # URLS: Path("v1/jobs") -> {Method.GET: JobListQuery, Method.POST: JobMutation}
+>>> handler(request, context)  # called by interceptor after ApiRequest is built
+>>> # URLS: Path("v1/jobs") -> {Method.GET: JobListQuery, Method.POST: JobMutation}
 """
 
 from __future__ import annotations

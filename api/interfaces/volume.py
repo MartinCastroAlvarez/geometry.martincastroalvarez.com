@@ -15,9 +15,9 @@ comparisons. Walk uses it for turn direction; Polygon for winding and
 convexity checks.
 
 Examples:
-    area = polygon.signed_area
-    abs(polygon)  # absolute area
-    walk.signed_area  # 2x2 determinant
+>>> area = polygon.signed_area
+>>> abs(polygon)  # absolute area
+>>> walk.signed_area  # 2x2 determinant
 """
 
 from __future__ import annotations

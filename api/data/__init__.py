@@ -16,11 +16,11 @@ caching. All raise appropriate exceptions (ConfigurationError, ServiceUnavailabl
 ValidationError, NotFoundError) on missing env, S3 errors, or invalid input.
 
 Examples:
-    bucket = Bucket()
-    bucket.save("data/galleries/abc.json", gallery.serialize())
-    data = bucket.load("data/galleries/abc.json")
-    page = bucket.search(prefix="data/galleries/", limit=Limit(20))
-    secret = Secret.get(Secret.JWT_SECRET_NAME)
+>>> bucket = Bucket()
+>>> bucket.save("data/galleries/abc.json", gallery.serialize())
+>>> data = bucket.load("data/galleries/abc.json")
+>>> page = bucket.search(prefix="data/galleries/", limit=Limit(20))
+>>> secret = Secret.get(Secret.JWT_SECRET_NAME)
 """
 
 from data.bucket import DATA_BUCKET_NAME

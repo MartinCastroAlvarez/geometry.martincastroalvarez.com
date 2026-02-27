@@ -29,7 +29,7 @@ class TestMethod:
 
     def test_parse_invalid_raises(self):
         with pytest.raises(MethodNotAllowedError):
-            Method.parse("PATCH")
+            Method.parse("PUT")
 
 
 class TestStatus:

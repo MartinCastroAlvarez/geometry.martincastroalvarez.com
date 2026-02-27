@@ -16,9 +16,9 @@ gallery id from job_id and user email). Used in models, repositories,
 indexes, and mutation/query request types.
 
 Examples:
-    Identifier("gallery_abc-123")
-    Identifier(12345)
-    Identifier(Signature(Email("user@example.com")))
+>>> Identifier("gallery_abc-123")
+>>> Identifier(12345)
+>>> Identifier(Signature(Email("user@example.com")))
 """
 
 from __future__ import annotations

@@ -16,9 +16,9 @@ extract the resource id for detail routes. Path supports startswith for
 route matching in the handler. Stored and compared as a string.
 
 Examples:
-    Path("/v1/galleries")   # version=v1, resource=galleries
-    Path("v1/jobs/abc")    # version=v1, resource=jobs, id=abc
-    path.id                # raises if path has no third segment
+>>> Path("/v1/galleries")   # version=v1, resource=galleries
+>>> Path("v1/jobs/abc")    # version=v1, resource=jobs, id=abc
+>>> path.id                # raises if path has no third segment
 """
 
 from __future__ import annotations

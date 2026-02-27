@@ -10,7 +10,8 @@
  */
 
 export * from "./constants";
-export * from "./cookies";
+export { getAuthToken, fetchWithAuth } from "./cookies";
+export * from "./AuthenticationContext";
 export * from "./auth";
 export * from "./geometry";
 export * from "./types";

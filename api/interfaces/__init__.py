@@ -16,9 +16,9 @@ these for consistent persistence and spatial operations. Used for type
 hints and to group behavior (e.g. Bounded.intersects via box).
 
 Examples:
-    isinstance(point, Spatial)
-    box = segment.box  # Bounded
-    data = model.serialize()  # Serializable
+>>> isinstance(point, Spatial)
+>>> box = segment.box  # Bounded
+>>> data = model.serialize()  # Serializable
 """
 
 from interfaces.bounded import Bounded

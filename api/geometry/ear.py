@@ -15,8 +15,8 @@ edge as ConvexComponent. Constructor raises ValidationError if not three
 points or if collinear.
 
 Examples:
-    ear = Ear([p0, p1, p2])
-    shared = ear & other_ear
+>>> ear = Ear([p0, p1, p2])
+>>> shared = ear & other_ear
 """
 
 from __future__ import annotations

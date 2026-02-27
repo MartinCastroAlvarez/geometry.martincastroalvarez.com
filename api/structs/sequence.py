@@ -16,11 +16,11 @@ cycle has same hash. Used by Polygon (vertices) and geometry __and__.
 serialize/unserialize for persistence.
 
 Examples:
-    s = Sequence([1, 2, 3, 4])
-    s[3:6]   # wrap -> Sequence([4, 1, 2])
-    s << 1   # rotate
-    s & other  # shared contiguous part
-    ~s       # reversed
+>>> s = Sequence([1, 2, 3, 4])
+>>> s[3:6]   # wrap -> Sequence([4, 1, 2])
+>>> s << 1   # rotate
+>>> s & other  # shared contiguous part
+>>> ~s       # reversed
 """
 
 from __future__ import annotations
@@ -39,37 +39,37 @@ T = TypeVar("T")
 
 class Sequence(list, Generic[T]):
     """
-    List-like sequence with modular slicing (wrap-around), shift, add/sub/and/invert, hash, serialize.
+        List-like sequence with modular slicing (wrap-around), shift, add/sub/and/invert, hash, serialize.
 
-    Slicing: indices wrap (mod len). s[3:6] on length-4 sequence gives s[3:4] + s[0:2].
-    Shift: s << idx or s << element puts that index/element first; >> puts it last.
-    Add: s + other concatenates. Sub: s - other removes first contiguous occurrence of other (with wrap).
-    And: s & other returns the contiguous subsequence that appears in both (with wrap); raises if multiple overlaps.
-    Invert: ~s returns reversed copy.
-    Hash: idempotent by canonical rotation (same value for same cycle regardless of start).
+        Slicing: indices wrap (mod len). s[3:6] on length-4 sequence gives s[3:4] + s[0:2].
+        Shift: s << idx or s << element puts that index/element first; >> puts it last.
+        Add: s + other concatenates. Sub: s - other removes first contiguous occurrence of other (with wrap).
+        And: s & other returns the contiguous subsequence that appears in both (with wrap); raises if multiple overlaps.
+        Invert: ~s returns reversed copy.
+        Hash: idempotent by canonical rotation (same value for same cycle regardless of start).
 
-    Examples:
-        >>> s = Sequence([10, 20, 30])
-        >>> s[0], s[1], s[-1]
-        (10, 20, 30)
-        >>> s[1:4]
-        Sequence([20, 30, 10])
-        >>> s << 20
-        Sequence([20, 30, 10])
-        >>> s + Sequence([40])
-        Sequence([10, 20, 30, 40])
-        >>> (s + Sequence([40])) - Sequence([30, 40])
-        Sequence([10, 20])
-        >>> Sequence([1, 2, 3, 4]).dedup()
-        Sequence([1, 2, 3, 4])
-        >>> Sequence([1, 1, 2, 2]).dedup()
-        Sequence([1, 2])
-        >>> s.append(40)
-        >>> s.pop(2)
-        30
-        >>> 20 in s, Sequence([20, 30]) in s
-        (True, True)
-    """
+        Examples:
+    >>> >>> s = Sequence([10, 20, 30])
+    >>> >>> s[0], s[1], s[-1]
+    >>> (10, 20, 30)
+    >>> >>> s[1:4]
+    >>> Sequence([20, 30, 10])
+    >>> >>> s << 20
+    >>> Sequence([20, 30, 10])
+    >>> >>> s + Sequence([40])
+    >>> Sequence([10, 20, 30, 40])
+    >>> >>> (s + Sequence([40])) - Sequence([30, 40])
+    >>> Sequence([10, 20])
+    >>> >>> Sequence([1, 2, 3, 4]).dedup()
+    >>> Sequence([1, 2, 3, 4])
+    >>> >>> Sequence([1, 1, 2, 2]).dedup()
+    >>> Sequence([1, 2])
+    >>> >>> s.append(40)
+    >>> >>> s.pop(2)
+    >>> 30
+    >>> >>> 20 in s, Sequence([20, 30]) in s
+    >>> (True, True)
+    >>>"""
 
     def __init__(
         self,

@@ -15,8 +15,8 @@ downstream. unserialize is not used (handler builds response directly).
 Used by workers.handler to collect task outcomes and return from Lambda.
 
 Examples:
-    return WorkerResponse(results=results)
-    return response.serialize()  # for Lambda return
+>>> return WorkerResponse(results=results)
+>>> return response.serialize()  # for Lambda return
 """
 
 from __future__ import annotations

@@ -16,9 +16,9 @@ reflection of arbitrary origins while supporting the app frontend and
 local development. Used by the API interceptor when building ApiResponse.
 
 Examples:
-    Origin("https://geometry.martincastroalvarez.com")
-    Origin("")  # -> '*'
-    Origin("http://localhost:3000")
+>>> Origin("https://geometry.martincastroalvarez.com")
+>>> Origin("")  # -> '*'
+>>> Origin("http://localhost:3000")
 """
 
 from __future__ import annotations

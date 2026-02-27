@@ -14,8 +14,8 @@ Used by the API handler to dispatch by method and by URLS (Path -> Method -> Han
 OPTIONS is used for CORS preflight and is handled without auth.
 
 Examples:
-    method = Method.parse(request.http_method)
-    handler_class = URLS[path_prefix].get(method)
+>>> method = Method.parse(request.http_method)
+>>> handler_class = URLS[path_prefix].get(method)
 """
 
 from __future__ import annotations
@@ -43,6 +43,4 @@ class Method(str, Enum):
         try:
             return cls(raw)
         except ValueError:
-            raise MethodNotAllowedError(
-                f"method must be one of [{', '.join(m.value for m in cls)}], got {raw!r}"
-            )
+            raise MethodNotAllowedError(f"method must be one of [{', '.join(m.value for m in cls)}], got {raw!r}")

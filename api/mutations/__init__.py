@@ -15,9 +15,9 @@ receive request.user. Mutations validate body, mutate state (repo, index,
 queue), and return a response dict. Registered in api.api.urls by path and method.
 
 Examples:
-    from mutations import JobMutation, ArtGalleryPublishMutation
-    handler = JobMutation(user=request.user)
-    result = handler.handle(body)
+>>> from mutations import JobMutation, ArtGalleryPublishMutation
+>>> handler = JobMutation(user=request.user)
+>>> result = handler.handle(body)
 """
 
 from mutations.galleries import ArtGalleryHideMutation

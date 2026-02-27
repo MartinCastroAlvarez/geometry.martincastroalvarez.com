@@ -15,8 +15,8 @@ serialization and when building/updating jobs from worker or API. The
 actual pipeline execution is outside this API; this enum tracks progress.
 
 Examples:
-    stage = Stage.parse(data.get("stage"))
-    job.stage = Stage.EAR_CLIPPING
+>>> stage = Stage.parse(data.get("stage"))
+>>> job.stage = Stage.EAR_CLIPPING
 """
 
 from __future__ import annotations

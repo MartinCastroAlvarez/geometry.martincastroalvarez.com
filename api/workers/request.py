@@ -16,10 +16,10 @@ entry, or one from the event itself for non-SQS invocations. Used by
 workers.handler to parse and to commit (message.receipt_handle).
 
 Examples:
-    for request in WorkerRequest.from_event(event):
-        task_class = TASK_BY_ACTION[request.action]
-        task_class().handle(body=request.body)
-        queue.commit(request.message)
+>>> for request in WorkerRequest.from_event(event):
+>>> task_class = TASK_BY_ACTION[request.action]
+>>> task_class().handle(body=request.body)
+>>> queue.commit(request.message)
 """
 
 from __future__ import annotations

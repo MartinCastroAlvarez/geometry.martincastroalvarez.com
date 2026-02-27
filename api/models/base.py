@@ -16,8 +16,8 @@ Signature(id). Used by Repository, indexes, and all API payloads that
 read or write gallery/job/user data.
 
 Examples:
-    data = gallery.serialize()
-    gallery = ArtGallery.unserialize(data)
+>>> data = gallery.serialize()
+>>> gallery = ArtGallery.unserialize(data)
 """
 
 from __future__ import annotations

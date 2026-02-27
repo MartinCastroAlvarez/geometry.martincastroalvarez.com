@@ -16,10 +16,10 @@ corrupt or id-mismatch data raises CorruptionError. Used by ArtGalleryRepository
 and JobsRepository (the latter via PrivateRepository).
 
 Examples:
-    repo = ArtGalleryRepository()
-    gallery = repo.get(Identifier("abc"))
-    repo.save(gallery)
-    results = repo.search(next_token=token, limit=Limit(20))
+>>> repo = ArtGalleryRepository()
+>>> gallery = repo.get(Identifier("abc"))
+>>> repo.save(gallery)
+>>> results = repo.search(next_token=token, limit=Limit(20))
 """
 
 from __future__ import annotations

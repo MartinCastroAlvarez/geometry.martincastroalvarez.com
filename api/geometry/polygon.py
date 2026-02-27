@@ -17,10 +17,10 @@ is_cw, is_convex use Walk orientation. Used for gallery boundary, obstacles,
 and all polygon-based geometry in the pipeline.
 
 Examples:
-    poly = Polygon.unserialize([[0,0], [1,0], [1,1], [0,1]])
-    poly.edges
-    poly.contains(point)
-    shared = poly1 & poly2
+>>> poly = Polygon.unserialize([[0,0], [1,0], [1,1], [0,1]])
+>>> poly.edges
+>>> poly.contains(point)
+>>> shared = poly1 & poly2
 """
 
 from __future__ import annotations

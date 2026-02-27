@@ -8,6 +8,23 @@ Computational geometry project: art gallery algorithms, convex decomposition, an
 |------|-------------|--------|
 | **Lab** | Python prototype, examples, and art gallery pipeline | [lab/README.md](lab/README.md) |
 | **API** | REST and worker backend (Lambda, S3, SQS, repositories, indexes) | [api/README.md](api/README.md) |
+| **Web** | React app and shared frontend packages (see project structure below) | [docs/3 methodology/4 FRONTEND.md](docs/3%20methodology/4%20FRONTEND.md) |
+
+## Project structure
+
+| Path | Description |
+|------|-------------|
+| **apps/web** | SPA app shell: routing, layout, nav; composes providers (React Query, locale, analytics) and pages (Home, Jobs, Job, Gallery, Editor). |
+| **packages/analytics** | Google Analytics: `AnalyticsProvider`, `useAnalytics()`, `track`, actions/categories enums; constants for default label and env key. |
+| **packages/data** | Data layer: API clients (auth, geometry), React Query hooks (session, jobs, galleries), adapters API ↔ domain. |
+| **packages/domain** | Pure domain: entities (Point, Polygon, ArtGallery, User, Job, Gallery, ConvexComponent, Ear, Guard) and invariants. |
+| **packages/editor** | Polygon editor: Konva-based Editor, Toolbar, vertex/edge interaction; adapters to/from domain polygons. |
+| **packages/i18n** | Localization: Language enum, LocaleProvider, useLocale, persisted locale, JSON translations (EN/ES). |
+| **packages/ui** | Design system: layout (Body, Container, Nav), typography (Title, Text), Button, Toggle, Toaster, etc.; Tailwind. |
+| **packages/config/typescript** | Shared TypeScript config (base tsconfig). |
+| **api/** | Backend: REST handlers, S3/SQS, repositories, indexes, worker Lambda; see [api/README.md](api/README.md). |
+| **lab/** | Python prototype and example scripts for art gallery pipeline; see [lab/README.md](lab/README.md). |
+| **tests/** | API tests (pytest); run with `pnpm run build:api:pytest` or `pnpm run build:api:coverage`. |
 
 ## Lab examples
 
@@ -114,14 +131,28 @@ Required test coverage of 90% reached. Total coverage: 92.81%
 
 ## Build, deploy, and test
 
-Use **Node.js 25** and **pnpm** (e.g. run `nvm use 25` if using nvm; install pnpm with `npm install -g pnpm` if needed).
+### Prerequisites
 
-From the project root:
+- **Node.js** 20+ (LTS recommended; e.g. `nvm use 20` or `nvm use 22`) and **pnpm** (`npm install -g pnpm`).
+- **Python** 3.12+ and **Poetry** (for the API and tests).
+- **AWS CLI** configured with a profile (deploy uses `AWS_PROFILE='martin'`).
+- **Secrets:** `./spy.sh martin com.martincastroalvarez.secrets GOOGLE_ANALYTICS_ID` (and optionally `JWT_TEST`) must succeed for `build:web:with-tag` and `deploy`.
 
-- **Install and bootstrap:** `pnpm run init` (uses AWS profile `martin`; run `pnpm run update` to only install dependencies).
-- **Dev (web app):** `pnpm run dev` (starts the Art Gallery editor at http://localhost:5174 with hardcoded Google Tag ID).
-- **Build:** `pnpm run build` (runs `build:api` and `build:cdk`). Use `pnpm run build:api` or `pnpm run build:cdk` for specific parts. Use `pnpm run build:web` to build the web app, or `pnpm run build:web:with-tag` to build with Google Analytics ID from secrets.
-- **Build all (for deploy):** `pnpm run build:all` (API, CDK, and web app with Google Tag).
-- **Deploy:** `pnpm run deploy` (update, build all, CDK deploy, then CloudFront invalidation via `pnpm run publish`).
-- **Publish (invalidation only):** `pnpm run publish` (invalidates the geometry CloudFront distribution using `GeometryStack` / `GeometryDistributionId` from `outputs.json`).
-- **Test:** `pnpm run test` (runs `test:lab`). Use `pnpm run test:lab:1` … `pnpm run test:lab:10` to run `lab/example1.py` … `lab/example10.py`.
+### Commands (from project root)
+
+- **Install and bootstrap:** `pnpm run init` (installs deps and bootstraps CDK; uses AWS profile `martin`). Use `pnpm run update` to only install dependencies.
+- **Dev (web app):** `pnpm run dev` (Art Gallery editor at http://localhost:5174 with hardcoded Google Tag ID).
+- **Build:** `pnpm run build` (runs `build:api` and `build:cdk`). Use `pnpm run build:api` or `pnpm run build:cdk` for specific parts. Use `pnpm run build:web` for the web app, or `pnpm run build:web:with-tag` to bake in Google Analytics ID from secrets.
+- **Build all (for deploy):** `pnpm run build:all` (API + CDK + web app with Google Tag).
+- **Deploy:** `pnpm run deploy` (update → build:all → CDK deploy → CloudFront invalidation via `pnpm run publish`).
+- **Publish (invalidation only):** `pnpm run publish` (invalidates CloudFront using `GeometryDistributionId` from `outputs.json`).
+- **Test:** `pnpm run test` (runs `test:lab`). Use `pnpm run test:lab:1` … `pnpm run test:lab:10` for `lab/example1.py` … `lab/example10.py`.
+
+### Deploy steps (what `pnpm run deploy` does)
+
+1. `pnpm run update` — install Python (Poetry) and Node (pnpm) dependencies.
+2. `pnpm run build:all` — API (black, isort, flake8, pytest, coverage), CDK TypeScript → `app.js`, web app build with Google Tag.
+3. `AWS_PROFILE='martin' pnpm exec cdk deploy --require-approval never --all` — deploy CDK stacks.
+4. `pnpm run publish` — CloudFront invalidation for the geometry site.
+
+If deploy fails: fix any `build:api` (e.g. dataclass field order, tests) or `build:cdk` (e.g. TypeScript/Node) errors first, then run `pnpm run build:all` and `cdk deploy` again.

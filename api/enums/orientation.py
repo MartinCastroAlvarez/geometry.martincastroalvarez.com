@@ -14,8 +14,8 @@ numeric comparison. Geometry types (Walk, Polygon) use this to determine
 winding order and convexity without string parsing.
 
 Examples:
-    walk.orientation  # Orientation.CLOCKWISE
-    polygon.is_ccw()  # uses signed_area sign
+>>> walk.orientation  # Orientation.CLOCKWISE
+>>> polygon.is_ccw()  # uses signed_area sign
 """
 
 from __future__ import annotations

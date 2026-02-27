@@ -17,11 +17,11 @@ avoid circular imports. Data structures (Sequence, Table) live in structs/.
 Use these types in request/response validation and in domain models.
 
 Examples:
-    from attributes import Timestamp, Email, Identifier, Path, Limit
-    ts = Timestamp.now()
-    email = Email("user@example.com")
-    path = Path("/v1/galleries/abc")
-    from attributes import Polygon, Point
+>>> from attributes import Timestamp, Email, Identifier, Path, Limit
+>>> ts = Timestamp.now()
+>>> email = Email("user@example.com")
+>>> path = Path("/v1/galleries/abc")
+>>> from attributes import Polygon, Point
 """
 
 from attributes.countdown import Countdown

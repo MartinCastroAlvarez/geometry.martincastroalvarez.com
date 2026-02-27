@@ -11,8 +11,8 @@ Mutation handlers.
 Lambda entry point: api.handler (API Gateway).
 
 Examples:
-    >>> from api import handler
-    >>> response = handler(event, context)  # event = API Gateway proxy event
+>>> >>> from api import handler
+>>> >>> response = handler(event, context)  # event = API Gateway proxy event
 """
 
 from api.api.handler import handler

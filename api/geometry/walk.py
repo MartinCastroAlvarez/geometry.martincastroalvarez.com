@@ -15,9 +15,9 @@ as [0]=start, [1]=center, [2]=end. is_cw(), is_ccw(), is_collinear() are
 convenience predicates.
 
 Examples:
-    walk = Walk(start=p0, center=p1, end=p2)
-    walk.orientation  # Orientation.CLOCKWISE
-    walk.is_collinear()
+>>> walk = Walk(start=p0, center=p1, end=p2)
+>>> walk.orientation  # Orientation.CLOCKWISE
+>>> walk.is_collinear()
 """
 
 from __future__ import annotations

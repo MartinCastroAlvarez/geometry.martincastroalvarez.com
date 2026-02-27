@@ -15,8 +15,8 @@ intersection checks box first). TYPE_CHECKING import avoids circular
 dependency with geometry.box.
 
 Examples:
-    box = segment.box
-    if box1.intersects(polygon.box): ...
+>>> box = segment.box
+>>> if box1.intersects(polygon.box): ...
 """
 
 from __future__ import annotations

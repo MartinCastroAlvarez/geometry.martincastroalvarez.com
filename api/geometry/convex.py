@@ -15,8 +15,8 @@ ear clipping; visibility and guard placement operate on convex components.
 Stored in ArtGallery.convex_components as Table[ConvexComponent].
 
 Examples:
-    cc = ConvexComponent([p0, p1, p2, p3])
-    edge = cc & other_convex
+>>> cc = ConvexComponent([p0, p1, p2, p3])
+>>> edge = cc & other_convex
 """
 
 from __future__ import annotations

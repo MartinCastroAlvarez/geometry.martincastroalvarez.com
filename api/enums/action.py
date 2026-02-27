@@ -15,8 +15,8 @@ and workers.handler to select StartTask or ReportTask. The worker dispatches
 by action via TASK_BY_ACTION.
 
 Examples:
-    action = Action.parse(body.get("action"))
-    task_class = TASK_BY_ACTION[action]
+>>> action = Action.parse(body.get("action"))
+>>> task_class = TASK_BY_ACTION[action]
 """
 
 from __future__ import annotations

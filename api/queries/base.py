@@ -14,8 +14,8 @@ ListQueryRequest (next_token, limit). DetailsQuery validates DetailsQueryRequest
 Used by ArtGalleryListQuery, ArtGalleryDetailsQuery, JobListQuery, JobDetailsQuery.
 
 Examples:
-    query = ArtGalleryListQuery()
-    result = query.handle(body={"next_token": "", "limit": 20})
+>>> query = ArtGalleryListQuery()
+>>> result = query.handle(body={"next_token": "", "limit": 20})
 """
 
 from __future__ import annotations

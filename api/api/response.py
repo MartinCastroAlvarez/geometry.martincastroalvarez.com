@@ -18,11 +18,11 @@ error.code, error.type, and error.message. Handlers return dicts; the
 interceptor turns them into ApiResponse and then serialize() for Gateway.
 
 Examples:
-    response = ApiResponse(http.HTTPStatus.OK, json.dumps(data), origin=Origin())
-    return response.serialize()
-    response = ApiResponse.unserialize(ValidationError("bad input"))
-    response.origin = Origin(request_headers.get("Origin"))
-    return response.serialize()
+>>> response = ApiResponse(http.HTTPStatus.OK, json.dumps(data), origin=Origin())
+>>> return response.serialize()
+>>> response = ApiResponse.unserialize(ValidationError("bad input"))
+>>> response.origin = Origin(request_headers.get("Origin"))
+>>> return response.serialize()
 """
 
 from __future__ import annotations

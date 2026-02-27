@@ -1,4 +1,11 @@
-import * as cdk from 'aws-cdk-lib'
+import {
+  App,
+  CfnOutput,
+  Duration,
+  RemovalPolicy,
+  Stack,
+  type StackProps,
+} from 'aws-cdk-lib'
 import * as s3 from 'aws-cdk-lib/aws-s3'
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment'
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront'
@@ -17,22 +24,22 @@ import { fileURLToPath } from 'url'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-class GeometryStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+class GeometryStack extends Stack {
+  constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props)
 
     const webBucket = new s3.Bucket(this, 'WebBucket', {
       bucketName: 'com.martincastroalvarez.geometry',
       publicReadAccess: false,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      removalPolicy: RemovalPolicy.RETAIN,
     })
 
     const apiBucket = new s3.Bucket(this, 'ApiBucket', {
       bucketName: 'com.martincastroalvarez.api.geometry',
       publicReadAccess: false,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      removalPolicy: RemovalPolicy.RETAIN,
       cors: [
         {
           allowedMethods: [s3.HttpMethods.GET, s3.HttpMethods.PUT, s3.HttpMethods.POST, s3.HttpMethods.DELETE],
@@ -44,9 +51,9 @@ class GeometryStack extends cdk.Stack {
 
     const geometryQueue = new sqs.Queue(this, 'GeometryQueue', {
       queueName: 'geometry-queue',
-      visibilityTimeout: cdk.Duration.seconds(960),
-      receiveMessageWaitTime: cdk.Duration.seconds(20),
-      retentionPeriod: cdk.Duration.days(14),
+      visibilityTimeout: Duration.seconds(960),
+      receiveMessageWaitTime: Duration.seconds(20),
+      retentionPeriod: Duration.days(14),
     })
 
     const oai = new cloudfront.OriginAccessIdentity(this, 'GeometryOAI', {
@@ -125,7 +132,7 @@ class GeometryStack extends cdk.Stack {
         QUEUE_NAME: geometryQueue.queueName,
         LOG_LEVEL: 'INFO',
       },
-      timeout: cdk.Duration.seconds(30),
+      timeout: Duration.seconds(30),
       memorySize: 256,
       logRetention: logs.RetentionDays.ONE_DAY,
     })
@@ -152,14 +159,14 @@ class GeometryStack extends cdk.Stack {
         QUEUE_NAME: geometryQueue.queueName,
         LOG_LEVEL: 'INFO',
       },
-      timeout: cdk.Duration.seconds(900),
+      timeout: Duration.seconds(900),
       memorySize: 512,
       logRetention: logs.RetentionDays.ONE_DAY,
     })
 
     workerHandler.addEventSource(new lambda_event_sources.SqsEventSource(geometryQueue, {
       batchSize: 3,
-      maxBatchingWindow: cdk.Duration.seconds(300),
+      maxBatchingWindow: Duration.seconds(300),
       maxConcurrency: 2,
     }))
 
@@ -172,7 +179,7 @@ class GeometryStack extends cdk.Stack {
         accessLogDestination: new apigateway.LogGroupLogDestination(
           new logs.LogGroup(this, 'GeometryApiGatewayAccessLogs', {
             retention: logs.RetentionDays.ONE_DAY,
-            removalPolicy: cdk.RemovalPolicy.DESTROY,
+            removalPolicy: RemovalPolicy.DESTROY,
           })
         ),
         accessLogFormat: apigateway.AccessLogFormat.jsonWithStandardFields()
@@ -266,20 +273,20 @@ class GeometryStack extends cdk.Stack {
       retainOnDelete: false,
     })
 
-    new cdk.CfnOutput(this, 'WebBucketName', { value: webBucket.bucketName, exportName: 'GeometryWebBucketName' })
-    new cdk.CfnOutput(this, 'ApiBucketName', { value: apiBucket.bucketName, exportName: 'GeometryApiBucketName' })
-    new cdk.CfnOutput(this, 'GeometryQueueName', { value: geometryQueue.queueName, exportName: 'GeometryQueueName' })
-    new cdk.CfnOutput(this, 'GeometryQueueUrl', { value: geometryQueue.queueUrl, exportName: 'GeometryQueueUrl' })
-    new cdk.CfnOutput(this, 'GeometryDistributionId', { value: distribution.distributionId, exportName: 'GeometryDistributionId' })
-    new cdk.CfnOutput(this, 'GeometryDistributionDomainName', { value: distribution.distributionDomainName, exportName: 'GeometryDistributionDomainName' })
-    new cdk.CfnOutput(this, 'GeometryApiUrl', { value: api.url, exportName: 'GeometryApiUrl' })
-    new cdk.CfnOutput(this, 'GeometryApiDomainName', { value: apiDomainName.domainNameAliasDomainName, exportName: 'GeometryApiDomainName' })
-    new cdk.CfnOutput(this, 'LambdaFunctionName', { value: apiHandler.functionName, exportName: 'GeometryLambdaFunctionName' })
-    new cdk.CfnOutput(this, 'WorkerFunctionName', { value: workerHandler.functionName, exportName: 'GeometryWorkerFunctionName' })
+    new CfnOutput(this, 'WebBucketName', { value: webBucket.bucketName, exportName: 'GeometryWebBucketName' })
+    new CfnOutput(this, 'ApiBucketName', { value: apiBucket.bucketName, exportName: 'GeometryApiBucketName' })
+    new CfnOutput(this, 'GeometryQueueName', { value: geometryQueue.queueName, exportName: 'GeometryQueueName' })
+    new CfnOutput(this, 'GeometryQueueUrl', { value: geometryQueue.queueUrl, exportName: 'GeometryQueueUrl' })
+    new CfnOutput(this, 'GeometryDistributionId', { value: distribution.distributionId, exportName: 'GeometryDistributionId' })
+    new CfnOutput(this, 'GeometryDistributionDomainName', { value: distribution.distributionDomainName, exportName: 'GeometryDistributionDomainName' })
+    new CfnOutput(this, 'GeometryApiUrl', { value: api.url, exportName: 'GeometryApiUrl' })
+    new CfnOutput(this, 'GeometryApiDomainName', { value: apiDomainName.domainNameAliasDomainName, exportName: 'GeometryApiDomainName' })
+    new CfnOutput(this, 'LambdaFunctionName', { value: apiHandler.functionName, exportName: 'GeometryLambdaFunctionName' })
+    new CfnOutput(this, 'WorkerFunctionName', { value: workerHandler.functionName, exportName: 'GeometryWorkerFunctionName' })
   }
 }
 
-const app = new cdk.App()
+const app = new App()
 new GeometryStack(app, 'GeometryStack', {
   env: {
     region: 'us-west-2',

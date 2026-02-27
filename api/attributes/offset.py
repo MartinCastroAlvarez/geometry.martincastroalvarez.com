@@ -15,8 +15,8 @@ and Index.search accept next_token: Offset | None. When building from
 request body, only pass a value when the client sent a token.
 
 Examples:
-    token = Offset("abc123")
-    next_token = Offset(body["next_token"]) if body.get("next_token") else None
+>>> token = Offset("abc123")
+>>> next_token = Offset(body["next_token"]) if body.get("next_token") else None
 """
 
 from __future__ import annotations

@@ -14,8 +14,8 @@ details queries get id from path. Used by Query.validate() return types
 and by ListQuery/DetailsQuery base implementations.
 
 Examples:
-    ListQueryRequest(next_token=Offset(...), limit=Limit(20))
-    DetailsQueryRequest(id=Identifier("gallery-123"))
+>>> ListQueryRequest(next_token=Offset(...), limit=Limit(20))
+>>> DetailsQueryRequest(id=Identifier("gallery-123"))
 """
 
 from __future__ import annotations

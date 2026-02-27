@@ -17,8 +17,8 @@ trailing slash and path segments (e.g. v1/galleries vs v1/galleries/
 for a single gallery by id). OPTIONS is handled globally for CORS.
 
 Examples:
-    URLS[Path("v1/jobs")][Method.GET]  # JobListQuery
-    URLS[Path("v1/jobs/")][Method.POST]  # ArtGalleryPublishMutation
+>>> URLS[Path("v1/jobs")][Method.GET]  # JobListQuery
+>>> URLS[Path("v1/jobs/")][Method.POST]  # ArtGalleryPublishMutation
 """
 
 from typing import Type

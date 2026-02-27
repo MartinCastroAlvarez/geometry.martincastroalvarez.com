@@ -16,9 +16,9 @@ ArtGallery obstacles, ears, convex_components, guards, visibility.
 Items must be hashable (e.g. Point, Polygon, Ear).
 
 Examples:
-    table = Table().add(poly1).add(poly2)
-    table -= poly1
-    data = table.serialize()
+>>> table = Table().add(poly1).add(poly2)
+>>> table -= poly1
+>>> data = table.serialize()
 """
 
 from __future__ import annotations

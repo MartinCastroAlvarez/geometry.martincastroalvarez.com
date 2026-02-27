@@ -16,8 +16,8 @@ the async job flow. The actual pipeline execution (ear clipping, etc.)
 would be triggered elsewhere; this task only logs and enqueues report.
 
 Examples:
-    task = StartTask()
-    result = task.handle(body={"job_id": "abc", "user_email": "u@e.com"})
+>>> task = StartTask()
+>>> result = task.handle(body={"job_id": "abc", "user_email": "u@e.com"})
 """
 
 from __future__ import annotations

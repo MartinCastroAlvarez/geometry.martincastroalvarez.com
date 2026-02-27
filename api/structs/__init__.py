@@ -15,9 +15,9 @@ obstacles, ears, convex_components, guards, visibility in ArtGallery.
 Both support serialize/unserialize for S3 and API.
 
 Examples:
-    from structs import Sequence, Table
-    poly = Polygon(Sequence([p0, p1, p2]))
-    table = Table().add(ear1).add(ear2)
+>>> from structs import Sequence, Table
+>>> poly = Polygon(Sequence([p0, p1, p2]))
+>>> table = Table().add(ear1).add(ear2)
 """
 
 from structs.sequence import Sequence

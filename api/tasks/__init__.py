@@ -17,8 +17,8 @@ and optional job_id, error, traceback. Used by workers.handler and
 workers.urls (TASK_BY_ACTION).
 
 Examples:
-    task = StartTask()
-    result = task.handle(body={"job_id": "abc", "user_email": "u@e.com"})
+>>> task = StartTask()
+>>> result = task.handle(body={"job_id": "abc", "user_email": "u@e.com"})
 """
 
 from tasks.base import Task

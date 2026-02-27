@@ -1,3 +1,15 @@
+/**
+ * Locale context: provider and useLocale hook with t() for translations.
+ *
+ * Context: LocaleProvider reads language from useLocaleStore, loads translations via getTranslations(language),
+ * and exposes language, setLanguage, and t(key, vars). t() uses dot-path keys and {{var}} interpolation (see utils).
+ * useLocale must be used within LocaleProvider or it throws.
+ *
+ * Example:
+ *   const { language, setLanguage, t } = useLocale();
+ *   t("common.save");  // "Save" / "Guardar"
+ *   t("greeting.hello", { name: "Jane" });  // "Hello, {{name}}" → "Hello, Jane"
+ */
 import React, { createContext, useContext, useCallback, useMemo } from "react";
 import { useLocaleStore } from "./store";
 import { getTranslations } from "./translations";

@@ -15,10 +15,10 @@ that need ownership or identity use PrivateMutation. The API handler
 instantiates with user=request.user for routes registered as PrivateMutation.
 
 Examples:
-    class JobMutation(PrivateMutation[JobMutationRequest, JobMutationResponse]):
-        def validate(self, body): ...
-        def mutate(self, validated_input): ...
-    handler = JobMutation(user=request.user)
+>>> class JobMutation(PrivateMutation[JobMutationRequest, JobMutationResponse]):
+>>> def validate(self, body): ...
+>>> def mutate(self, validated_input): ...
+>>> handler = JobMutation(user=request.user)
 """
 
 from __future__ import annotations

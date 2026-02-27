@@ -16,10 +16,10 @@ require an authenticated user. Constructor validates id == Identifier(Signature(
 Used by api.api.private, JobsRepository, and mutation/query handlers.
 
 Examples:
-    if request.user.is_authenticated():
-        repo = JobsRepository(user=request.user)
-    user = User(email=email)
-    user = User.test()
+>>> if request.user.is_authenticated():
+>>> repo = JobsRepository(user=request.user)
+>>> user = User(email=email)
+>>> user = User.test()
 """
 
 from __future__ import annotations
@@ -32,8 +32,8 @@ from typing import ClassVar
 from attributes import Email
 from attributes import Identifier
 from attributes import Signature
-from attributes import Title
 from attributes import Timestamp
+from attributes import Title
 from attributes import Url
 from exceptions import ValidationError
 from models.base import Model

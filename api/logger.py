@@ -16,9 +16,9 @@ level from LOG_LEVEL env (default INFO). CloudWatch captures stdout from
 the Lambda runtime.
 
 Examples:
-    logger = get_logger(__name__)
-    logger.info("message", extra=log_extra(request_id=req_id, path=path))
-    configure_logging()
+>>> logger = get_logger(__name__)
+>>> logger.info("message", extra=log_extra(request_id=req_id, path=path))
+>>> configure_logging()
 """
 
 from __future__ import annotations

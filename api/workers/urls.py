@@ -14,8 +14,8 @@ it, and calls handle(body). Adding a new action requires a new Task
 subclass and an entry here. Used only by workers.handler.
 
 Examples:
-    task_class = TASK_BY_ACTION.get(action)
-    result = task_class().handle(body=body)
+>>> task_class = TASK_BY_ACTION.get(action)
+>>> result = task_class().handle(body=body)
 """
 
 from __future__ import annotations

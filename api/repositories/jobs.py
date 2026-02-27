@@ -14,9 +14,9 @@ Used by JobMutation, JobUpdateMutation, JobDetailsQuery, JobListQuery
 Only the owning user can access their jobs.
 
 Examples:
-    repo = JobsRepository(user=request.user)
-    repo.save(job)
-    job = repo.get(job_id)
+>>> repo = JobsRepository(user=request.user)
+>>> repo.save(job)
+>>> job = repo.get(job_id)
 """
 
 from __future__ import annotations

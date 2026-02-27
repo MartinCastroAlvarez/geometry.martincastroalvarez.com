@@ -15,9 +15,9 @@ get() and search() return ArtGallery instances. Used by ArtGalleryListQuery
 and ArtGalleryPublishMutation (save) / ArtGalleryHideMutation (delete).
 
 Examples:
-    index = ArtGalleryPublicIndex()
-    records, next_token = index.search(limit=Limit(20))
-    gallery = index.get(Identifier(countdown_str))
+>>> index = ArtGalleryPublicIndex()
+>>> records, next_token = index.search(limit=Limit(20))
+>>> gallery = index.get(Identifier(countdown_str))
 """
 
 from __future__ import annotations

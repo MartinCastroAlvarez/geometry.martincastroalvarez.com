@@ -17,10 +17,10 @@ exception it logs the full traceback and returns a 500-style response.
 CORS origin is taken from the request Origin header and set on the response.
 
 Examples:
-    @interceptor
-    @private
-    def handler(request: ApiRequest, context) -> dict[str, Any]: ...
-    # In Lambda: handler(event, context) receives raw event; interceptor does the rest.
+>>> @interceptor
+>>> @private
+>>> def handler(request: ApiRequest, context) -> dict[str, Any]: ...
+>>> # In Lambda: handler(event, context) receives raw event; interceptor does the rest.
 """
 
 from __future__ import annotations

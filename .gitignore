@@ -16,3 +16,4 @@ apps/web/dist/
 .turbo/
 apps/*/.turbo/
 packages/*/.turbo/
+app.cjs 

@@ -14,11 +14,11 @@ Page is iterable over keys and supports len(page). Used by Repository.search,
 Index.search, and callers that need to walk pages (e.g. index.all()).
 
 Examples:
-    page = bucket.search(prefix="data/", limit=10)
-    for key in page:
-        data = bucket.load(key)
-    if page.continues:
-        next_page = bucket.search(prefix="data/", next_token=page.next_token)
+>>> page = bucket.search(prefix="data/", limit=10)
+>>> for key in page:
+>>> data = bucket.load(key)
+>>> if page.continues:
+>>> next_page = bucket.search(prefix="data/", next_token=page.next_token)
 """
 
 from __future__ import annotations

@@ -17,10 +17,10 @@ request before passing it to the handler. This type is used across the
 api.api package and by Query/Mutation code that receives the request.
 
 Examples:
-    request = ApiRequest.unserialize(event)
-    path, method = request.path, request.http_method
-    user = request.user
-    body = request.body
+>>> request = ApiRequest.unserialize(event)
+>>> path, method = request.path, request.http_method
+>>> user = request.user
+>>> body = request.body
 """
 
 from __future__ import annotations

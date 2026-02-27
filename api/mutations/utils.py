@@ -15,8 +15,8 @@ for repository lookups. Used by ArtGalleryPublishMutation, ArtGalleryHideMutatio
 and JobUpdateMutation (to find gallery by job and user when syncing title).
 
 Examples:
-    gallery_id = gallery_id_from_job_and_user(job.id, user.email)
-    gallery_repo.get(gallery_id)
+>>> gallery_id = gallery_id_from_job_and_user(job.id, user.email)
+>>> gallery_repo.get(gallery_id)
 """
 
 from __future__ import annotations

@@ -15,9 +15,9 @@ receipt_handle so the worker can commit after handling. Used in messages.Message
 and workers.request.WorkerRequest.
 
 Examples:
-    handle = ReceiptHandle("abc123-receipt-handle")
-    message = Message.unserialize({..., "receipt_handle": str(handle)})
-    queue.commit(message)
+>>> handle = ReceiptHandle("abc123-receipt-handle")
+>>> message = Message.unserialize({..., "receipt_handle": str(handle)})
+>>> queue.commit(message)
 """
 
 from __future__ import annotations

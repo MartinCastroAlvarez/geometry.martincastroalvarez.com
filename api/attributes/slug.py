@@ -14,9 +14,9 @@ Email.slug returns Slug(email) + '-' + Signature(email) for a unique,
 collision-resistant path segment. None, non-string, or empty raise ValidationError.
 
 Examples:
-    Slug("User@Example.com")  # -> 'user-example-com'
-    Slug("  hello  world  ")   # -> 'hello-world'
-    path = f"data/{user.email.slug}/jobs"
+>>> Slug("User@Example.com")  # -> 'user-example-com'
+>>> Slug("  hello  world  ")   # -> 'hello-world'
+>>> path = f"data/{user.email.slug}/jobs"
 """
 
 from __future__ import annotations
