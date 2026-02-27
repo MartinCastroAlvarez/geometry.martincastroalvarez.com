@@ -34,13 +34,12 @@ from controllers import ControllerRequest
 from controllers import ControllerResponse
 from enums import Action
 from enums import Status
+from logger import get_logger
 from messages import Message
 from messages import Queue
 from models import Job
 from models import User
 from repositories import JobsRepository
-
-from api.logger import get_logger
 
 logger = get_logger(__name__)
 

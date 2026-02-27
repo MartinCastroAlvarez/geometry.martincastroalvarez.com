@@ -34,13 +34,12 @@ from exceptions import NotFoundError
 from exceptions import ServiceUnavailableError
 from exceptions import StorageError
 from exceptions import ValidationError
-
-from api.logger import get_logger
-from api.settings import DATA_BUCKET_NAME
-from api.settings import DEFAULT_LIMIT
-from api.settings import JWT_SECRET_NAME
-from api.settings import JWT_TEST_NAME
-from api.settings import SECRETS_BUCKET_NAME
+from logger import get_logger
+from settings import DATA_BUCKET_NAME
+from settings import DEFAULT_LIMIT
+from settings import JWT_SECRET_NAME
+from settings import JWT_TEST_NAME
+from settings import SECRETS_BUCKET_NAME
 
 logger = get_logger(__name__)
 

@@ -26,7 +26,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from api.settings import LOG_LEVEL
+from settings import LOG_LEVEL
 
 
 def get_logger(name: str) -> logging.Logger:

@@ -37,10 +37,9 @@ from urllib.parse import urlparse
 
 from exceptions import PathMissingResourceIdError
 from exceptions import ValidationError
-
-from api.settings import DEFAULT_ORIGIN
-from api.settings import DEFAULT_TITLE_MAX_LENGTH
-from api.settings import MAX_LIMIT
+from settings import DEFAULT_ORIGIN
+from settings import DEFAULT_TITLE_MAX_LENGTH
+from settings import MAX_LIMIT
 
 
 class Path(str):
@@ -362,7 +361,7 @@ class Limit(int):
 
     def __new__(cls, value: Any = None) -> Limit:
         if value is None:
-            from api.settings import DEFAULT_LIMIT
+            from settings import DEFAULT_LIMIT
 
             value = DEFAULT_LIMIT
         try:

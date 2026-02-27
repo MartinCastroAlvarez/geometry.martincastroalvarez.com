@@ -31,12 +31,11 @@ from exceptions import ConfigurationError
 from exceptions import ServiceUnavailableError
 from exceptions import ValidationError
 from interfaces import Serializable
-
-from api.logger import get_logger
-from api.settings import QUEUE_MAX_RECEIVE_MESSAGES
-from api.settings import QUEUE_NAME
-from api.settings import QUEUE_WAIT_TIME_SECONDS
-from api.settings import QUEUE_WAIT_TIME_SECONDS_MAX
+from logger import get_logger
+from settings import QUEUE_MAX_RECEIVE_MESSAGES
+from settings import QUEUE_NAME
+from settings import QUEUE_WAIT_TIME_SECONDS
+from settings import QUEUE_WAIT_TIME_SECONDS_MAX
 
 logger = get_logger(__name__)
 

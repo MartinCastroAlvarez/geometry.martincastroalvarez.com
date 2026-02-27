@@ -37,8 +37,7 @@ from interfaces import Serializable
 from repositories import ArtGalleryRepository
 from repositories import JobsRepository
 from serializers import Serialized
-
-from api.settings import DEFAULT_LIMIT
+from settings import DEFAULT_LIMIT
 
 bucket = Bucket()
 T = TypeVar("T")

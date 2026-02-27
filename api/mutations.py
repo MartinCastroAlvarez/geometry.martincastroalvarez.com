@@ -42,6 +42,7 @@ from geometry import Polygon
 from indexes import ArtGalleryPublicIndex
 from indexes import Indexed
 from indexes import JobsPrivateIndex
+from logger import get_logger
 from messages import Message
 from messages import Queue
 from models import ArtGallery
@@ -50,8 +51,6 @@ from repositories import ArtGalleryRepository
 from repositories import JobsRepository
 from structs import Table
 from validations import PolygonValidation
-
-from api.logger import get_logger
 
 queue = Queue()
 logger = get_logger(__name__)

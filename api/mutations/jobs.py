@@ -36,6 +36,7 @@ from exceptions import ValidationError
 from geometry import Polygon
 from indexes.indexed import Indexed
 from indexes.jobs import JobsPrivateIndex
+from logger import get_logger
 from messages import Message
 from messages import Queue
 from models import Job
@@ -48,8 +49,6 @@ from repositories import ArtGalleryRepository
 from repositories import JobsRepository
 from structs import Table
 from validations.polygon import PolygonValidation
-
-from api.logger import get_logger
 
 queue = Queue()
 logger = get_logger(__name__)

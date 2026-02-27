@@ -15,7 +15,7 @@ the handler to build ApiResponse with CORS headers and to turn exceptions
 into JSON error bodies. ROUTES maps path prefixes and HTTP methods to handler classes.
 
 Examples:
->>> from api.api import handler, ApiRequest, ApiResponse, ROUTES
+>>> from api import handler, ApiRequest, ApiResponse, ROUTES
 >>> response_dict = handler(api_gateway_event, context)
 """
 
@@ -43,6 +43,8 @@ from exceptions import MethodNotAllowedError
 from exceptions import PathMissingResourceIdError
 from exceptions import UnauthorizedError
 from interfaces import Serializable
+from logger import get_logger
+from logger import log_extra
 from models import User
 from mutations import ArtGalleryHideMutation
 from mutations import ArtGalleryPublishMutation
@@ -52,14 +54,11 @@ from queries import ArtGalleryDetailsQuery
 from queries import ArtGalleryListQuery
 from queries import JobDetailsQuery
 from queries import JobListQuery
+from settings import JWT_ALGORITHM
+from settings import JWT_SECRET_NAME
+from settings import JWT_TEST_NAME
+from settings import X_AUTH_HEADER
 from validations import PolygonValidation
-
-from api.logger import get_logger
-from api.logger import log_extra
-from api.settings import JWT_ALGORITHM
-from api.settings import JWT_SECRET_NAME
-from api.settings import JWT_TEST_NAME
-from api.settings import X_AUTH_HEADER
 
 logger = get_logger(__name__)
 

@@ -43,13 +43,12 @@ from exceptions import CorruptionError
 from exceptions import RecordNotFoundError
 from exceptions import UnauthorizedError
 from exceptions import ValidationError
+from logger import get_logger
 from models import ArtGallery
 from models import Job
 from models import Model
 from models import User
-
-from api.logger import get_logger
-from api.settings import DEFAULT_LIMIT
+from settings import DEFAULT_LIMIT
 
 bucket = Bucket()
 logger = get_logger(__name__)

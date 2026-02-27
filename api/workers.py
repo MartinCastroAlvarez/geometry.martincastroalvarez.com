@@ -16,7 +16,7 @@ are logged and appended with error; failed task execution does not commit
 so SQS can retry.
 
 Examples:
->>> from api.workers import handler, WorkerRequest, WorkerResponse
+>>> from workers import handler, WorkerRequest, WorkerResponse
 >>> result = handler(sqs_event, context)
 """
 
@@ -37,14 +37,13 @@ from enums import Status
 from exceptions import InvalidActionError
 from exceptions import ValidationError
 from interfaces import Serializable
+from logger import get_logger
 from messages import Message
 from messages import Queue
 from tasks import ReportTask
 from tasks import StartTask
 from tasks import Task
 from tasks import TaskResponse
-
-from api.logger import get_logger
 
 logger = get_logger(__name__)
 _logger = logging.getLogger()
