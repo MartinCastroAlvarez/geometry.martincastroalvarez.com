@@ -4,13 +4,13 @@
  * Context: Uses useSession and useLogout from @geometry/data; shows Jobs link when
  * logged in. Nav has create (editor), language toggle, and login/logout. AppRoutes
  * render inside a padded Container. Tracks page views and nav events via @geometry/analytics.
- * AuthenticationProvider passes JWT from app env (packages cannot read import.meta.env).
+ * AuthenticationProvider wraps App in main.tsx; useSession uses the token from it.
  */
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Globe, Plus } from "lucide-react";
 import { Toaster, Nav, NavSkeleton, Container, Body, Buttons, Button, Toggle, Card } from "@geometry/ui";
-import { useSession, useLogout, AuthenticationProvider } from "@geometry/data";
+import { useSession, useLogout } from "@geometry/data";
 import { useLocale, Language } from "@geometry/i18n";
 import { useAnalytics, GoogleAnalyticsActions, GoogleAnalyticsCategories } from "@geometry/analytics";
 import { AppRoutes } from "./Routes";
@@ -51,11 +51,7 @@ const App = () => {
         logout();
     };
 
-    const jwtToken =
-        typeof import.meta.env.VITE_JWT_TEST === "string" ? import.meta.env.VITE_JWT_TEST : undefined;
-
     return (
-        <AuthenticationProvider jwtToken={jwtToken}>
         <Body>
             <Toaster />
             {sessionLoading ? (
@@ -89,7 +85,6 @@ const App = () => {
                 <AppRoutes />
             </Container>
         </Body>
-        </AuthenticationProvider>
     );
 };
 

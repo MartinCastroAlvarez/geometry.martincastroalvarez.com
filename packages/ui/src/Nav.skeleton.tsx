@@ -29,7 +29,7 @@ export const NavSkeleton = () => {
                 </div>
             </Container>
             <Container middle spaced size={isMobile ? 12 : 10} right>
-                <div className="flex flex-row items-center gap-2 flex-wrap justify-end">
+                <div className="flex w-full flex-row items-center gap-2 flex-wrap justify-end">
                     <ButtonSkeleton sm width={72} height={28} />
                     <TextSkeleton sm width="2.5rem" />
                     <ImageSkeleton size={20} rounded />

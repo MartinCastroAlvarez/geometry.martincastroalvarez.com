@@ -1,41 +1,43 @@
 /**
- * React Query hooks for jobs (list, single, publish, unpublish, update).
+ * React Query hooks for jobs (list, single, publish, unpublish, update, create).
  *
- * Context: Jobs represent art-gallery processing pipelines. Hooks call Geometry API
- * /v1/jobs, normalize with fromApiJob + toDomainJob. Query keys and stale times from constants.ts
- * (JOBS_QUERY_KEY, JOB_QUERY_KEY, STALE_TIME_*). Mutations invalidate jobs and
- * galleries caches so the UI stays in sync after publish/unpublish/update.
+ * Context: Uses useAuthentication() for JWT and passes it to GeometryApiClient. Queries are
+ * enabled only when token is present; mutations use the token in the client. Returns
+ * jobs/job and isLoading. Query keys and stale times from constants.ts.
  *
  * Example:
- *   const { jobs } = useJobs({ limit: 20 });
- *   const { job } = useJob(jobId);
+ *   const { jobs, isLoading } = useJobs({ limit: 20 });
+ *   const { job, isLoading } = useJob(jobId);
  *   const publish = usePublish();  publish.mutate(jobId);
- *   const update = useUpdateJob(); update.mutate({ jobId, meta: { title: "New" } });
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { geometryApiClient } from "./geometry";
+import { GeometryApiClient } from "./geometry";
 import { fromApiJob, toDomainJob } from "./adapters";
 import {
+    GEOMETRY_API_URL,
     GALLERIES_QUERY_KEY,
     JOBS_QUERY_KEY,
     JOB_QUERY_KEY,
     STALE_TIME_JOBS_LIST_MS,
     STALE_TIME_JOB_MS,
 } from "./constants";
+import { useAuthentication } from "./useAuthToken";
 
 export { JOBS_QUERY_KEY, JOB_QUERY_KEY } from "./constants";
 
 export const useJobs = (params?: { nextToken?: string; limit?: number }) => {
+    const token = useAuthentication();
     const query = useQuery({
-        queryKey: [...JOBS_QUERY_KEY, params?.nextToken ?? "", params?.limit ?? 20],
+        queryKey: [...JOBS_QUERY_KEY, params?.nextToken ?? "", params?.limit ?? 20, token ?? ""],
         queryFn: async () => {
-            const data = await geometryApiClient.getJobs(params);
+            const data = await new GeometryApiClient(GEOMETRY_API_URL, token).getJobs(params);
             return {
                 records: data.records.map((r) => toDomainJob(fromApiJob(r))),
                 next_token: data.next_token,
             };
         },
+        enabled: !!token,
         staleTime: STALE_TIME_JOBS_LIST_MS,
     });
     const { data, isLoading, ...rest } = query;
@@ -43,14 +45,15 @@ export const useJobs = (params?: { nextToken?: string; limit?: number }) => {
 };
 
 export const useJob = (jobId: string | null) => {
+    const token = useAuthentication();
     const query = useQuery({
-        queryKey: JOB_QUERY_KEY(jobId ?? ""),
+        queryKey: [...JOB_QUERY_KEY(jobId ?? ""), token ?? ""],
         queryFn: async () => {
             if (!jobId) throw new Error("jobId required");
-            const data = await geometryApiClient.getJob(jobId);
+            const data = await new GeometryApiClient(GEOMETRY_API_URL, token).getJob(jobId);
             return toDomainJob(fromApiJob(data));
         },
-        enabled: !!jobId,
+        enabled: !!token && !!jobId,
         staleTime: STALE_TIME_JOB_MS,
     });
     const { data, isLoading, ...rest } = query;
@@ -59,8 +62,9 @@ export const useJob = (jobId: string | null) => {
 
 export const usePublish = () => {
     const queryClient = useQueryClient();
+    const token = useAuthentication();
     const mutation = useMutation({
-        mutationFn: (jobId: string) => geometryApiClient.publish(jobId),
+        mutationFn: (jobId: string) => new GeometryApiClient(GEOMETRY_API_URL, token).publish(jobId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: GALLERIES_QUERY_KEY });
             queryClient.invalidateQueries({ queryKey: JOBS_QUERY_KEY });
@@ -71,8 +75,9 @@ export const usePublish = () => {
 
 export const useUnpublish = () => {
     const queryClient = useQueryClient();
+    const token = useAuthentication();
     const mutation = useMutation({
-        mutationFn: (jobId: string) => geometryApiClient.unpublish(jobId),
+        mutationFn: (jobId: string) => new GeometryApiClient(GEOMETRY_API_URL, token).unpublish(jobId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: GALLERIES_QUERY_KEY });
             queryClient.invalidateQueries({ queryKey: JOBS_QUERY_KEY });
@@ -83,13 +88,32 @@ export const useUnpublish = () => {
 
 export const useUpdateJob = () => {
     const queryClient = useQueryClient();
+    const token = useAuthentication();
     const mutation = useMutation({
         mutationFn: ({ jobId, meta }: { jobId: string; meta: Record<string, string> }) =>
-            geometryApiClient.updateJob(jobId, meta),
+            new GeometryApiClient(GEOMETRY_API_URL, token).updateJob(jobId, meta),
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: JOB_QUERY_KEY(variables.jobId) });
             queryClient.invalidateQueries({ queryKey: JOBS_QUERY_KEY });
             queryClient.invalidateQueries({ queryKey: GALLERIES_QUERY_KEY });
+        },
+    });
+    return { ...mutation, isLoading: mutation.isPending };
+};
+
+export const useCreateJob = () => {
+    const queryClient = useQueryClient();
+    const token = useAuthentication();
+    const mutation = useMutation({
+        mutationFn: ({
+            boundary,
+            obstacles,
+        }: {
+            boundary: Array<{ x: number; y: number }>;
+            obstacles: Array<Array<{ x: number; y: number }>>;
+        }) => new GeometryApiClient(GEOMETRY_API_URL, token).createJob(boundary, obstacles),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: JOBS_QUERY_KEY });
         },
     });
     return { ...mutation, isLoading: mutation.isPending };

@@ -17,7 +17,8 @@ const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
     const { user, isLoading } = useSession();
     const logout = useLogout();
     useEffect(() => {
-        if (!isLoading && !user) logout();
+        if (isLoading) return;
+        if (!user) logout();
     }, [isLoading, user, logout]);
     if (isLoading || !user) return null;
     return <>{children}</>;

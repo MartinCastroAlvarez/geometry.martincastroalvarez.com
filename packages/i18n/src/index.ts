@@ -10,7 +10,8 @@
  *   const { t, language, setLanguage } = useLocale();
  */
 export { Language } from "./Language";
-export { LocaleProvider, useLocale } from "./LocaleProvider";
-export type { TFunction } from "./LocaleProvider";
+export { LocaleProvider } from "./LocaleProvider";
+export { useLocale } from "./useLocale";
+export type { TFunction, LocaleContextValue } from "./LocaleContext";
 export { useLocaleStore } from "./store";
 export { getTranslations } from "./translations";
