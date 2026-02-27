@@ -1,3 +1,12 @@
+/**
+ * ConvexComponent: convex polygon used in triangulation/ear-clipping.
+ *
+ * Context: Extends Polygon; constructor validates convexity via cross-product sign. Reflects backend
+ * ConvexComponent. Ear extends this with exactly 3 points.
+ *
+ * Example:
+ *   const c = new ConvexComponent([p1, p2, p3, p4]);  c.isConvex();  // true
+ */
 import { Point } from './Point';
 import { Polygon } from './Polygon';
 

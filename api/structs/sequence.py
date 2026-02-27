@@ -1,23 +1,26 @@
 """
 Sequence[T]: list-like with modular slicing, shift, add/sub/and/invert, hash, serialize/unserialize.
 
+Title
+-----
+Sequence (List-like with Wrap-around)
+
+Context
+-------
+Sequence is a list-like with modular indexing: slicing wraps (e.g. s[3:6]
+on length-4 gives s[3:4]+s[0:2]). Shift (<<, >>) rotates by index or
+element. Add concatenates; sub removes first contiguous occurrence (with
+wrap); and (&) returns shared contiguous subsequence (raises if multiple
+overlaps); invert (~) reverses. Hash is canonical by rotation so same
+cycle has same hash. Used by Polygon (vertices) and geometry __and__.
+serialize/unserialize for persistence.
+
 Examples:
-    >>> from structs import Sequence
-    >>> s = Sequence([1, 2, 3, 4])
-    >>> s[1:3]
-    Sequence([2, 3])
-    >>> s[3:6]   # wrap: indices mod len(s)
-    Sequence([4, 1, 2])
-    >>> s << 1
-    Sequence([2, 3, 4, 1])
-    >>> s + Sequence([5, 6])
-    Sequence([1, 2, 3, 4, 5, 6])
-    >>> s - Sequence([3, 4])
-    Sequence([1, 2])
-    >>> Sequence([1, 2, 3]) & Sequence([2, 3, 4])
-    Sequence([2, 3])
-    >>> ~s
-    Sequence([4, 3, 2, 1])
+    s = Sequence([1, 2, 3, 4])
+    s[3:6]   # wrap -> Sequence([4, 1, 2])
+    s << 1   # rotate
+    s & other  # shared contiguous part
+    ~s       # reversed
 """
 
 from __future__ import annotations

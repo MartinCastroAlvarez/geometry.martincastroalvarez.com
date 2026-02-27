@@ -1,3 +1,13 @@
+/**
+ * Global styles and Tailwind setup.
+ *
+ * Context: Imports tailwindcss; @theme sets --font-title (Oswald). @source points
+ * to packages/ui and inline safelist for dynamic classes. :root defines editor
+ * CSS vars (bg, border, vertex, edge) and base font; html/body/#root get height/layout.
+ *
+ * Example:
+ *   --editor-bg, --editor-vertex, etc. are read by the Konva editor.
+ */
 @import "tailwindcss";
 
 @theme {

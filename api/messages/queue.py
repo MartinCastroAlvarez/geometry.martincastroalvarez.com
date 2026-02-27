@@ -1,5 +1,27 @@
 """
 SQS queue operations for the geometry API.
+
+Title
+-----
+Queue (SQS Client)
+
+Context
+-------
+Queue wraps SQS for the geometry job queue. Queue name from QUEUE_NAME env;
+missing raises ConfigurationError. put(message, delay_seconds) sends a
+message (JSON body from message.serialize()). receive(max_messages, wait_time_seconds)
+returns raw SQS message list (body, receiptHandle). delete(receipt_handle)
+removes a message; commit(message) calls delete when message has receipt_handle.
+Used by JobMutation (put after create), StartTask and ReportTask (put REPORT),
+and worker handler (receive, process, commit). SQS errors raise ServiceUnavailableError.
+
+Examples:
+    queue = Queue()
+    queue.put(Message(action=Action.START, job_id=job_id, user_email=user.email))
+    for raw in queue.receive(max_messages=5):
+        msg = Message.unserialize({**json.loads(raw["body"]), "receipt_handle": raw["receiptHandle"]})
+        process(msg)
+        queue.commit(msg)
 """
 
 from __future__ import annotations

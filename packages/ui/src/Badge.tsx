@@ -1,3 +1,15 @@
+/**
+ * Status badges: danger (red), success (green), or default (neutral).
+ *
+ * Context: Renders a small pill-style span with variant styles. danger and success set
+ * background and border; default is white/10 with white/80 text.
+ *
+ * Example:
+ *   <Badge>Draft</Badge>
+ *   <Badge danger>Failed</Badge>
+ *   <Badge success>Done</Badge>
+ */
+
 import React from "react";
 
 interface BadgeProps {

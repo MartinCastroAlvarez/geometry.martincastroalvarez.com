@@ -1,3 +1,14 @@
+/**
+ * Modal confirm dialog: overlay with message and Confirm/Cancel buttons.
+ *
+ * Context: When isOpen is true, renders a fixed full-screen overlay (backdrop blur) and a
+ * Container dialog with message and two Buttons. onConfirm/onCancel are called on button click.
+ * Used by Button when confirm prop is set.
+ *
+ * Example:
+ *   <Confirm isOpen={open} message="Delete item?" onConfirm={handleDelete} onCancel={() => setOpen(false)} />
+ */
+
 import React from "react";
 import { Container } from "./Container";
 import { Button } from "./Button";

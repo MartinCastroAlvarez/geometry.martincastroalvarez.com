@@ -1,3 +1,14 @@
+/**
+ * Jobs list page: list current user's jobs with status.
+ *
+ * Context: useJobs fetches jobs from API; shows loading state and record count.
+ * Each job is a Link to /jobs/:id with a Badge for status (success/failed).
+ * Protected by PrivateRoute.
+ *
+ * Example:
+ *   const { data, isLoading } = useJobs();
+ *   data?.records.map((job) => <Link to={`/jobs/${job.id}`}>...</Link>)
+ */
 import { Link } from "react-router-dom";
 import { Container, Title, Text, Button, Badge } from "@geometry/ui";
 import { useJobs } from "@geometry/data";

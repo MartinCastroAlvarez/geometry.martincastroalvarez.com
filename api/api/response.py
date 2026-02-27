@@ -1,5 +1,28 @@
 """
 ApiResponse: API Gateway response formatting with CORS.
+
+Title
+-----
+API Gateway Response Model
+
+Context
+-------
+ApiResponse builds the response shape expected by API Gateway (statusCode,
+body, headers). CORS headers (Access-Control-Allow-Origin, etc.) are
+included so browsers can call the API from allowed origins. The origin
+is taken from the request Origin header and normalized via attributes.Origin;
+if unset, use Origin() for default. For success, the interceptor builds
+ApiResponse(status_code=200, body=json.dumps(result), origin=...). For
+errors, ApiResponse.unserialize(exception) builds a JSON body with
+error.code, error.type, and error.message. Handlers return dicts; the
+interceptor turns them into ApiResponse and then serialize() for Gateway.
+
+Examples:
+    response = ApiResponse(http.HTTPStatus.OK, json.dumps(data), origin=Origin())
+    return response.serialize()
+    response = ApiResponse.unserialize(ValidationError("bad input"))
+    response.origin = Origin(request_headers.get("Origin"))
+    return response.serialize()
 """
 
 from __future__ import annotations

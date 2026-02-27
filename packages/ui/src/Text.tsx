@@ -1,3 +1,14 @@
+/**
+ * Body text: size (xs–xxxl), alignment (left/center/right), optional truncate and max width.
+ *
+ * Context: Renders inside a center-aligned Container; applies text-white/60 and size/alignment
+ * classes. size prop sets maxWidth in px. Empty or whitespace-only children render null.
+ *
+ * Example:
+ *   <Text lg center>Introduction paragraph.</Text>
+ *   <Text size={400} truncate>{description}</Text>
+ */
+
 import React from "react";
 import { Container } from "./Container";
 

@@ -1,5 +1,21 @@
 """
 Base query: validate, query, handle.
+
+Title
+-----
+Query Base Classes
+
+Context
+-------
+Query is the generic base: validate(body) -> T (request), query(T) -> R
+(response), handle(body) = query(validate(body)). ListQuery validates
+ListQueryRequest (next_token, limit). DetailsQuery validates DetailsQueryRequest
+(id). For authenticated-only queries use PrivateQuery (queries.private).
+Used by ArtGalleryListQuery, ArtGalleryDetailsQuery, JobListQuery, JobDetailsQuery.
+
+Examples:
+    query = ArtGalleryListQuery()
+    result = query.handle(body={"next_token": "", "limit": 20})
 """
 
 from __future__ import annotations

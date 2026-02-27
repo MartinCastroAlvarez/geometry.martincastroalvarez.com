@@ -1,5 +1,24 @@
 """
 Identifier type: non-empty string with only alphanumeric, underscore, and dash.
+
+Title
+-----
+Identifier Attribute
+
+Context
+-------
+Identifier is a string subclass used for ids (job id, gallery id, index_id,
+real_id). It allows only letters, digits, underscore (_), and hyphen (-).
+None, non-string, non-int, empty string, or invalid characters raise
+ValidationError. int is accepted and converted to str. Often used with
+Signature to build deterministic ids (e.g. job id from boundary+obstacles,
+gallery id from job_id and user email). Used in models, repositories,
+indexes, and mutation/query request types.
+
+Examples:
+    Identifier("gallery_abc-123")
+    Identifier(12345)
+    Identifier(Signature(Email("user@example.com")))
 """
 
 from __future__ import annotations

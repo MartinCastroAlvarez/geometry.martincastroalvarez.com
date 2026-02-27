@@ -1,3 +1,15 @@
+/**
+ * Top navigation bar: logo, title, and optional right-side children.
+ *
+ * Context: Two-column layout (logo+title left, children right); on mobile both columns full width.
+ * Logo size is fixed (24px). Clicking the left block triggers optional onClick (e.g. go home).
+ *
+ * Example:
+ *   <Nav onClick={() => navigate('/')}>
+ *     <Button onClick={openMenu}>Menu</Button>
+ *   </Nav>
+ */
+
 import { Container } from "./Container";
 import { Logo } from "./Logo";
 import { Title } from "./Title";

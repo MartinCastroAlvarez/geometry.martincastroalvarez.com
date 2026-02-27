@@ -1,9 +1,25 @@
 """
 Abstract base for types that can be serialized to and from a wire/storage type T.
 
-Model (api/models/) and Indexed (api/indexes/indexed.py) implement Serializable[dict] for
-S3 persistence and JSON transport. Geometry types may implement Serializable[list] or
-Serializable[str]. Subclasses must implement serialize() and unserialize().
+Title
+-----
+Serializable Interface
+
+Context
+-------
+Serializable[T] is the abstract base for types that can be converted to
+and from a wire/storage representation T. Model and Indexed use
+Serializable[dict] for S3 and JSON. Geometry types use Serializable[list]
+or Serializable[str] (e.g. Point -> JSON array string). Subclasses must
+implement serialize() -> T and classmethod unserialize(data) -> instance.
+Validation and coercion belong in unserialize. Used everywhere data is
+persisted or sent over the API.
+
+Examples:
+    data = my_model.serialize()
+    obj = MyModel.unserialize(data)
+    s = point.serialize()
+    obj = Point.unserialize(s)
 """
 
 from __future__ import annotations

@@ -1,5 +1,21 @@
 """
-Method enum for HTTP request methods: OPTIONS, GET, POST, DELETE.
+Method enum for HTTP request methods: OPTIONS, GET, POST, PATCH, DELETE.
+
+Title
+-----
+HTTP Method Enum
+
+Context
+-------
+Method represents the HTTP verb of a request. Values are OPTIONS, GET,
+POST, PATCH, DELETE. parse(value) coerces a string to Method; None or
+empty raises MethodNotAllowedError; invalid value raises with allowed list.
+Used by the API handler to dispatch by method and by URLS (Path -> Method -> Handler).
+OPTIONS is used for CORS preflight and is handled without auth.
+
+Examples:
+    method = Method.parse(request.http_method)
+    handler_class = URLS[path_prefix].get(method)
 """
 
 from __future__ import annotations

@@ -1,5 +1,22 @@
 """
 Mutation response: base TypedDict and mutation response subclasses.
+
+Title
+-----
+Mutation Response Types
+
+Context
+-------
+This module defines TypedDicts for mutation output. MutationResponse is
+the base. ArtGalleryPublishMutationResponse and ArtGalleryHideMutationResponse
+carry gallery data or deleted/id. JobMutationResponse and JobUpdateMutationResponse
+carry full job dict. Handlers return these shapes (or compatible dicts)
+which the interceptor JSON-serializes as the API response body. Used for
+typing and documentation of API contract.
+
+Examples:
+    def mutate(self, validated_input) -> JobMutationResponse:
+        return job.serialize()
 """
 
 from __future__ import annotations

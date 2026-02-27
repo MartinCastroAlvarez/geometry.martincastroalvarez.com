@@ -1,3 +1,13 @@
+/**
+ * Editor color palette from CSS variables with fallbacks.
+ *
+ * Context: getComputedStyle reads --editor-* from document.documentElement (e.g. in app's index.css).
+ * Fallbacks match the app palette when variables are not set. Used by Edge and Vertex for stroke/fill.
+ *
+ * Example:
+ *   stroke={editorColors.vertexActive}  fill={editorColors.vertex}  stroke={editorColors.edge}
+ */
+
 /** Read editor colors from CSS variables (defined in app's index.css). Fallbacks match app palette. */
 const getVar = (name: string, fallback: string): string => {
     if (typeof document === "undefined") return fallback;

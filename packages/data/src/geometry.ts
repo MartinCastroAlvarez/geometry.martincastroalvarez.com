@@ -1,3 +1,17 @@
+/**
+ * Geometry API client: jobs and art galleries (CRUD, publish/unpublish).
+ *
+ * Context: All requests go to GEOMETRY_API_URL with fetchWithAuth (JWT in X-Auth).
+ * Methods throw on non-OK responses. Used by job.ts and gallery.ts hooks; responses
+ * are normalized via adapters (fromApiJob, toDomainJob, etc.) before reaching UI.
+ *
+ * Example:
+ *   const jobs = await geometryApiClient.getJobs({ limit: 10 });
+ *   const job = await geometryApiClient.getJob(jobId);
+ *   await geometryApiClient.createJob(boundary, obstacles);
+ *   await geometryApiClient.publish(jobId);
+ */
+
 import { GEOMETRY_API_URL } from "./constants";
 import { fetchWithAuth } from "./cookies";
 import type { PageResponse, GeometryApiJob, GeometryApiArtGallery } from "./types";

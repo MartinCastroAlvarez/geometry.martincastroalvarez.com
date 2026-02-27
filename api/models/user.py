@@ -1,5 +1,25 @@
 """
 User model: JWT/auth user. id is Identifier(Signature(email)). Used by private repositories and the private decorator.
+
+Title
+-----
+User Model
+
+Context
+-------
+User represents the authenticated (or anonymous) user. id is
+Identifier(Signature(email)); created_at/updated_at may be default for
+auth-only use. anonymous() returns the shared anonymous user; test()
+returns a user with test constants for X-Auth test token. is_authenticated()
+is True when not anonymous. Private repositories and PrivateQuery/PrivateMutation
+require an authenticated user. Constructor validates id == Identifier(Signature(email)).
+Used by api.api.private, JobsRepository, and mutation/query handlers.
+
+Examples:
+    if request.user.is_authenticated():
+        repo = JobsRepository(user=request.user)
+    user = User(email=email)
+    user = User.test()
 """
 
 from __future__ import annotations

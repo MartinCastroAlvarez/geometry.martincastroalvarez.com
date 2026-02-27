@@ -1,5 +1,24 @@
 """
 Point type: list of exactly two Decimal coordinates (x, y). Hashable, comparable, Serializable[str].
+
+Title
+-----
+Point (2D Coordinate)
+
+Context
+-------
+Point represents a 2D point as a list of two Decimal values (x, y). It
+inherits from list, implements Serializable[str] (JSON array string),
+and is hashable via Signature. Supports __eq__, __lt__, __sub__, and
+to(other) returning a Segment. Constructor accepts list or tuple of two
+numeric values; invalid or wrong length raises ValidationError. Used
+everywhere coordinates are needed: polygon vertices, segment endpoints,
+guards, and visibility polygons.
+
+Examples:
+    p = Point.unserialize(["1", "2"])
+    p.x, p.y
+    seg = p.to(Point.unserialize(["0", "0"]))
 """
 
 from __future__ import annotations

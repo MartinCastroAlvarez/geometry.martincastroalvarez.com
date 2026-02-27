@@ -1,3 +1,14 @@
+/**
+ * Convert between domain Polygon/Point, editor EditorVertex, and API polygon format.
+ *
+ * Context: polygonToEditorVertices / editorVerticesToPolygon use @geometry/domain Polygon and Point.
+ * apiPolygonToEditorVertices / editorVerticesToApiPolygon use ApiPolygon ({ points: { x, y }[] }) for API payloads.
+ *
+ * Example:
+ *   const verts = polygonToEditorVertices(boundary);  const poly = editorVerticesToPolygon(verts);
+ *   const api = editorVerticesToApiPolygon(verts);  // for POST/PATCH body
+ */
+
 import { Point, Polygon } from "@geometry/domain";
 import type { EditorVertex, ApiPolygon } from "./types";
 

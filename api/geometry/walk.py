@@ -1,5 +1,23 @@
 """
-Walk type: three Points (start, center, end) with signed_area and orientation (collinear / clockwise / counter-clockwise).
+Walk type: three Points (start, center, end) with signed_area and orientation.
+
+Title
+-----
+Walk (Three-Point Turn)
+
+Context
+-------
+Walk represents three consecutive points (start, center, end) and computes
+the signed area (2x2 determinant) and Orientation (COLLINEAR, CLOCKWISE,
+COUNTER_CLOCKWISE). Used by Segment.contains (collinearity check), Polygon
+is_convex (all turns same orientation), and orientation tests. Indexable
+as [0]=start, [1]=center, [2]=end. is_cw(), is_ccw(), is_collinear() are
+convenience predicates.
+
+Examples:
+    walk = Walk(start=p0, center=p1, end=p2)
+    walk.orientation  # Orientation.CLOCKWISE
+    walk.is_collinear()
 """
 
 from __future__ import annotations

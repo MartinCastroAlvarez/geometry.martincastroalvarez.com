@@ -1,3 +1,13 @@
+/**
+ * ArtGallery and ArtGalleryDict: gallery geometry (perimeter, holes, guards).
+ *
+ * Context: Immutable perimeter Polygon, holes[], guards[]; fromDict/toDict for API. Mutations
+ * (addHole, removeLastHole, setPerimeter, addGuard) return new instances.
+ *
+ * Example:
+ *   const g = ArtGallery.fromDict({ outer: {...}, holes: [], guards: [] });
+ *   g.addHole(hole).addGuard(guard);  g.toDict();
+ */
 import { Point, PointDict } from './Point';
 import { Polygon, PolygonDict } from './Polygon';
 

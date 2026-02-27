@@ -1,3 +1,13 @@
+/**
+ * Editor toolbar: vertex count, closed state, and actions (undo, start hole, close polygon, clear).
+ *
+ * Context: Uses @geometry/ui (Container, Button, Text, Buttons) and @geometry/i18n useLocale for labels.
+ * Callbacks (onUndo, onStartHole, onClosePolygon, onClear) are invoked by the parent; disabled states depend on vertexCount, isClosed, isAddingHole.
+ *
+ * Example:
+ *   <Toolbar vertexCount={5} isClosed isAddingHole={false} onUndo={...} onStartHole={...} onClosePolygon={...} onClear={...} />
+ */
+
 import { Container, Button, Text, Buttons } from "@geometry/ui";
 import { useLocale } from "@geometry/i18n";
 import { Undo, Target, Check, Trash2 } from "lucide-react";

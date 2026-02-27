@@ -1,5 +1,26 @@
 """
 S3 bucket operations for the geometry API.
+
+Title
+-----
+S3 Bucket (Data Storage)
+
+Context
+-------
+Bucket provides S3 operations for the geometry API data bucket. The bucket
+name comes from the DATA_BUCKET_NAME environment variable; missing it
+raises ConfigurationError. load(key) returns parsed JSON or default;
+missing key, invalid JSON, or empty content raise ValidationError or
+StorageError. save(key, data) writes JSON; delete(key) removes the object.
+search(prefix, limit, next_token) returns a Page of keys and optional
+next_token for pagination. All key/prefix validation and ClientError
+handling are done here; callers get typed results and exceptions.
+
+Examples:
+    bucket = Bucket()
+    bucket.save("data/galleries/abc.json", {"id": "abc", "boundary": []})
+    data = bucket.load("data/galleries/abc.json")
+    page = bucket.search(prefix="data/galleries/", limit=20, next_token=token)
 """
 
 from __future__ import annotations

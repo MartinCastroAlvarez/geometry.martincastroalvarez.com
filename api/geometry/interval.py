@@ -1,5 +1,22 @@
 """
 Interval type: list of exactly two Decimal (start, end) with start <= end. serialize/unserialize, contains, intersects, size. Measurable.
+
+Title
+-----
+Interval (1D Range)
+
+Context
+-------
+Interval is a 1D range [start, end] with start <= end. It implements
+Measurable (size = end - start), Spatial (contains, intersects), and
+Serializable. contains(Decimal or Interval) and intersects(Interval)
+support inclusive bounds. Used by Box for x and y extent and in
+intersection logic. Constructor and __setitem__ enforce start <= end.
+
+Examples:
+    i = Interval([Decimal("0"), Decimal("10")])
+    i.contains(Decimal("5"))
+    i.intersects(Interval([Decimal("5"), Decimal("15")]))
 """
 
 from __future__ import annotations

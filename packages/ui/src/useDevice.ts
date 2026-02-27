@@ -1,3 +1,14 @@
+/**
+ * Device breakpoint hook: mobile / tablet / desktop from window width, updates on resize.
+ *
+ * Context: Uses innerWidth with breakpoints <600 = mobile, 600–899 = tablet, >=900 = desktop.
+ * Resize handler is debounced (200ms) via useDebounce. SSR-safe (defaults to mobile width).
+ *
+ * Example:
+ *   const { isMobile, isTablet, isDesktop, deviceType } = useDevice();
+ *   const cols = isMobile ? 1 : 3;
+ */
+
 import { useCallback, useState, useEffect } from "react";
 import { useDebounce } from "./useDebounce";
 
@@ -11,17 +22,6 @@ type DeviceInfo = {
 const MOBILE_BREAKPOINT = 600;
 const TABLET_BREAKPOINT = 900;
 
-/**
- * useDevice Hook
- *
- * Determines if the current device is 'mobile', 'tablet', or 'desktop' based on window width.
- * Dynamically updates on window resize events.
- *
- * Breakpoints:
- * - Mobile: < 600px
- * - Tablet: 600px - 899px
- * - Desktop: >= 900px
- */
 export const useDevice = (): DeviceInfo => {
     const [width, setWidth] = useState(typeof window !== "undefined" ? window.innerWidth : MOBILE_BREAKPOINT);
 

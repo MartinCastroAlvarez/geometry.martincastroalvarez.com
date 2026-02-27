@@ -1,5 +1,24 @@
 """
 Signature type: deterministic hash (SHA-256 truncated to LENGTH bytes) for use in __hash__.
+
+Title
+-----
+Signature Attribute
+
+Context
+-------
+Signature is an integer derived from hashing a value (SHA-256, first
+LENGTH bytes). It is used where a stable, deterministic "hash" is needed:
+Point and Segment use it for __hash__; User id is Identifier(Signature(email));
+job and gallery ids are built from Signature(boundary+obstacles) or
+Signature(job_id+user_email). Constructor accepts Any; None raises;
+non-string is converted with str(value); empty string is hashed as ":empty:".
+Implements __hash__ to return self so it can be used as a hash value.
+
+Examples:
+    s = Signature("point:1:2")
+    s = Signature([1, 2])
+    id = Identifier(Signature(email))
 """
 
 from __future__ import annotations

@@ -1,5 +1,24 @@
 """
 Mutation request: base TypedDict and all mutation request subclasses.
+
+Title
+-----
+Mutation Request Types
+
+Context
+-------
+This module defines TypedDicts for mutation input. MutationRequest is
+the base. ArtGalleryPublishMutationRequest and ArtGalleryHideMutationRequest
+have job_id. JobMutationRequest has boundary and obstacles. JobUpdateMutationRequest
+has job_id and meta. These types document the expected body shape after
+validation and are used by Mutation subclasses in validate() return and
+mutate() parameter. Path params (e.g. id) are merged into body by the
+handler before validate.
+
+Examples:
+    def validate(self, body) -> JobMutationRequest:
+        return JobMutationRequest(boundary=..., obstacles=...)
+    def mutate(self, validated_input: ArtGalleryPublishMutationRequest): ...
 """
 
 from __future__ import annotations

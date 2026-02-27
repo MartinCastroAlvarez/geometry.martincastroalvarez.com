@@ -1,5 +1,21 @@
 """
 Art gallery list and gallery details queries.
+
+Title
+-----
+Art Gallery Queries
+
+Context
+-------
+ArtGalleryListQuery lists published galleries via ArtGalleryPublicIndex
+(newest first); returns records and next_token. ArtGalleryDetailsQuery
+loads a single gallery by id from ArtGalleryRepository. Both are public
+(no auth). Used for GET v1/galleries (list) and GET v1/galleries/:id
+(details). Response records are serialized ArtGallery dicts.
+
+Examples:
+    GET v1/galleries?limit=20 -> ArtGalleryListQuery
+    GET v1/galleries/:id -> ArtGalleryDetailsQuery
 """
 
 from __future__ import annotations

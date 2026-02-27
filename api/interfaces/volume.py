@@ -1,5 +1,23 @@
 """
 Volume abstract base: defines signed_area and __abs__ (absolute signed area).
+
+Title
+-----
+Volume Interface
+
+Context
+-------
+Volume is the abstract base for types that have a signed area: Polygon,
+Walk. signed_area is positive for counter-clockwise, negative for
+clockwise, zero for degenerate. __abs__ returns abs(signed_area). Used
+for polygon orientation (is_ccw, is_cw), convexity, and area-based
+comparisons. Walk uses it for turn direction; Polygon for winding and
+convexity checks.
+
+Examples:
+    area = polygon.signed_area
+    abs(polygon)  # absolute area
+    walk.signed_area  # 2x2 determinant
 """
 
 from __future__ import annotations

@@ -1,3 +1,13 @@
+/**
+ * Single edge line between two vertices; hover/selected styling; optional click to add vertex on edge.
+ *
+ * Context: Renders a Konva Line from start to end. Stroke and width come from editorColors (selected > hover > default).
+ * When onClick is provided, click/tap pass (x, y) of the pointer so the parent can insert a new vertex on the edge.
+ *
+ * Example:
+ *   <Edge start={v1} end={v2} selected onClick={(x, y) => handleEdgeClick(edgeIndex, x, y)} />
+ */
+
 import { Line } from "react-konva";
 import type { EditorVertex } from "./types";
 import { editorColors } from "./colors";

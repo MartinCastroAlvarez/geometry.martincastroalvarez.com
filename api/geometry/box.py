@@ -1,5 +1,24 @@
 """
 Box type: axis-aligned box defined by four corner Points; implements Spatial and Serializable[dict].
+
+Title
+-----
+Box (Axis-Aligned Bounding Rectangle)
+
+Context
+-------
+Box is an axis-aligned rectangle defined by four corner Points:
+bottom_left, top_left, bottom_right, top_right. Edges must be vertical
+or horizontal; constructor raises BoxInvalidEdgeError otherwise. Implements
+Spatial (contains, intersects), Serializable[dict]. x and y properties
+return Interval for the horizontal and vertical extent. Used for bounding
+boxes of Segment and Polygon, and for fast intersection tests before
+detailed geometry. unserialize expects a dict with the four corner keys.
+
+Examples:
+    box = Box(bottom_left=p1, top_left=p2, bottom_right=p3, top_right=p4)
+    box.contains(point)
+    interval_x = box.x
 """
 
 from __future__ import annotations

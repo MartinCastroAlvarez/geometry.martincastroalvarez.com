@@ -1,5 +1,24 @@
 """
 Origin type: CORS origin string validated for API responses.
+
+Title
+-----
+Origin (CORS) Attribute
+
+Context
+-------
+Origin represents the value used for the Access-Control-Allow-Origin
+response header. It normalizes the request Origin (or empty) to a safe
+value: empty or invalid becomes "*"; https://*.martincastroalvarez.com
+and http://localhost (with optional port) are allowed as-is; any other
+value is replaced with the default production origin. This avoids
+reflection of arbitrary origins while supporting the app frontend and
+local development. Used by the API interceptor when building ApiResponse.
+
+Examples:
+    Origin("https://geometry.martincastroalvarez.com")
+    Origin("")  # -> '*'
+    Origin("http://localhost:3000")
 """
 
 from __future__ import annotations

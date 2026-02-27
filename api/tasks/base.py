@@ -1,5 +1,23 @@
 """
 Base task interface: validate, execute, handle.
+
+Title
+-----
+Task Base Class
+
+Context
+-------
+Task is the abstract base for worker tasks. It is generic over request
+(T) and response (R). validate(body) returns validated input T;
+execute(validated_input) returns response R; handle(body) runs validate
+then execute (body default {}). The worker passes the message body dict
+to handle; validate can assume body is a dict. Used by StartTask and
+ReportTask; dispatch is by Action via TASK_BY_ACTION in workers.urls.
+
+Examples:
+    class StartTask(Task[TaskRequest, StartTaskResponse]):
+        def validate(self, body): ...
+        def execute(self, validated_input): ...
 """
 
 from __future__ import annotations

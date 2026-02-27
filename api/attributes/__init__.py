@@ -1,7 +1,27 @@
 """
-API value types: Timestamp, Countdown, Identifier, Email, Url, Point, Polygon, Segment, Signature, Slug, Interval, Path, Box.
-Geometry types (Box, ConvexComponent, Ear, Walk, Point, Polygon, Segment, Orientation) are re-exported lazily to avoid circular import.
-Data structures (Sequence, Table) live in structs/.
+API value types and geometry re-exports.
+
+Title
+-----
+Attributes Package (Value Types and Geometry)
+
+Context
+-------
+This package defines validated value types used across the API: Timestamp,
+Countdown, Identifier, Email, Url, Title, Path, Origin, Limit, Offset,
+Slug, Signature, ReceiptHandle. Each enforces format and raises
+ValidationError (or a specific exception) on invalid input. Geometry types
+(Box, ConvexComponent, Ear, Walk, Point, Polygon, Segment, Interval,
+Orientation) are re-exported via __getattr__ from the geometry package to
+avoid circular imports. Data structures (Sequence, Table) live in structs/.
+Use these types in request/response validation and in domain models.
+
+Examples:
+    from attributes import Timestamp, Email, Identifier, Path, Limit
+    ts = Timestamp.now()
+    email = Email("user@example.com")
+    path = Path("/v1/galleries/abc")
+    from attributes import Polygon, Point
 """
 
 from attributes.countdown import Countdown

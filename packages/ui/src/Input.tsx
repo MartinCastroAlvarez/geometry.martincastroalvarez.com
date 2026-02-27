@@ -1,3 +1,14 @@
+/**
+ * Styled text input: geometry theme with focus ring and optional className.
+ *
+ * Context: Forwards all native input props; adds geometry-input class and base styles
+ * (bg white/5, border, rounded, amber focus ring). Extends InputHTMLAttributes minus className.
+ *
+ * Example:
+ *   <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Search" />
+ *   <Input type="password" className="mt-2" />
+ */
+
 import React from "react";
 
 const baseClasses =

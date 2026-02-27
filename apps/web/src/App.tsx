@@ -1,3 +1,15 @@
+/**
+ * Root layout: nav, session, locale, and route outlet.
+ *
+ * Context: Uses useSession and useLogout from @geometry/data; shows Jobs link when
+ * logged in. Nav has create (editor), language toggle, and login/logout. AppRoutes
+ * render inside a padded Container.
+ *
+ * Example:
+ *   const { data: user } = useSession();
+ *   const logout = useLogout();
+ *   {user ? <Button onClick={logout}>Logout</Button> : <Button onClick={logout}>Login</Button>}
+ */
 import { useNavigate } from "react-router-dom";
 import { Globe, Plus } from "lucide-react";
 import { Toaster, Nav, Container, Body, Buttons, Button, Toggle } from "@geometry/ui";

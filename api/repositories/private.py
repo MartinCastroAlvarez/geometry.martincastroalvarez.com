@@ -1,5 +1,24 @@
 """
 Private (user-scoped) repository base for S3 persistence.
+
+Title
+-----
+PrivateRepository Base Class
+
+Context
+-------
+PrivateRepository extends Repository and scopes the S3 path by user:
+path = data/{user.email.slug}/{NAME}. Subclasses set NAME and MODEL.
+User must be authenticated (is_authenticated()); otherwise path getter
+raises UnauthorizedError. Used by JobsRepository so each user's jobs
+are stored under their email slug. Index and repository use the same
+user for consistency.
+
+Examples:
+    class JobsRepository(PrivateRepository[Job]):
+        NAME = "jobs"
+        MODEL = Job
+    repo = JobsRepository(user=request.user)
 """
 
 from __future__ import annotations

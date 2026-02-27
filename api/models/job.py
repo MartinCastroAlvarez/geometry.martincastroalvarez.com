@@ -1,5 +1,24 @@
 """
 Job model: async job with stdin/stdout, status, stage; used by the queue worker.
+
+Title
+-----
+Job Model
+
+Context
+-------
+Job represents an async processing job: id, parent_id, children_ids,
+status (PENDING/SUCCESS/FAILED), stage (pipeline phase), stdin (input),
+stdout (output), meta (e.g. title), stderr (errors). created_at and
+updated_at are timestamps. is_pending(), is_failed(), is_finished() are
+convenience methods. Used by JobsRepository, JobsPrivateIndex, JobMutation,
+JobUpdateMutation, StartTask, ReportTask, and job list/details queries.
+Worker tasks load job, update stdout/stderr/status, and save.
+
+Examples:
+    job = Job(id=Identifier("abc"), stdin={"boundary": ...})
+    job = Job.unserialize(data)
+    if job.is_finished(): ...
 """
 
 from __future__ import annotations

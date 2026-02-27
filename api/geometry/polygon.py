@@ -1,6 +1,26 @@
 """
 Polygon type: Sequence of Point (closed chain). __and__ shared edge, is_ccw, is_cw, is_convex.
-Implements Volume, Spatial, Bounded, Serializable[list].
+
+Title
+-----
+Polygon (Closed Chain of Points)
+
+Context
+-------
+Polygon is a closed sequence of Points representing a boundary or obstacle.
+It implements Volume (signed_area), Spatial (contains, intersects), Bounded
+(box), and Serializable. edges returns consecutive Segment (with wrap).
+contains and intersects support Point, Segment, Box, Polygon. Ray casting
+(point-in-polygon) and edge intersection are used. __and__(other) returns
+the shared edge as a two-point polygon; raises if no shared edge. is_ccw,
+is_cw, is_convex use Walk orientation. Used for gallery boundary, obstacles,
+and all polygon-based geometry in the pipeline.
+
+Examples:
+    poly = Polygon.unserialize([[0,0], [1,0], [1,1], [0,1]])
+    poly.edges
+    poly.contains(point)
+    shared = poly1 & poly2
 """
 
 from __future__ import annotations

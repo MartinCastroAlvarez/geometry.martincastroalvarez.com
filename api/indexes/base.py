@@ -1,5 +1,25 @@
 """
 Generic Index and PrivateIndex for S3-backed listing by sort key.
+
+Title
+-----
+Index Base Classes
+
+Context
+-------
+Index is a generic S3-backed index: entries are stored under index/{NAME}/
+as {index_id}.json containing Indexed (index_id, real_id). REPOSITORY
+loads the full record by real_id. get(identifier) returns the record;
+search(next_token, limit) returns (records, next_token) with read-repair
+for stale keys. PrivateIndex scopes path to index/{NAME}/{email.slug}/ and
+requires user for repository. Subclasses set NAME and REPOSITORY. Used by
+ArtGalleryPublicIndex and JobsPrivateIndex.
+
+Examples:
+    index = ArtGalleryPublicIndex()
+    records, next_token = index.search(limit=Limit(10))
+    record = index.get(Identifier("gallery-123"))
+    index.save(Indexed(index_id=key, real_id=record.id))
 """
 
 from __future__ import annotations

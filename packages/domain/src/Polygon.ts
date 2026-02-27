@@ -1,3 +1,13 @@
+/**
+ * Polygon and PolygonDict: closed ring of points and point-in-polygon.
+ *
+ * Context: Immutable list of Point; fromDict/toDict for API. contains() uses robust-point-in-polygon
+ * (-1 = inside). isClosed when first equals last; addPoint/removeLastPoint for editing.
+ *
+ * Example:
+ *   const poly = Polygon.fromDict({ points: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }] });
+ *   poly.contains(new Point(0.2, 0.2));  poly.isClosed;
+ */
 /// <reference path="./robust-point-in-polygon.d.ts" />
 import robustPointInPolygon from 'robust-point-in-polygon';
 import { Point, PointDict } from './Point';

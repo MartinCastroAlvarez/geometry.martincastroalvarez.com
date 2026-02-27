@@ -1,5 +1,22 @@
 """
 Task response: base and all task response subclasses.
+
+Title
+-----
+Task Response Types
+
+Context
+-------
+TaskResponse is the base: status (Status), optional job_id, error,
+traceback. StartTaskResponse adds reason (e.g. "job_failed").
+ReportTaskResponse adds reason and job (serialized Job dict). Tasks
+return these shapes; the worker collects them in WorkerResponse.results
+and serializes for the Lambda return value. Used by workers.handler and
+WorkerResponse.serialize().
+
+Examples:
+    return {"status": Status.SUCCESS, "job_id": job_id}
+    return {"status": Status.FAILED, "error": str(e), "traceback": [...]}
 """
 
 from __future__ import annotations

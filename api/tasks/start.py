@@ -1,5 +1,23 @@
 """
 StartTask: log job stdin, enqueue report message. Returns failed with reason if job is failed.
+
+Title
+-----
+Start Task
+
+Context
+-------
+StartTask runs when the worker receives a START message (after JobMutation
+enqueues). It loads the job by id; if job is already failed returns
+FAILED with reason "job_failed" and does not enqueue. Otherwise it logs
+job.stdin and enqueues a REPORT message for the same job so ReportTask
+will run (and aggregate when children exist). Used as the first step of
+the async job flow. The actual pipeline execution (ear clipping, etc.)
+would be triggered elsewhere; this task only logs and enqueues report.
+
+Examples:
+    task = StartTask()
+    result = task.handle(body={"job_id": "abc", "user_email": "u@e.com"})
 """
 
 from __future__ import annotations

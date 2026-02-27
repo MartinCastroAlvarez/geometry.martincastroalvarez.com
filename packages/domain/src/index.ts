@@ -1,3 +1,13 @@
+/**
+ * Domain package barrel: geometry and app entities.
+ *
+ * Context: Re-exports Point, User, Polygon, ArtGallery, Job, Gallery, ConvexComponent, Ear, Guard, and types.
+ * Used by packages/data and apps for API DTOs and UI models.
+ *
+ * Example:
+ *   import { Point, User, ArtGallery } from '@repo/domain';
+ *   const p = Point.fromDict({ x: 0, y: 0 });  const u = User.fromDict(dict);
+ */
 export * from './Point';
 export * from './User';
 export * from './Polygon';

@@ -1,5 +1,24 @@
 """
 Path type: API request path (str), normalized (no leading slashes). version, resource, id.
+
+Title
+-----
+Path Attribute
+
+Context
+-------
+Path represents the API request path after normalizing (strip, remove
+leading slashes). The path is split into parts by "/"; version is the
+first segment (e.g. "v1"), resource the second (e.g. "galleries", "jobs"),
+and id the third when present. The id property raises PathMissingResourceIdError
+if there are fewer than three segments; it is used by the handler to
+extract the resource id for detail routes. Path supports startswith for
+route matching in the handler. Stored and compared as a string.
+
+Examples:
+    Path("/v1/galleries")   # version=v1, resource=galleries
+    Path("v1/jobs/abc")    # version=v1, resource=jobs, id=abc
+    path.id                # raises if path has no third segment
 """
 
 from __future__ import annotations

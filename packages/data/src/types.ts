@@ -1,3 +1,16 @@
+/**
+ * API response types and shared shapes for the data layer.
+ *
+ * Context: These types mirror backend responses (session, geometry jobs/galleries).
+ * Used by adapters (fromApi*, toDomain*) and API clients. Domain types (Job, Gallery,
+ * User) live in @geometry/domain; here we only define the wire format.
+ *
+ * Example:
+ *   const raw: unknown = await response.json();
+ *   const apiJob = fromApiJob(raw);   // ApiJob
+ *   const apiGallery = fromApiArtGallery(raw);  // ApiArtGallery
+ */
+
 /** User - matches session API response */
 export interface ApiUser {
     email: string | null;

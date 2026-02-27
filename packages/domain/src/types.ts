@@ -1,3 +1,13 @@
+/**
+ * SolveRequest and SolveResponse: art-gallery solve API contract.
+ *
+ * Context: SolveRequest is outer polygon, holes, and guards (all Dict form). SolveResponse is
+ * solution points, coverage (0–1), and isValid. Used by geometry/solve API layer.
+ *
+ * Example:
+ *   const req: SolveRequest = { outer: {...}, holes: [], guards: [] };
+ *   const res: SolveResponse = { solution: [], coverage: 1, isValid: true };
+ */
 import { PointDict } from './Point'
 import { PolygonDict } from './Polygon'
 

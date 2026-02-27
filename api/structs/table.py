@@ -1,6 +1,24 @@
 """
 Table: dict-like collection keyed by hash(item). Add with add/+=, remove with pop/-=.
-Serializable[dict]: serialize to dict key -> item.serialize(); unserialize from list of items or dict (key must match hash(item)).
+
+Title
+-----
+Table (Hash-keyed Collection)
+
+Context
+-------
+Table is a dict-like where the key is hash(item). add(item) or table += item
+inserts; pop(key) or table -= item_or_key removes. __contains__ accepts
+key or item. __iter__ yields values. serialize() returns dict mapping
+str(hash(item)) -> item.serialize(). unserialize() accepts list (each
+item added by hash) or dict (key must equal hash(value)). Used for
+ArtGallery obstacles, ears, convex_components, guards, visibility.
+Items must be hashable (e.g. Point, Polygon, Ear).
+
+Examples:
+    table = Table().add(poly1).add(poly2)
+    table -= poly1
+    data = table.serialize()
 """
 
 from __future__ import annotations

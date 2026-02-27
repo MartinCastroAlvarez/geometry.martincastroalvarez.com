@@ -1,5 +1,22 @@
 """
 Action enum for SQS worker messages: START or REPORT.
+
+Title
+-----
+Worker Action Enum
+
+Context
+-------
+Action indicates what the worker should do for a message: START (run the
+job flow, enqueue report) or REPORT (aggregate children, update job status,
+notify parent). parse(value) coerces a string; None or empty defaults to
+START; invalid value raises InvalidActionError. Used in messages.Message
+and workers.handler to select StartTask or ReportTask. The worker dispatches
+by action via TASK_BY_ACTION.
+
+Examples:
+    action = Action.parse(body.get("action"))
+    task_class = TASK_BY_ACTION[action]
 """
 
 from __future__ import annotations

@@ -1,3 +1,15 @@
+/**
+ * Layout grid/flex container: 12-col grid, alignment, padding, and event forwarding.
+ *
+ * Context: size 1–12 maps to col-span; 0 renders null. With nested Containers becomes grid;
+ * with middle/bottom becomes flex. Supports padded, spaced, rounded, solid and left/center/right.
+ * Forwards ref and common DOM events (click, keyboard, drag, touch, etc.).
+ *
+ * Example:
+ *   <Container size={6} padded rounded><Content /></Container>
+ *   <Container middle spaced size={12} left><Buttons>...</Buttons></Container>
+ */
+
 import React, { forwardRef } from "react";
 
 interface ContainerProps {

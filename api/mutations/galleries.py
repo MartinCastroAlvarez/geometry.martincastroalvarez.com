@@ -1,5 +1,23 @@
 """
 Art gallery publish and unpublish (hide) mutations.
+
+Title
+-----
+Art Gallery Publish/Hide Mutations
+
+Context
+-------
+ArtGalleryPublishMutation publishes a gallery from a finished job: loads
+job, checks status is SUCCESS, builds gallery from job stdout and
+gallery_id_from_job_and_user, saves to ArtGalleryRepository and
+ArtGalleryPublicIndex. User must own the job. ArtGalleryHideMutation
+removes the gallery from repo and public index; user must own the job.
+Both take job_id (from path/body). Used for POST and DELETE on v1/jobs/
+(resource = publish/hide gallery for that job).
+
+Examples:
+    POST v1/jobs/:id -> publish gallery from job
+    DELETE v1/jobs/:id -> hide gallery
 """
 
 from __future__ import annotations

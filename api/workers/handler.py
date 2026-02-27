@@ -1,5 +1,23 @@
 """
 SQS worker Lambda entry point.
+
+Title
+-----
+Worker Handler
+
+Context
+-------
+handler(event, context) is the Lambda entry point for SQS. It iterates
+over WorkerRequest.from_event(event) (each SQS record or single payload).
+For each request it parses action and body; on ValidationError or
+InvalidActionError appends a failed result and continues (message still
+committed). Otherwise it looks up the task class by action, runs
+task.handle(body), appends the result, and commits the message. On task
+exception it logs, appends failed result with traceback, and does not
+commit (SQS retry). Returns WorkerResponse(results=...).
+
+Examples:
+    handler(event, context)  # event = SQS event with Records
 """
 
 from __future__ import annotations

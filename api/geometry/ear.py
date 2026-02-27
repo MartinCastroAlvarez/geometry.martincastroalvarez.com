@@ -1,5 +1,22 @@
 """
 Ear: ConvexComponent with exactly 3 points and either is_ccw or is_cw. __and__ returns ConvexComponent.
+
+Title
+-----
+Ear (Triangular Convex Component)
+
+Context
+-------
+Ear is a triangle that is a valid ConvexComponent: exactly three points
+and either counter-clockwise or clockwise (not collinear). Used in ear
+clipping and decomposition. __and__(other) with Ear, ConvexComponent, or
+Polygon wraps self and other as ConvexComponent and returns their shared
+edge as ConvexComponent. Constructor raises ValidationError if not three
+points or if collinear.
+
+Examples:
+    ear = Ear([p0, p1, p2])
+    shared = ear & other_ear
 """
 
 from __future__ import annotations

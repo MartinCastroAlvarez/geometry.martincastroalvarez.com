@@ -1,5 +1,24 @@
 """
 Spatial abstract base: defines contains and intersects.
+
+Title
+-----
+Spatial Interface
+
+Context
+-------
+Spatial is the abstract base for types that support containment and
+intersection tests. contains(obj, inclusive) returns True if this
+object contains obj (Point, Segment, etc.). intersects(obj, inclusive)
+returns True if this object intersects obj. The inclusive flag controls
+boundary behavior. Box, Segment, Polygon, and Interval implement
+Spatial. Used for point-in-polygon, segment intersection, and
+visibility/guard logic.
+
+Examples:
+    box.contains(point)
+    segment.intersects(other_segment)
+    polygon.contains(point)
 """
 
 from __future__ import annotations

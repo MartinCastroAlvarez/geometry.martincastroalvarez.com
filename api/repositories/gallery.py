@@ -1,5 +1,22 @@
 """
 Art gallery repository (public S3 path).
+
+Title
+-----
+ArtGallery Repository
+
+Context
+-------
+ArtGalleryRepository persists ArtGallery records under data/galleries/
+with key {id}.json. No user scope; any caller can get/save/delete by
+id. Used by ArtGalleryPublishMutation, ArtGalleryHideMutation,
+ArtGalleryDetailsQuery, ArtGalleryListQuery (via index.get), and
+JobUpdateMutation (when syncing gallery title). MODEL is ArtGallery.
+
+Examples:
+    repo = ArtGalleryRepository()
+    gallery = repo.get(Identifier("gallery_abc"))
+    repo.save(gallery)
 """
 
 from __future__ import annotations

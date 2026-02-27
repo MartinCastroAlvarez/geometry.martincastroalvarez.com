@@ -1,3 +1,12 @@
+/**
+ * Guard: guard placement point in the art gallery.
+ *
+ * Context: Subclass of Point with semantic meaning; fromPoint() converts Point to Guard.
+ * Reflects backend guards (e.g. Table[Point]).
+ *
+ * Example:
+ *   const g = new Guard(1, 2);  Guard.fromPoint(somePoint);
+ */
 import { Point } from './Point';
 
 /**

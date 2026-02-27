@@ -1,3 +1,15 @@
+/**
+ * Button and Buttons layout: primary action UI and optional confirm dialog.
+ *
+ * Context: Button supports sizes (xs/sm/lg), optional icon, and confirm (boolean or custom message).
+ * When confirm is set, click opens a Confirm modal; on confirm the original onClick runs. Buttons
+ * wraps children in a flex row with optional left/center/right alignment via Container.
+ *
+ * Example:
+ *   <Buttons><Button onClick={save}>Save</Button></Buttons>
+ *   <Button confirm="Delete?" onClick={onDelete}>Delete</Button>
+ */
+
 import React, { useCallback, useState } from "react";
 import Confirm from "./Confirm";
 import { Container } from "./Container";

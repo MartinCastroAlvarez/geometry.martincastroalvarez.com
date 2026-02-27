@@ -1,5 +1,23 @@
 """
 Job create and update mutations.
+
+Title
+-----
+Job Mutations
+
+Context
+-------
+JobMutation creates a job: validates boundary and obstacles, builds
+idempotent job id from Signature(boundary+obstacles), saves to JobsRepository,
+enqueues START message, and adds entry to JobsPrivateIndex (Countdown key).
+JobUpdateMutation updates job meta (e.g. title); if meta contains "title"
+and the user has a published gallery for that job, the gallery title is
+updated. Both require authenticated user (PrivateMutation). Used by
+api.api.urls for POST and PATCH on v1/jobs and v1/jobs/.
+
+Examples:
+    POST v1/jobs with body { boundary, obstacles } -> JobMutation
+    PATCH v1/jobs/:id with body { meta: { title: "..." } } -> JobUpdateMutation
 """
 
 from __future__ import annotations

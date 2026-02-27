@@ -1,5 +1,25 @@
 """
-Typed structures for S3 API responses. Used to type list_objects_v2 and related responses.
+Typed structures for S3 API responses.
+
+Title
+-----
+S3 Response Types
+
+Context
+-------
+This module defines TypedDicts for S3 API responses used by the data layer.
+ListObjectsV2Entry describes a single object in the Contents list (Key and
+optional LastModified, ETag, Size, StorageClass). ListObjectsV2Response
+describes the full list_objects_v2 response (Contents, IsTruncated,
+NextContinuationToken, etc.). Used in bucket.search() to type the boto3
+response and validate shape; invalid or non-dict response is handled with
+StorageError. Keeps S3 contract explicit and documentable.
+
+Examples:
+    response: ListObjectsV2Response = client.list_objects_v2(...)
+    for obj in response.get("Contents", []):
+        keys.append(obj["Key"])
+    next_token = response.get("NextContinuationToken", "")
 """
 
 from __future__ import annotations

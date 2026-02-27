@@ -1,5 +1,23 @@
 """
 ReportTask: load job and its children; set job status from children (success/failed), save, notify parent when done.
+
+Title
+-----
+Report Task
+
+Context
+-------
+ReportTask runs when the worker receives a REPORT message. It loads the
+job by id and all children jobs. If job is already failed, it notifies
+parent and returns. Otherwise it merges children stdout into job.stdout,
+and if any child failed merges stderr and sets job.status = FAILED; else
+if all children finished successfully sets job.status = SUCCESS. Saves
+job; if not pending, notifies parent by putting a REPORT message for
+parent_id. Used for aggregation after child jobs complete. TaskRequest
+has job_id and user_email.
+
+Examples:
+    REPORT message for job_id -> load job, merge children, save, notify parent
 """
 
 from __future__ import annotations

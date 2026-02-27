@@ -1,5 +1,26 @@
 """
 ApiRequest: API Gateway event parsing; path, method, headers, body, path_params, query_params, user.
+
+Title
+-----
+API Gateway Request Model
+
+Context
+-------
+ApiRequest parses the API Gateway proxy integration event into a typed
+object. The path is normalized (no leading slash) and wrapped as Path.
+Headers, queryStringParameters, and pathParameters are exposed as dicts.
+The body is JSON-decoded; if missing or invalid, body is {}. The user
+starts as anonymous and is set by the private decorator when X-Auth is
+valid. Implementations use ApiRequest.unserialize(event) to build the
+request before passing it to the handler. This type is used across the
+api.api package and by Query/Mutation code that receives the request.
+
+Examples:
+    request = ApiRequest.unserialize(event)
+    path, method = request.path, request.http_method
+    user = request.user
+    body = request.body
 """
 
 from __future__ import annotations

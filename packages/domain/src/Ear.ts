@@ -1,3 +1,12 @@
+/**
+ * Ear: triangular ear from ear-clipping algorithm.
+ *
+ * Context: ConvexComponent with exactly 3 points; constructor throws if points.length !== 3.
+ * Reflects backend Ear type used in triangulation.
+ *
+ * Example:
+ *   const ear = new Ear([p1, p2, p3]);  // must be 3 points
+ */
 import { Point } from './Point';
 import { ConvexComponent } from './ConvexComponent';
 

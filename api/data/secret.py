@@ -1,5 +1,24 @@
 """
 Access to secrets stored in S3 for the geometry API.
+
+Title
+-----
+Secrets (S3-backed)
+
+Context
+-------
+Secret retrieves secret values from an S3 bucket (SECRETS_BUCKET_NAME).
+Each secret is stored as an S3 object keyed by name (e.g. JWT_SECRET,
+JWT_TEST). get(secret_id) returns the object body as a string; results
+are cached per Lambda execution. Missing bucket name raises ConfigurationError;
+missing or empty object raises NotFoundError; S3 errors raise ServiceUnavailableError.
+Used by the private decorator for JWT verification and test token comparison.
+Do not log or expose returned values.
+
+Examples:
+    secret = Secret.get(Secret.JWT_SECRET_NAME)
+    test_token = Secret.get(Secret.JWT_TEST_NAME)
+    jwt.decode(token, secret, algorithms=["HS256"])
 """
 
 from __future__ import annotations

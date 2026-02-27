@@ -1,3 +1,13 @@
+/**
+ * Public gallery view by ID.
+ *
+ * Context: useArtGallery(id) fetches published gallery; shows title and id. Route
+ * /:id (after /jobs, /editor) is public—no session required.
+ *
+ * Example:
+ *   const { id } = useParams<{ id: string }>();
+ *   const { data: gallery, isLoading } = useArtGallery(id ?? null);
+ */
 import { useParams } from "react-router-dom";
 import { Container, Title, Text } from "@geometry/ui";
 import { useArtGallery } from "@geometry/data";

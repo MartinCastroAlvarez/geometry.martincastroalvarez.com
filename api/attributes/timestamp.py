@@ -1,7 +1,25 @@
 """
 ISO 8601 timestamp type for created_at, updated_at.
 
-Parsing raises ValidationError from exceptions. Accepts None (uses Timestamp.now()).
+Title
+-----
+Timestamp Attribute
+
+Context
+-------
+Timestamp is an ISO 8601 string type used for created_at and updated_at
+on models. The constructor accepts None (then uses now()), a Timestamp,
+a str (parsed via from_iso), or date/datetime. Invalid input raises
+ValidationError. from_iso, from_date, and from_datetime are class
+methods for explicit construction. to_datetime() and to_date() convert
+back for arithmetic. The canonical format includes microseconds and Z.
+Used by Model, Job, ArtGallery, User and by indexes (Countdown).
+
+Examples:
+    ts = Timestamp.now()
+    ts = Timestamp("2025-02-22T12:00:00Z")
+    ts = Timestamp(None)  # same as now()
+    dt = ts.to_datetime()
 """
 
 from __future__ import annotations

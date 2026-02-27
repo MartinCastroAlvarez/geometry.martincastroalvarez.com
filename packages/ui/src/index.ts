@@ -1,3 +1,8 @@
+/**
+ * @geometry/ui public API: layout (Body, Container, Nav), primitives (Button, Input, Badge, etc.),
+ * and hooks (useDevice, useDebounce). Re-exports all UI components and utilities.
+ */
+
 export * from './Toast'
 export * from './Button'
 export * from './Toggle'

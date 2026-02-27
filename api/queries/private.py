@@ -1,5 +1,23 @@
 """
 Private query: base class that requires authenticated user.
+
+Title
+-----
+PrivateQuery Base Class
+
+Context
+-------
+PrivateQuery extends Query and requires an authenticated user. Constructor
+takes user: User. validate(body) first checks user is not None and
+user.is_authenticated(); otherwise raises UnauthorizedError. Then calls
+super().validate(body). Job list and details use PrivateQuery so only
+the owning user can see their jobs. The API handler instantiates with
+user=request.user for routes registered as PrivateQuery.
+
+Examples:
+    class JobListQuery(PrivateQuery[...], ListQuery[...]):
+        def query(self, validated_input): ...
+    handler = JobListQuery(user=request.user)
 """
 
 from __future__ import annotations

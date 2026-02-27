@@ -1,5 +1,24 @@
 """
 Segment type: exactly two Point (start, end). Spatial, Bounded. serialize/unserialize, midpoint, box, contains, intersects, connects.
+
+Title
+-----
+Segment (Line Segment)
+
+Context
+-------
+Segment is a line segment between two Points. It implements Spatial
+(contains, intersects), Bounded (box), and Serializable. size is
+Euclidean length; midpoint is the center point; box is the axis-aligned
+bounding box. contains(Point or Segment) and intersects(Segment) support
+inclusive boundary. connects(other) is True if the segments share an
+endpoint. Hash is canonical (min point, max point). Used for polygon
+edges and intersection tests in visibility and guard placement.
+
+Examples:
+    s = Segment([Point.unserialize(["0","0"]), Point.unserialize(["1","1"])])
+    s.midpoint
+    s.intersects(other_segment)
 """
 
 from __future__ import annotations

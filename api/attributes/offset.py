@@ -1,5 +1,22 @@
 """
-Offset type: non-empty string for pagination next_token. Does not accept None.
+Offset type: non-empty string for pagination next_token.
+
+Title
+-----
+Offset Attribute
+
+Context
+-------
+Offset represents a pagination token (e.g. S3 ContinuationToken, or
+opaque next_token from list APIs). It is a non-empty string; None,
+non-string, or empty raise ValidationError. Use Offset | None in types
+where the token is optional (e.g. first page has no token). ListQueryRequest
+and Index.search accept next_token: Offset | None. When building from
+request body, only pass a value when the client sent a token.
+
+Examples:
+    token = Offset("abc123")
+    next_token = Offset(body["next_token"]) if body.get("next_token") else None
 """
 
 from __future__ import annotations

@@ -1,5 +1,22 @@
 """
 Url type: string validated as a valid URL format.
+
+Title
+-----
+Url Attribute
+
+Context
+-------
+Url is a string subclass that must parse as a valid URL with scheme and
+netloc. Allowed schemes are http, https, ftp, mailto. None, non-string,
+empty string, or invalid URL raise ValidationError. Used for avatar_url
+and similar fields on User and in any payload that carries a URL. The
+value is stored as the original string after validation.
+
+Examples:
+    Url("https://example.com/path")
+    Url("http://localhost:3000")
+    Url("not-a-url")  # ValidationError
 """
 
 from __future__ import annotations

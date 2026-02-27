@@ -1,5 +1,24 @@
 """
 API handler: route request path and method to Query/Mutation; merge path params and dispatch.
+
+Title
+-----
+API Gateway Request Handler
+
+Context
+-------
+The handler is the main entry point after the interceptor and private
+decorator. It parses the request path (Path), HTTP method (Method), and
+merges path parameters with body (POST/PATCH/DELETE) or query params (GET).
+Route matching is prefix-based using URLS; the longest matching prefix
+wins. For resource-by-id routes (e.g. v1/jobs/), the path's id is extracted
+and merged so handlers receive a single "id" in the body. PrivateQuery
+and PrivateMutation receive the authenticated User; public handlers get
+a default instance. OPTIONS is handled for CORS and returns an empty dict.
+
+Examples:
+    handler(request, context)  # called by interceptor after ApiRequest is built
+    # URLS: Path("v1/jobs") -> {Method.GET: JobListQuery, Method.POST: JobMutation}
 """
 
 from __future__ import annotations

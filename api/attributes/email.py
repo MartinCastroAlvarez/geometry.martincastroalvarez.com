@@ -1,5 +1,23 @@
 """
 Email type: string validated as a valid email format.
+
+Title
+-----
+Email Attribute
+
+Context
+-------
+Email is a string subclass validated with a regex for typical email format
+(local@domain.tld). None, non-string, empty, or invalid format raise
+ValidationError. The slug property returns a URL-safe identifier for the
+email (Slug(email) + '-' + Signature(email)) to avoid collisions when
+different emails slugify to the same string. Used for user identity, owner_email,
+and in JWT payloads and task messages.
+
+Examples:
+    Email("user@example.com")
+    user_email.slug  # URL-safe id for paths/indexes
+    Email("invalid")  # ValidationError
 """
 
 from __future__ import annotations

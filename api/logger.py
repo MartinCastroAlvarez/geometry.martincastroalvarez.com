@@ -1,8 +1,24 @@
 """
 Centralized logging for the geometry API.
 
+Title
+-----
+Geometry API Logger
+
+Context
+-------
 Provides structured logging with request_id support for correlation across
-API Gateway, Authorizer, and Worker Lambdas. Use get_logger(__name__) in modules.
+API Gateway, Authorizer, and Worker Lambdas. Use get_logger(__name__) in
+each module. log_extra() builds a JSON-friendly dict for request_id, path,
+method, and custom kwargs so CloudWatch can index and filter logs. Call
+configure_logging() at Lambda cold start if you need to set the root log
+level from LOG_LEVEL env (default INFO). CloudWatch captures stdout from
+the Lambda runtime.
+
+Examples:
+    logger = get_logger(__name__)
+    logger.info("message", extra=log_extra(request_id=req_id, path=path))
+    configure_logging()
 """
 
 from __future__ import annotations

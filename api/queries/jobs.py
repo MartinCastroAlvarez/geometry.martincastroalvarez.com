@@ -1,5 +1,21 @@
 """
 Job list and job details queries.
+
+Title
+-----
+Job Queries
+
+Context
+-------
+JobListQuery lists jobs for the current user via JobsPrivateIndex;
+returns records and next_token. JobDetailsQuery loads a single job by
+id from JobsRepository(user); user must own the job. Both require
+authentication (PrivateQuery). Used for GET v1/jobs (list) and GET v1/jobs/:id
+(details). Handler receives request.user from the private decorator.
+
+Examples:
+    GET v1/jobs?limit=20&next_token=... -> JobListQuery
+    GET v1/jobs/:id -> JobDetailsQuery
 """
 
 from __future__ import annotations

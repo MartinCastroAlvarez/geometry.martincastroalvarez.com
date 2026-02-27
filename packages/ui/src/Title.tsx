@@ -1,3 +1,14 @@
+/**
+ * Heading text: size (xs–xxxl), alignment, optional truncate and max width.
+ *
+ * Context: Same size/alignment/truncate/size contract as Text but with font-semibold and
+ * font-title; used for section or page titles. Renders inside a center Container.
+ *
+ * Example:
+ *   <Title lg>Section name</Title>
+ *   <Title xl center size={600}>Page title</Title>
+ */
+
 import React from "react";
 import { Container } from "./Container";
 

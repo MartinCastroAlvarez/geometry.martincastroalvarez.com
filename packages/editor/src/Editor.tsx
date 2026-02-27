@@ -1,3 +1,15 @@
+/**
+ * Geometry editor canvas: boundary and obstacles as editable vertices and edges.
+ *
+ * Context: Uses react-konva Stage/Layer. State is vertices (EditorVertex[]) and edges ([number, number][]).
+ * findCycles discovers closed polygons from the graph; largest by area is boundary, cycles inside it are holes.
+ * Supports add vertex (click edge or stage), connect two vertices (click one then another), delete vertex/edge (key).
+ * Calls onChange(boundaryPolygon, holePolygons) when cycles change.
+ *
+ * Example:
+ *   <Editor boundary={poly} obstacles={[]} width={400} height={300} onChange={(b, o) => setGeometry(b, o)} />
+ */
+
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Stage, Layer } from "react-konva";
 import { Point, Polygon } from "@geometry/domain";

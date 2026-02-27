@@ -1,5 +1,21 @@
 """
 Query response: base TypedDict and reusable list/details response types.
+
+Title
+-----
+Query Response Types
+
+Context
+-------
+QueryResponse is the base. ListQueryResponse[T] has records: list[T] and
+next_token: str. DetailsQueryResponse[R] is generic over the entity dict
+type (e.g. JobDict, ArtGalleryDict). List handlers return {"records": [...], "next_token": ...};
+details handlers return the serialized entity. Used for typing and
+documentation of API response shape.
+
+Examples:
+    ListQueryResponse[ArtGalleryDict]
+    DetailsQueryResponse[JobDict]
 """
 
 from __future__ import annotations

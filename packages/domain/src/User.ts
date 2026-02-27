@@ -1,3 +1,13 @@
+/**
+ * User and UserDict: authenticated user identity and serialization.
+ *
+ * Context: User is built from session/API dict (email, name, avatarUrl). fromDict/toDict for transport.
+ * Used by auth/session layer; nullables for optional profile fields.
+ *
+ * Example:
+ *   const user = User.fromDict({ email: 'a@b.com', name: 'A', avatarUrl: null });
+ *   user.toDict();  // { email, name, avatarUrl }
+ */
 export interface UserDict {
     email: string | null;
     name: string | null;

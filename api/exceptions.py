@@ -1,17 +1,29 @@
 """
 Custom exceptions for the geometry (art gallery) API.
 
+Title
+-----
+Geometry API Exceptions
+
+Context
+-------
 All exceptions inherit from GeometryException and set a `code` attribute
-(http.HTTPStatus) used for HTTP status codes. Handlers use
-ApiResponse.unserialize(exception) to build JSON error responses.
+(http.HTTPStatus) used for HTTP status codes. The interceptor catches
+GeometryException and generic Exception, then builds a JSON error response
+via ApiResponse.unserialize(exception). This keeps error handling consistent
+across API Gateway and allows clients to rely on error.code and error.type.
+ValidationError (400), NotFoundError/RecordNotFoundError (404), UnauthorizedError
+(401), ForbiddenError (403), and others cover typical API and storage failures.
+StorageError is for invalid S3 data; ValidationError is for bad request input.
 
-Example:
-
+Examples:
     raise ValidationError("id is required")
+    raise RecordNotFoundError("Job xyz not found")
     try:
-        raise RecordNotFoundError("Job xyz not found")
+        ...
     except GeometryException as e:
         print(e.code.value, str(e))
+    response = ApiResponse.unserialize(e)
 """
 
 import http

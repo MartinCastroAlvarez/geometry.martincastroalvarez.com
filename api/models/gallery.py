@@ -1,5 +1,23 @@
 """
 ArtGallery model: boundary, obstacles, ears, convex_components, guards, visibility; owner_email, owner_job_id.
+
+Title
+-----
+ArtGallery Model
+
+Context
+-------
+ArtGallery is the main gallery entity: boundary (Polygon), obstacles
+(Table[Polygon]), and computed pipeline outputs (ears, convex_components,
+guards, visibility). owner_email and owner_job_id link to the creating
+user and job. title is a Title. Serialized shape includes all fields for
+S3 and API. Used by ArtGalleryRepository, ArtGalleryPublicIndex,
+ArtGalleryPublishMutation, ArtGalleryHideMutation, and list/details queries.
+
+Examples:
+    data = gallery.serialize()
+    gallery = ArtGallery.unserialize(data)
+    repo.save(gallery)
 """
 
 from __future__ import annotations

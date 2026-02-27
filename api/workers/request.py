@@ -1,5 +1,25 @@
 """
 Worker request parsed from a single SQS message body.
+
+Title
+-----
+WorkerRequest
+
+Context
+-------
+WorkerRequest wraps one SQS message: data (parsed body dict) and
+receipt_handle. Properties action, job_id, user_email, message, body
+expose typed values for the handler and tasks. unserialize(record) builds
+from SQS record (body string + receiptHandle) or from a plain dict with
+receipt_handle. from_event(event) yields one WorkerRequest per Records[]
+entry, or one from the event itself for non-SQS invocations. Used by
+workers.handler to parse and to commit (message.receipt_handle).
+
+Examples:
+    for request in WorkerRequest.from_event(event):
+        task_class = TASK_BY_ACTION[request.action]
+        task_class().handle(body=request.body)
+        queue.commit(request.message)
 """
 
 from __future__ import annotations

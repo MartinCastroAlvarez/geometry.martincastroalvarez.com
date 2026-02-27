@@ -1,3 +1,15 @@
+/**
+ * Session API client: get current user from the auth service.
+ *
+ * Context: Single endpoint GET /v1/session. Uses fetchWithAuth (X-Auth from cookies.ts).
+ * Returns SessionResponse (email, name, avatarUrl) or null on 401/403. Used by
+ * session.ts useSession hook after conversion to domain User.
+ *
+ * Example:
+ *   const client = new AuthApiClient();
+ *   const data = await client.getSession();  // SessionResponse | null
+ */
+
 import { SESSION_API_URL } from "./constants";
 import { fetchWithAuth } from "./cookies";
 import type { SessionResponse } from "./types";

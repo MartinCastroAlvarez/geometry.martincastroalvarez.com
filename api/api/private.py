@@ -1,5 +1,27 @@
 """
 private: decorator that validates X-Auth (test token or JWT) and sets request.user.
+
+Title
+-----
+Private (Authentication) Decorator
+
+Context
+-------
+The private decorator enforces authentication on handler functions. It
+runs after the interceptor has built ApiRequest and before the handler
+logic. For non-OPTIONS requests it requires an X-Auth (or x-auth) header.
+If the header matches the JWT test token (from Secret), request.user is
+set to User.test(). Otherwise it decodes the token as JWT with the app
+JWT secret; on success it sets request.user from the token's email, name,
+and avatarUrl. On missing header, expired token, invalid token, or
+missing email claim it raises UnauthorizedError. OPTIONS is skipped for
+CORS preflight. Used by all routes that need a logged-in user (jobs, publish/hide).
+
+Examples:
+    @interceptor
+    @private
+    def handler(request: ApiRequest, context): ...
+    # request.user is User.test() or User from JWT; UnauthorizedError if invalid
 """
 
 from __future__ import annotations

@@ -1,5 +1,23 @@
 """
 Index entry: index_id (sort key) and real_id (record id).
+
+Title
+-----
+Indexed (Index Entry)
+
+Context
+-------
+Indexed is the stored form of an index entry: index_id is the sort key
+(e.g. Countdown as string for newest-first), real_id is the actual record
+identifier. Serialized as dict with index_id and real_id strings. Used when
+saving to an index (Index.save(Indexed(...))) and when loading from
+search (Indexed.unserialize(data); repository.get(indexed.real_id)).
+Identifier type is used for both fields.
+
+Examples:
+    entry = Indexed(index_id="123", real_id="gal_abc")
+    data = entry.serialize()
+    entry = Indexed.unserialize(data)
 """
 
 from __future__ import annotations

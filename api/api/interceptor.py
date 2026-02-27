@@ -1,5 +1,26 @@
 """
 Interceptor: converts API Gateway event to ApiRequest, calls handler, formats response.
+
+Title
+-----
+API Request/Response Interceptor
+
+Context
+-------
+The interceptor is a decorator that wraps the main handler. It receives
+the raw API Gateway event and context, builds ApiRequest via ApiRequest.unserialize(event),
+calls the underlying handler(request, context), and converts the returned
+dict into an API Gateway response via ApiResponse. It logs each request
+(path, method, request_id) and elapsed time; on GeometryException it logs
+a warning and returns ApiResponse.unserialize(e).serialize(); on any other
+exception it logs the full traceback and returns a 500-style response.
+CORS origin is taken from the request Origin header and set on the response.
+
+Examples:
+    @interceptor
+    @private
+    def handler(request: ApiRequest, context) -> dict[str, Any]: ...
+    # In Lambda: handler(event, context) receives raw event; interceptor does the rest.
 """
 
 from __future__ import annotations

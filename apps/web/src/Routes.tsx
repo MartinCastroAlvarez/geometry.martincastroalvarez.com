@@ -1,3 +1,13 @@
+/**
+ * Route definitions and private-route guard.
+ *
+ * Context: PrivateRoute uses useSession; when not loading and no user, calls
+ * useLogout() (redirect to login). Public routes: / (Home), /:id (Gallery).
+ * Protected: /jobs, /jobs/:id, /editor.
+ *
+ * Example:
+ *   <Route path="/jobs" element={<PrivateRoute><JobsPage /></PrivateRoute>} />
+ */
 import React, { useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
 import { useSession, useLogout } from "@geometry/data";

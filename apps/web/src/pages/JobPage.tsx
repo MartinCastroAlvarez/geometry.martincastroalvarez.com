@@ -1,3 +1,14 @@
+/**
+ * Single job page: detail, title edit, publish/unpublish.
+ *
+ * Context: useJob(id) loads job; usePublish/useUnpublish/useUpdateJob for mutations.
+ * Title is synced from job.meta.title and saved on blur. Publish/Unpublish only
+ * when job.status === "success". Protected by PrivateRoute.
+ *
+ * Example:
+ *   const { data: job } = useJob(id ?? null);
+ *   publish.mutate(id);  updateJob.mutate({ jobId: id, meta: { title } });
+ */
 import { useParams, Link } from "react-router-dom";
 import { Container, Title, Text, Button, Input, Badge } from "@geometry/ui";
 import { useJob, usePublish, useUnpublish, useUpdateJob } from "@geometry/data";

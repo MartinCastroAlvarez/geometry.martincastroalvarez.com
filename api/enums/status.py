@@ -1,5 +1,22 @@
 """
-Status enum for task output: SUCCESS or FAILED.
+Status enum for task output: PENDING, SUCCESS, FAILED.
+
+Title
+-----
+Task/Job Status Enum
+
+Context
+-------
+Status represents the state of a job or task result: PENDING, SUCCESS,
+FAILED. parse(value) coerces a string; None or empty raises ValidationError;
+invalid value raises with allowed list. Used in Job model, TaskResponse,
+ReportTask and StartTask return values, and WorkerResponse. Job methods
+is_pending(), is_failed(), is_finished() are convenience checks on status.
+
+Examples:
+    status = Status.parse(data.get("status"))
+    job.status = Status.SUCCESS
+    return {"status": Status.FAILED, "error": str(e)}
 """
 
 from __future__ import annotations

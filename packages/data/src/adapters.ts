@@ -1,3 +1,16 @@
+/**
+ * Adapters between API response shapes and @geometry/domain models.
+ *
+ * Context: The backend returns plain JSON (ApiJob, ApiArtGallery, ApiUser). We convert
+ * to domain types (Job, Gallery, User) so the rest of the app works with rich objects
+ * (e.g. ArtGallery, Polygon, Point) and stays independent of API field names.
+ *
+ * Example:
+ *   const apiJob = await geometryApiClient.getJob(id);
+ *   const job = toDomainJob(fromApiJob(apiJob));  // Job with typed meta, stdout, etc.
+ *   const gallery = toDomainArtGallery(fromApiArtGallery(apiGallery));  // Gallery with ArtGallery instance
+ */
+
 import { ArtGallery, Point, Polygon } from "@geometry/domain";
 import type { Job, Gallery } from "@geometry/domain";
 import type { ApiUser, ApiJob, ApiArtGallery, ApiPolygon } from "./types";

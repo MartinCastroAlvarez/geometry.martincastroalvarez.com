@@ -1,3 +1,14 @@
+/**
+ * Art gallery editor page: polygon boundary and obstacles.
+ *
+ * Context: Holds ArtGallery (perimeter + holes) in state; Editor from @geometry/editor
+ * gets boundary and obstacles, reports changes via onChange. ResizeObserver keeps
+ * editor size (width × 0.65) in sync with container. Protected by PrivateRoute.
+ *
+ * Example:
+ *   const [gallery, setGallery] = useState<ArtGallery>(() => emptyGallery);
+ *   <Editor boundary={gallery.perimeter} obstacles={gallery.holes} onChange={handleChange} />
+ */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArtGallery, Polygon } from "@geometry/domain";
 import { Editor } from "@geometry/editor";

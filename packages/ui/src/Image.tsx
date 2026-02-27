@@ -1,3 +1,13 @@
+/**
+ * Image block: fixed size via background-image, optional rounded (circle).
+ *
+ * Context: Renders a div with backgroundImage set to src; size sets width/height in px. If
+ * src is missing or size is 0, returns null. rounded adds rounded-full overflow-hidden.
+ *
+ * Example:
+ *   <Image src={avatarUrl} size={48} rounded />
+ */
+
 import React from "react";
 
 interface ImageProps {

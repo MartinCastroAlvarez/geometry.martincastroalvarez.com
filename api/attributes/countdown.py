@@ -1,5 +1,24 @@
 """
-Countdown sort key for "newest first" index ordering: seconds from value to FAR_FUTURE, scaled by 10**PRECISION.
+Countdown sort key for "newest first" index ordering.
+
+Title
+-----
+Countdown Attribute
+
+Context
+-------
+Countdown is an integer sort key used to order index entries "newest first".
+It is computed as (FAR_FUTURE - value) in total seconds, multiplied by
+10**PRECISION, so that later timestamps yield smaller integers and sort
+first when keys are listed in ascending order. The constructor accepts
+only an integer > 0 (or Countdown). Use from_datetime, from_date, or
+from_timestamp to build from time types. Used by ArtGalleryPublicIndex
+and JobsPrivateIndex as index_id (e.g. Countdown.from_timestamp(gallery.created_at)).
+
+Examples:
+    key = Countdown.from_timestamp(Timestamp.now())
+    key = Countdown.from_datetime(datetime.utcnow())
+    index.save(Indexed(index_id=Identifier(key), real_id=record.id))
 """
 
 from __future__ import annotations

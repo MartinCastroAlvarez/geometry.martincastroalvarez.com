@@ -1,5 +1,22 @@
 """
 Stage enum for job pipeline stages.
+
+Title
+-----
+Job Pipeline Stage Enum
+
+Context
+-------
+Stage represents the pipeline phase of a job: ART_GALLERY, STITCHING,
+EAR_CLIPPING, CONVEX_COMPONENT_OPTIMIZATION, VISIBILITY_MATRIX,
+GUARD_PLACEMENT. parse(value) coerces a string (spaces to underscores,
+lowercase); None or empty raises ValidationError. Used in Job model
+serialization and when building/updating jobs from worker or API. The
+actual pipeline execution is outside this API; this enum tracks progress.
+
+Examples:
+    stage = Stage.parse(data.get("stage"))
+    job.stage = Stage.EAR_CLIPPING
 """
 
 from __future__ import annotations

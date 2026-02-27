@@ -1,5 +1,23 @@
 """
 Abstract Model base for persisted entities. id, created_at, updated_at; serialize/unserialize.
+
+Title
+-----
+Model Base Class
+
+Context
+-------
+Model is the abstract base for all persisted entities. It defines id
+(Identifier), created_at, updated_at (Timestamp), and requires
+serialize() -> ModelDict and unserialize(data) -> Model. Subclasses
+implement __str__, __repr__, and their own serialize/unserialize.
+ModelDict is the TypedDict base for serialized shape. Hash is
+Signature(id). Used by Repository, indexes, and all API payloads that
+read or write gallery/job/user data.
+
+Examples:
+    data = gallery.serialize()
+    gallery = ArtGallery.unserialize(data)
 """
 
 from __future__ import annotations

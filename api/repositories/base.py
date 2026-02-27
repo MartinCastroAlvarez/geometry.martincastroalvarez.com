@@ -1,5 +1,25 @@
 """
 Base repository for S3 persistence.
+
+Title
+-----
+Repository Base Class
+
+Context
+-------
+Repository is the abstract base for S3-backed persistence. Subclasses
+set MODEL (the Model class) and implement path (S3 prefix). get(identifier)
+loads one record; save(record) writes and re-loads; delete(identifier)
+removes; exists(identifier) checks presence. search(next_token, limit)
+returns Results (records + next_token) by listing under path. No versioning;
+corrupt or id-mismatch data raises CorruptionError. Used by ArtGalleryRepository
+and JobsRepository (the latter via PrivateRepository).
+
+Examples:
+    repo = ArtGalleryRepository()
+    gallery = repo.get(Identifier("abc"))
+    repo.save(gallery)
+    results = repo.search(next_token=token, limit=Limit(20))
 """
 
 from __future__ import annotations

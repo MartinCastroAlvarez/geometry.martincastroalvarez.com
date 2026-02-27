@@ -1,5 +1,22 @@
 """
 Worker response: handler return value (results list of TaskResponse).
+
+Title
+-----
+WorkerResponse
+
+Context
+-------
+WorkerResponse is the return type of the worker handler. It holds
+results: list[TaskResponse]. serialize() converts it to a dict with
+"results" list; Status and Identifier are serialized to string values.
+The Lambda return value is typically the serialized form for logging or
+downstream. unserialize is not used (handler builds response directly).
+Used by workers.handler to collect task outcomes and return from Lambda.
+
+Examples:
+    return WorkerResponse(results=results)
+    return response.serialize()  # for Lambda return
 """
 
 from __future__ import annotations

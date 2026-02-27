@@ -1,5 +1,24 @@
 """
 Base mutation: validate, mutate, handle.
+
+Title
+-----
+Mutation Base Class
+
+Context
+-------
+Mutation is the abstract base for write operations. It is generic over
+request (T) and response (R) types. validate(body) returns validated
+input T; mutate(validated_input) returns response R; handle(body) runs
+validate then mutate. Subclasses implement validate and mutate. For
+authenticated mutations use PrivateMutation (in mutations.private) which
+checks user and passes user to the handler. Used by JobMutation,
+JobUpdateMutation, ArtGalleryPublishMutation, ArtGalleryHideMutation.
+
+Examples:
+    class MyMutation(Mutation[MyRequest, MyResponse]):
+        def validate(self, body): ...
+        def mutate(self, validated_input): ...
 """
 
 from __future__ import annotations

@@ -1,3 +1,13 @@
+/**
+ * Draggable vertex circle with first/active/hover styling and optional drag/click handlers.
+ *
+ * Context: Renders a Konva Circle; radius and fill/stroke come from editorColors (isFirst, isActive, hover).
+ * dragBoundFunc clamps position to dragBounds [0,0]–[width,height] when provided. onDragMove receives (x, y).
+ *
+ * Example:
+ *   <Vertex vertex={v} isActive onDragMove={(x, y) => handleVertexDrag(i, x, y)} onClick={() => handleVertexClick(i)} />
+ */
+
 import { useState } from "react";
 import { Circle } from "react-konva";
 import type { EditorVertex } from "./types";
