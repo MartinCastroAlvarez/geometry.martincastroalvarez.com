@@ -25,7 +25,10 @@ export const Body: React.FC<BodyProps> = ({ children }) => {
     const hideSides = isMobile || isTablet;
 
     return (
-        <div className="geometry-body flex flex-col flex-1 min-h-0 overflow-hidden font-sans bg-body-gradient text-white">
+        <div
+            className="geometry-body flex flex-col flex-1 min-h-0 overflow-hidden font-sans text-slate-800 dark:text-slate-100"
+            style={{ background: "var(--body-gradient)" }}
+        >
             <Container>
                 <Container size={hideSides ? 0 : 2} />
                 <Container size={hideSides ? 12 : 8}>

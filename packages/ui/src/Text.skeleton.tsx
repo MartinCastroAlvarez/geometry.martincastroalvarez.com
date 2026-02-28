@@ -2,7 +2,7 @@
  * Skeleton placeholder for Text. Matches Text size variants.
  *
  * Context: Used by Nav.skeleton (e.g. "Jobs", "Logout", user name) and list/grid placeholders.
- * No external skeleton library; uses bg-skeleton animate-pulse.
+ * No external skeleton library; uses bg-slate-700 animate-pulse.
  *
  * Example:
  *   {isLoading ? <TextSkeleton sm /> : <Text sm>Content</Text>}
@@ -55,7 +55,7 @@ export const TextSkeleton: React.FC<TextSkeletonProps> = ({
             {Array.from({ length: lines }).map((_, i) => (
                 <div
                     key={i}
-                    className="rounded bg-skeleton animate-pulse"
+                    className="rounded bg-slate-700 animate-pulse"
                     style={{
                         height: `${lineHeight}px`,
                         width: lines === 1 ? widthCss : i === lines - 1 && lines > 1 ? "75%" : widthCss,

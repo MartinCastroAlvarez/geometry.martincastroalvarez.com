@@ -35,7 +35,7 @@ export interface BulletProps {
 }
 
 const BULLET_ICON_SIZE = 15;
-const defaultIcon = <Info size={BULLET_ICON_SIZE} className="shrink-0 text-muted" aria-hidden />;
+const defaultIcon = <Info size={BULLET_ICON_SIZE} className="shrink-0 text-slate-700 dark:text-slate-400" aria-hidden />;
 
 export const Bullet: React.FC<BulletProps> = ({
     children,

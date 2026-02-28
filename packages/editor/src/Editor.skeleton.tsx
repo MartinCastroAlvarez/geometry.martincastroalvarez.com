@@ -41,6 +41,9 @@ export const EditorSkeleton = ({ size }: EditorSkeletonProps) => {
         overflow: "hidden",
         border: "none",
         outline: "none",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
     };
 
     return (
@@ -52,7 +55,7 @@ export const EditorSkeleton = ({ size }: EditorSkeletonProps) => {
                     position: "absolute",
                     inset: 0,
                     borderRadius: 12,
-                    backgroundColor: "color-mix(in srgb, var(--color-skeleton) 40%, transparent)",
+                    backgroundColor: "color-mix(in srgb, rgb(51 65 85) 40%, transparent)",
                 }}
             />
             <PolygonSkeleton size={polygonSize} rotation={rotation} />

@@ -3,26 +3,28 @@
  * WithJobPageSkeleton shows skeleton when loading, otherwise renders children.
  */
 import type { ReactNode } from "react";
-import { Skeleton, TitleSkeleton, BadgeSkeleton, InputSkeleton, ButtonSkeleton } from "@geometry/ui";
+import { Skeleton, Container, TitleSkeleton, BadgeSkeleton, InputSkeleton, ButtonSkeleton } from "@geometry/ui";
 
 export const JobPageSkeleton = () => (
-    <Skeleton padded spaced>
-        <Skeleton center>
-            <TitleSkeleton xl width="10rem" />
-            <BadgeSkeleton width="4rem" />
-        </Skeleton>
-        <Skeleton padded spaced>
-            <InputSkeleton width="100%" />
-        </Skeleton>
-        <Skeleton padded spaced>
-            <div className="flex gap-2">
-                <ButtonSkeleton width={90} height={32} />
-                <ButtonSkeleton width={100} height={32} />
-            </div>
-        </Skeleton>
-        <Skeleton padded spaced>
-            <ButtonSkeleton width={120} height={32} />
-        </Skeleton>
+    <Skeleton>
+        <Container padded spaced>
+            <Container center>
+                <TitleSkeleton xl width="10rem" />
+                <BadgeSkeleton width="4rem" />
+            </Container>
+            <Container padded spaced>
+                <InputSkeleton width="100%" />
+            </Container>
+            <Container padded spaced>
+                <div className="flex gap-2">
+                    <ButtonSkeleton width={90} height={32} />
+                    <ButtonSkeleton width={100} height={32} />
+                </div>
+            </Container>
+            <Container padded spaced>
+                <ButtonSkeleton width={120} height={32} />
+            </Container>
+        </Container>
     </Skeleton>
 );
 

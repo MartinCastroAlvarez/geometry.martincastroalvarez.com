@@ -1,0 +1,80 @@
+/**
+ * Theme variables: single source of truth for all theme-dependent colors.
+ * Lives in @geometry/theme; apps import it (e.g. @import "@geometry/theme/theme.css") and can
+ * override or extend in their own CSS if needed.
+ *
+ * Edit this file to add or modify themes. Each theme is a selector block:
+ * - :root              → default (dark) theme
+ * - [data-theme="light"] → light theme
+ *
+ * Add a new theme: add a block [data-theme="<name>"] with the same variable names,
+ * then add the value to the Theme enum in this package (Theme.ts) and the locale key theme.<name>.
+ *
+ * Variables use space-separated RGB (e.g. 2 6 23) so Tailwind can use
+ * rgb(var(--color-bg) / <alpha-value>). Gradients use full CSS values.
+ */
+
+:root {
+  /* Semantic (theme-dependent) */
+  --color-bg: 2 6 23;
+  --color-white: 255 255 255;
+  --color-text: 248 250 252;
+  --color-primary: 255 255 255;
+  /* Muted text (slightly stronger than soft gray for readability) */
+  --color-text-muted: 203 213 225;
+  --color-danger: 252 165 165;
+  --color-success: 134 239 172;
+  /* Editor canvas stroke/fill (Vertex, Edge); light in dark mode, dark in light mode (slate-50 / slate-950) */
+  --color-editor-stroke: 248 250 252;
+  /* Grid overlay: background and line color (full rgba for use in inline style / linear-gradient) */
+  --grid-bg: rgba(2, 6, 23, 0.2);
+  --grid-line: rgba(255, 255, 255, 0.08);
+  --body-gradient: linear-gradient(165deg, #0f172a 0%, #1e293b 35%, #1a1f2e 70%, #0f172a 100%);
+
+  /* Slate scale (50–950) */
+  --color-slate-50: 248 250 252;
+  --color-slate-100: 241 245 249;
+  --color-slate-200: 226 232 240;
+  --color-slate-300: 203 213 225;
+  --color-slate-400: 148 163 184;
+  --color-slate-500: 100 116 139;
+  --color-slate-600: 71 85 105;
+  --color-slate-700: 51 65 85;
+  --color-slate-800: 30 41 59;
+  --color-slate-900: 15 23 42;
+  --color-slate-950: 2 6 23;
+
+  /* Primary shades (violet; buttons/accents) */
+  --color-primary-10: 167 139 250;
+  --color-primary-50: 196 181 253;
+  --color-primary-400: 167 139 250;
+  --color-primary-500: 168 85 247;
+  --primary-gradient: linear-gradient(to right, rgb(var(--color-primary-400)), rgb(var(--color-primary-500)));
+
+  /* Danger shades */
+  --color-danger-10: 239 68 68;
+  --color-danger-50: 248 113 113;
+  --color-danger-400: 248 113 113;
+  --color-danger-500: 239 68 68;
+
+  /* Success shades */
+  --color-success-10: 34 197 94;
+  --color-success-50: 74 222 128;
+  --color-success-400: 74 222 128;
+  --color-success-500: 34 197 94;
+}
+
+[data-theme="light"] {
+  --color-bg: 248 250 252;
+  --color-white: 255 255 255;
+  --color-text: 15 23 42;
+  --color-primary: 24 24 27;
+  --color-text-muted: 100 116 139;
+  --color-danger: 239 68 68;
+  --color-success: 34 197 94;
+  --color-editor-stroke: 2 6 23;
+  --grid-bg: rgba(248, 250, 252, 0.25);
+  --grid-line: rgba(0, 0, 0, 0.08);
+  --body-gradient: linear-gradient(165deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%);
+  /* Slate, primary-10/50/400/500, danger-*, success-* unchanged; override above if needed */
+}

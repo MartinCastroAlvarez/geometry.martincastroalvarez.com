@@ -9,6 +9,10 @@
     "history": "Historial",
     "create": "Crear"
   },
+  "theme": {
+    "dark": "Oscuro",
+    "light": "Claro"
+  },
   "editor": {
     "mode": {
       "add": "Vértices",

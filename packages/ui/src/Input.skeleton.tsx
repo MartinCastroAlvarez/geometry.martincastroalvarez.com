@@ -2,7 +2,7 @@
  * Skeleton placeholder for Input. Optional size for future use.
  *
  * Context: For search bars, form fields, etc. when data is loading.
- * No external skeleton library; uses bg-skeleton animate-pulse.
+ * No external skeleton library; uses bg-slate-700 animate-pulse.
  *
  * Example:
  *   {isLoading ? <InputSkeleton /> : <Input value={q} onChange={...} />}
@@ -32,7 +32,7 @@ export const InputSkeleton: React.FC<InputSkeletonProps> = ({
 
     return (
         <div
-            className="rounded-lg bg-skeleton animate-pulse"
+            className="rounded-lg bg-slate-700 animate-pulse"
             style={{ height: `${h}px`, width: wCss }}
             aria-hidden
         />

@@ -3,7 +3,7 @@
  * WithHomePageSkeleton shows skeleton when loading, otherwise renders children.
  */
 import type { ReactNode } from "react";
-import { Skeleton } from "@geometry/ui";
+import { Skeleton, Container } from "@geometry/ui";
 import { EditorSkeleton } from "@geometry/editor";
 
 const ROWS = 4;
@@ -13,14 +13,16 @@ const CELLS = ROWS * COLS;
 const EDITOR_SKELETON_HEIGHT = 220;
 
 export const HomePageSkeleton = () => (
-    <Skeleton padded spaced>
-        <Skeleton name="geometry-home-skeleton-grid">
-            {Array.from({ length: CELLS }, (_, i) => (
-                <Skeleton key={i} size={12 / COLS}>
-                    <EditorSkeleton size={EDITOR_SKELETON_HEIGHT} />
-                </Skeleton>
-            ))}
-        </Skeleton>
+    <Skeleton>
+        <Container padded spaced>
+            <Container name="geometry-home-skeleton-grid">
+                {Array.from({ length: CELLS }, (_, i) => (
+                    <Container key={i} size={12 / COLS}>
+                        <EditorSkeleton size={EDITOR_SKELETON_HEIGHT} />
+                    </Container>
+                ))}
+            </Container>
+        </Container>
     </Skeleton>
 );
 

@@ -2,7 +2,7 @@
  * Skeleton placeholder for Title. Matches Title size variants.
  *
  * Context: Used by Nav.skeleton for "Art Gallery" title and other headings.
- * No external skeleton library; uses bg-skeleton animate-pulse.
+ * No external skeleton library; uses bg-slate-700 animate-pulse.
  *
  * Example:
  *   {isLoading ? <TitleSkeleton lg /> : <Title lg>Art Gallery</Title>}
@@ -49,7 +49,7 @@ export const TitleSkeleton: React.FC<TitleSkeletonProps> = ({
 
     return (
         <div
-            className="rounded bg-skeleton animate-pulse shrink-0"
+            className="rounded bg-slate-700 animate-pulse shrink-0"
             style={{ height: `${lineHeight}px`, width: widthCss }}
             aria-hidden
         />

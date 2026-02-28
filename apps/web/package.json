@@ -16,6 +16,7 @@
     "@geometry/domain": "workspace:*",
     "@geometry/editor": "workspace:*",
     "@geometry/i18n": "workspace:*",
+    "@geometry/theme": "workspace:*",
     "@geometry/ui": "workspace:*",
     "@tanstack/react-query": "^5.17.0",
     "@use-gesture/react": "^10.3.0",

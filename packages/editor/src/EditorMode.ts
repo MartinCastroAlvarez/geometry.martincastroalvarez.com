@@ -9,6 +9,8 @@ export enum EditorMode {
     Add = "add",
     /** Add a vertex and connect it to the last one (polyline/polygon). */
     Connect = "connect",
+    /** Pan the canvas (move view); geometry unchanged. */
+    Move = "move",
     /** Remove vertex or edge on click. */
     Erase = "erase",
 }

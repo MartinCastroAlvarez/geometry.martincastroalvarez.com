@@ -1,7 +1,7 @@
 /**
- * Single edge line between two vertices; same color as Vertex (Tailwind --color-primary), no border.
+ * Single edge line between two vertices; same color as Vertex (theme --color-editor-stroke), no border.
  *
- * Context: Konva Line; stroke from editorColors.color (Tailwind theme). When onClick is provided,
+ * Context: Konva Line; stroke from useTheme().getColor (theme.css). When onClick is provided,
  * click/tap pass (x, y) so the parent can insert a new vertex on the edge.
  *
  * Example:
@@ -10,8 +10,8 @@
 
 import { memo, useState } from "react";
 import { Line } from "react-konva";
+import { useTheme } from "@geometry/theme";
 import type { EditorVertex } from "./types";
-import { editorColors } from "./colors";
 
 export interface EdgeProps {
     start: EditorVertex;
@@ -25,6 +25,7 @@ export interface EdgeProps {
 }
 
 const EdgeComponent = ({ start, end, edgeIndex, selected = false, onClick, scale = 1 }: EdgeProps) => {
+    const { getColor } = useTheme();
     const [isHovered, setIsHovered] = useState(false);
     const baseStrokeWidth = selected ? 4 : isHovered ? 3 : 2;
     const strokeWidth = baseStrokeWidth / scale;
@@ -32,7 +33,7 @@ const EdgeComponent = ({ start, end, edgeIndex, selected = false, onClick, scale
     return (
         <Line
             points={[start.x, start.y, end.x, end.y]}
-            stroke={editorColors.color}
+            stroke={getColor("--color-editor-stroke")}
             strokeWidth={strokeWidth}
             hitStrokeWidth={20}
             lineCap="round"

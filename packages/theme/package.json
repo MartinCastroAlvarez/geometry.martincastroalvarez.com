@@ -1,5 +1,5 @@
 {
-  "name": "@geometry/editor",
+  "name": "@geometry/theme",
   "version": "0.1.0",
   "private": true,
   "main": "./src/index.ts",
@@ -8,20 +8,11 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
-    }
+    },
+    "./theme.css": "./theme.css"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@geometry/domain": "workspace:*",
-    "@geometry/i18n": "workspace:*",
-    "@geometry/ui": "workspace:*",
-    "konva": "^9.3.1",
-    "lucide-react": "^0.562.0",
-    "react-konva": "^18.2.10",
-    "sonner": "^2.0.7",
-    "@geometry/theme": "workspace:*"
   },
   "peerDependencies": {
     "react": "^18.2.0",

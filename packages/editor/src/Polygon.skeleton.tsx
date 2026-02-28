@@ -16,14 +16,12 @@ export const PolygonSkeleton = ({ size, rotation }: PolygonSkeletonProps) => (
         role="presentation"
         aria-hidden
         style={{
-            position: "absolute",
-            left: "50%",
-            top: "50%",
+            position: "relative",
             width: size,
             height: size,
             borderRadius: 6,
-            backgroundColor: "color-mix(in srgb, var(--color-skeleton) 45%, transparent)",
-            transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
+            backgroundColor: "color-mix(in srgb, rgb(51 65 85) 45%, transparent)",
+            transform: `rotate(${rotation}deg)`,
             transformOrigin: "center",
         }}
     />

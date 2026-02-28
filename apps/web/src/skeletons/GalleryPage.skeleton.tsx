@@ -3,14 +3,16 @@
  * WithGalleryPageSkeleton shows skeleton when loading, otherwise renders children.
  */
 import type { ReactNode } from "react";
-import { Skeleton, TitleSkeleton, TextSkeleton } from "@geometry/ui";
+import { Skeleton, Container, TitleSkeleton, TextSkeleton } from "@geometry/ui";
 
 export const GalleryPageSkeleton = () => (
-    <Skeleton padded spaced>
-        <Skeleton center>
-            <TitleSkeleton xl width="14rem" />
-            <TextSkeleton md width="8rem" />
-        </Skeleton>
+    <Skeleton>
+        <Container padded spaced>
+            <Container center>
+                <TitleSkeleton xl width="14rem" />
+                <TextSkeleton md width="8rem" />
+            </Container>
+        </Container>
     </Skeleton>
 );
 

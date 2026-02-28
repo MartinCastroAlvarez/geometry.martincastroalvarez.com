@@ -9,6 +9,10 @@
     "history": "History",
     "create": "Create"
   },
+  "theme": {
+    "dark": "Dark",
+    "light": "Light"
+  },
   "editor": {
     "mode": {
       "add": "Vertices",

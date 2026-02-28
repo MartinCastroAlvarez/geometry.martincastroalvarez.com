@@ -1,6 +1,6 @@
 /**
  * @geometry/ui public API: layout (Body, Container, Nav), primitives (Button, Input, Badge, etc.),
- * and hooks (useDevice, useDebounce). Re-exports all UI components and utilities.
+ * and hooks (useDevice, useDebounce). Theme/useTheme live in @geometry/theme.
  */
 
 export * from './Toast'
@@ -8,7 +8,6 @@ export * from './Button'
 export * from './Problem'
 export * from './Button.skeleton'
 export * from './Toggle'
-export * from './Options'
 export * from './Confirm'
 export * from './Container'
 export * from './Skeleton'

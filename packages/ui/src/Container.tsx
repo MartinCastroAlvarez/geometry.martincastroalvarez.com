@@ -12,7 +12,7 @@
 
 import React, { forwardRef } from "react";
 
-interface ContainerProps {
+export interface ContainerProps {
     name?: string;
     className?: string;
     size?: number;
@@ -75,7 +75,7 @@ export const Container = forwardRef<HTMLDivElement, ContainerProps>(({
     onClick, onDoubleClick, onContextMenu,
     onFocus, onBlur, onKeyDown, onKeyUp, onKeyPress,
     onTouchStart, onTouchEnd, onTouchMove,
-    onDragStart, onDragEnd, onDrag,     onDragEnter, onDragLeave, onDragOver, onDrop,
+    onDragStart, onDragEnd, onDrag, onDragEnter, onDragLeave, onDragOver, onDrop,
 }, ref) => {
     if (size < 0 || size > 12) throw new Error(`Container size must be between 0 and 12, received: ${size}`);
     if (size === 0) return null;
@@ -109,7 +109,7 @@ export const Container = forwardRef<HTMLDivElement, ContainerProps>(({
     if (padded) classes.push("p-4");
     if (spaced) classes.push("gap-2");
     if (rounded) classes.push("rounded-xl");
-    if (solid) classes.push("bg-dark-bg", "text-dark");
+    if (solid) classes.push("bg-slate-900", "text-slate-100");
     if (left) classes.push("text-left");
     else if (right) classes.push("text-right");
     else if (center) classes.push("text-center");

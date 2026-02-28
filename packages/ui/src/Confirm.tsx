@@ -22,7 +22,7 @@ const Confirm: React.FC<{
 }> = ({ isOpen, message, onConfirm, onCancel }) => {
     if (!isOpen) return null;
     return (
-        <div className="geometry-confirm fixed inset-0 z-50 flex items-center justify-center bg-overlay backdrop-blur-sm">
+        <div className="geometry-confirm fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-sm">
             <Container name="geometry-confirm-dialog" padded rounded solid>
                 <Container>
                     <Text>{message}</Text>

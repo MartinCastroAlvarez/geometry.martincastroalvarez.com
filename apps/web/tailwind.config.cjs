@@ -1,46 +1,58 @@
 /**
  * Tailwind config (loaded from index.css via @config in v4).
- * In v4, only theme.extend (e.g. fontFamily, colors) is merged; safelist and content
- * are not supported here — use @source and @source inline() in index.css instead.
+ * Custom CSS color classes (e.g. bg-bg, text-text, text-muted) are not acceptable.
+ * Only reusable, long-term clean code colors are allowed: slate scale, primary/danger/success
+ * semantic accents, white, none. Two themes: :root (dark) and [data-theme="light"].
  * @type {import('tailwindcss').Config}
  */
 module.exports = {
+    darkMode: ["selector", '[data-theme="dark"]'],
     theme: {
         extend: {
             fontFamily: {
                 title: ["Oswald", "sans-serif"],
             },
-            colors: {
-                white: "#ffffff",
-                primary: "rgba(255, 255, 255, 0.9)",
-                muted: "rgba(255, 255, 255, 0.5)",
-                neutral: "rgba(255, 255, 255, 0.5)",
-                danger: "#fca5a5",
-                success: "#86efac",
-                dark: "#f1f5f9",
-                none: "transparent",
-                surface: "rgba(255, 255, 255, 0.1)",
-                "surface-hover": "rgba(255, 255, 255, 0.1)",
-                "surface-active": "rgba(255, 255, 255, 0.1)",
-                "danger-bg": "rgba(239, 68, 68, 0.2)",
-                "success-bg": "rgba(34, 197, 94, 0.2)",
-                "dark-bg": "rgba(15, 23, 42, 0.6)",
-                skeleton: "rgba(255, 255, 255, 0.5)",
-                overlay: "rgba(0, 0, 0, 0.7)",
-                focus: "rgba(251, 191, 36, 0.5)",
-                ring: "#020617",
-                slate: {
-                    300: "rgba(255, 255, 255, 0.25)",
-                },
-            },
-            borderColor: {
-                muted: "rgba(255, 255, 255, 0.5)",
-            },
             backgroundImage: {
-                "primary-gradient":
-                    "linear-gradient(to right, #a78bfa, #a855f7)",
-                "body-gradient":
-                    "linear-gradient(165deg, #0f172a 0%, #1e293b 35%, #1a1f2e 70%, #0f172a 100%)",
+                "gradient-primary": "var(--primary-gradient)",
+            },
+            colors: {
+                none: "transparent",
+                white: "rgb(var(--color-white) / <alpha-value>)",
+                primary: {
+                    DEFAULT: "rgb(var(--color-primary) / <alpha-value>)",
+                    10: "rgb(var(--color-primary-10) / 0.15)",
+                    50: "rgb(var(--color-primary-50) / 0.9)",
+                    400: "rgb(var(--color-primary-400) / <alpha-value>)",
+                    500: "rgb(var(--color-primary-500) / <alpha-value>)",
+                },
+                danger: {
+                    DEFAULT: "rgb(var(--color-danger) / <alpha-value>)",
+                    10: "rgb(var(--color-danger-10) / 0.15)",
+                    50: "rgb(var(--color-danger-50) / 0.4)",
+                    400: "rgb(var(--color-danger-400) / <alpha-value>)",
+                    500: "rgb(var(--color-danger-500) / <alpha-value>)",
+                },
+                success: {
+                    DEFAULT: "rgb(var(--color-success) / <alpha-value>)",
+                    10: "rgb(var(--color-success-10) / 0.15)",
+                    50: "rgb(var(--color-success-50) / 0.4)",
+                    400: "rgb(var(--color-success-400) / <alpha-value>)",
+                    500: "rgb(var(--color-success-500) / <alpha-value>)",
+                },
+                /* Slate scale (from index.css) */
+                slate: {
+                    50: "rgb(var(--color-slate-50) / <alpha-value>)",
+                    100: "rgb(var(--color-slate-100) / <alpha-value>)",
+                    200: "rgb(var(--color-slate-200) / <alpha-value>)",
+                    300: "rgb(var(--color-slate-300) / <alpha-value>)",
+                    400: "rgb(var(--color-slate-400) / <alpha-value>)",
+                    500: "rgb(var(--color-slate-500) / <alpha-value>)",
+                    600: "rgb(var(--color-slate-600) / <alpha-value>)",
+                    700: "rgb(var(--color-slate-700) / <alpha-value>)",
+                    800: "rgb(var(--color-slate-800) / <alpha-value>)",
+                    900: "rgb(var(--color-slate-900) / <alpha-value>)",
+                    950: "rgb(var(--color-slate-950) / <alpha-value>)",
+                },
             },
         },
     },
@@ -48,6 +60,7 @@ module.exports = {
         "./index.html",
         "./src/**/*.{js,ts,jsx,tsx}",
         "../../packages/ui/src/**/*.{js,ts,jsx,tsx}",
+        "../../packages/editor/src/**/*.{js,ts,jsx,tsx}",
     ],
     safelist: [
         "opacity-60",
@@ -84,6 +97,8 @@ module.exports = {
         "border-slate-400",
         "border-slate-300",
         "border-slate-200",
+        "border-slate-600",
+        "border-slate-700",
         "text-xs",
         "text-sm",
         "text-base",

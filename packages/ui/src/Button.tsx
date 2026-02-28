@@ -15,6 +15,7 @@ import React, { useCallback, useState } from "react";
 import Confirm from "./Confirm";
 import { Container } from "./Container";
 import { useLocale } from "@geometry/i18n";
+import { Theme, useTheme } from "@geometry/theme";
 
 interface ToolbarProps {
     children: React.ReactNode;
@@ -65,13 +66,19 @@ export const Button: React.FC<ButtonProps> = ({
     "aria-label": ariaLabel,
 }) => {
     const { t } = useLocale();
+    const { theme } = useTheme();
     const [showConfirm, setShowConfirm] = useState(false);
 
     if (!children && !icon) return null;
 
+    const isLight = theme === Theme.Light;
+    const hoverBg = isLight ? "hover:bg-slate-200" : "hover:bg-slate-700";
+    const activeBg = isLight ? "active:bg-slate-300" : "active:bg-slate-600";
+
+    const activeBorder = isLight ? "active:border-slate-300" : "active:border-slate-600";
     const baseClasses = primary
-        ? "appearance-none inline-flex flex-row items-center justify-center gap-2 font-medium rounded-lg transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-ring disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer border border-transparent bg-primary-gradient text-white"
-        : "appearance-none inline-flex flex-row items-center justify-center gap-2 font-medium rounded-lg transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-ring disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer border border-slate-300 bg-transparent hover:bg-surface-hover hover:border-primary active:bg-surface-active text-primary";
+        ? `appearance-none inline-flex flex-row items-center justify-center gap-2 font-medium rounded-lg transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-100 dark:focus-visible:ring-offset-slate-950 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer border border-transparent bg-gradient-primary text-white ${hoverBg} hover:border-transparent ${activeBg} active:scale-[0.98]`
+        : `appearance-none inline-flex flex-row items-center justify-center gap-2 font-medium rounded-lg transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-600 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-100 dark:focus-visible:ring-offset-slate-950 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer border border-slate-400 dark:border-slate-600 bg-transparent text-slate-700 dark:text-slate-100 ${hoverBg} hover:text-slate-900 dark:hover:text-slate-100 hover:border-primary ${activeBg} ${activeBorder} active:text-slate-900 dark:active:text-slate-100 active:scale-[0.98]`;
 
     const getSizeClasses = (): string => {
         if (xs) return "py-0.5 px-1.5 text-[11px]";
@@ -88,7 +95,7 @@ export const Button: React.FC<ButtonProps> = ({
         if (!React.isValidElement(iconElement)) return iconElement;
         const element = iconElement as React.ReactElement<{ className?: string }>;
         const existingClassName = element.props.className || "";
-        const iconColorClass = primary ? "text-white" : "text-muted";
+        const iconColorClass = primary ? "text-inherit" : "text-slate-700 dark:text-slate-400";
         return React.cloneElement(element, { className: `${existingClassName} ${iconColorClass}`.trim() });
     };
 

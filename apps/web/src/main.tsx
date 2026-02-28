@@ -14,6 +14,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { ReactQueryProvider, AuthenticationProvider } from '@geometry/data'
 import { LocaleProvider } from '@geometry/i18n'
 import { AnalyticsProvider } from '@geometry/analytics'
+import { ThemeProvider } from '@geometry/theme'
 import App from './App.tsx'
 import './index.css'
 
@@ -26,9 +27,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <BrowserRouter future={{ v7_startTransition: true }}>
                 <LocaleProvider>
                     <AnalyticsProvider googleTagId={googleTagId}>
-                        <AuthenticationProvider jwtToken={jwtToken}>
-                            <App />
-                        </AuthenticationProvider>
+                        <ThemeProvider>
+                            <AuthenticationProvider jwtToken={jwtToken}>
+                                <App />
+                            </AuthenticationProvider>
+                        </ThemeProvider>
                     </AnalyticsProvider>
                 </LocaleProvider>
             </BrowserRouter>

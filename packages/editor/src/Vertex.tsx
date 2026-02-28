@@ -1,7 +1,7 @@
 /**
- * Draggable vertex circle; same color as Edge (Tailwind --color-primary), no border.
+ * Draggable vertex circle; same color as Edge (theme --color-editor-stroke), no border.
  *
- * Context: Konva Circle; fill from editorColors.color (Tailwind theme). No stroke.
+ * Context: Konva Circle; fill from useTheme().getColor (theme.css). No stroke.
  * dragBoundFunc clamps position to dragBounds [0,0]–[width,height] when provided.
  *
  * Example:
@@ -10,8 +10,8 @@
 
 import { memo, useState } from "react";
 import { Circle } from "react-konva";
+import { useTheme } from "@geometry/theme";
 import type { EditorVertex } from "./types";
-import { editorColors } from "./colors";
 
 export interface VertexProps {
     vertex: EditorVertex;
@@ -43,6 +43,7 @@ const VertexComponent = ({
     contentBounds,
     scale = 1,
 }: VertexProps) => {
+    const { getColor } = useTheme();
     const [isHovered, setIsHovered] = useState(false);
     const baseRadius = isActive ? 8 : isFirst ? 7 : isHovered ? 6 : 5;
     const radius = baseRadius / scale;
@@ -71,7 +72,7 @@ const VertexComponent = ({
             x={vertex.x}
             y={vertex.y}
             radius={radius}
-            fill={editorColors.color}
+            fill={getColor("--color-editor-stroke")}
             strokeWidth={0}
             draggable={draggable && !!onDragMove}
             cursor="pointer"

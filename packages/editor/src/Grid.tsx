@@ -1,21 +1,14 @@
 /**
  * Shared grid background for Editor and EditorSkeleton.
- * Uses theme --color-ring (apps/web tailwind) for background; 24px grid lines.
+ * Background uses Tailwind slate classes (light: slate-200, dark: slate-900). Grid lines use
+ * --grid-line from theme.css. 24px cell size.
  */
 
 import type { CSSProperties } from "react";
 
-const GRID_STYLE: CSSProperties = {
-    position: "absolute",
-    opacity: 0.35,
-    pointerEvents: "none",
-    backgroundColor: "color-mix(in srgb, var(--color-ring) 85%, transparent)",
-    backgroundImage: `
-        linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px)
-    `,
-    backgroundSize: "24px 24px",
-};
+/** Grid lines as linear gradients using theme variable for line color. */
+const GRID_LINES =
+    "linear-gradient(to right, var(--grid-line) 1px, transparent 1px), linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px)";
 
 export interface GridProps {
     /** When set with height, gives the grid explicit size (e.g. Editor scroll content). */
@@ -26,14 +19,20 @@ export interface GridProps {
     style?: CSSProperties;
 }
 
-export const Grid = ({ width, height, style }: GridProps) => (
-    <div
-        style={{
-            ...GRID_STYLE,
-            ...(width != null && height != null
-                ? { width, height, left: 0, top: 0 }
-                : { inset: 0 }),
-            ...style,
-        }}
-    />
-);
+export const Grid = ({ width, height, style }: GridProps) => {
+    return (
+        <div
+            className="bg-slate-200 dark:bg-slate-900"
+            style={{
+                position: "absolute",
+                pointerEvents: "none",
+                backgroundImage: GRID_LINES,
+                backgroundSize: "24px 24px",
+                ...(width != null && height != null
+                    ? { width, height, left: 0, top: 0 }
+                    : { inset: 0 }),
+                ...style,
+            }}
+        />
+    );
+};

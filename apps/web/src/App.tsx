@@ -8,7 +8,8 @@
  */
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Clock, Globe, Plus } from "lucide-react";
+import { Clock, Globe, Palette, Plus } from "lucide-react";
+import { Theme, useTheme } from "@geometry/theme";
 import { Toaster, Nav, Container, Body, Toolbar, Button, Toggle, Card } from "@geometry/ui";
 import { NavSkeleton } from "./skeletons";
 import { useSession, useLogout, useJobs } from "@geometry/data";
@@ -17,6 +18,7 @@ import { useAnalytics, GoogleAnalyticsActions, GoogleAnalyticsCategories } from 
 import { AppRoutes } from "./Routes";
 import "./index.css";
 
+
 const App = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -24,6 +26,7 @@ const App = () => {
     const { jobs } = useJobs();
     const logout = useLogout();
     const { t, language, setLanguage } = useLocale();
+    const { theme, setTheme } = useTheme();
     const { track } = useAnalytics();
 
     useEffect(() => {
@@ -68,6 +71,7 @@ const App = () => {
                         </Button>
                     )}
                     <Toggle value={language} options={Object.values(Language)} onChange={(v) => setLanguage(v as Language)} icon={<Globe size={14} />} sm />
+                    <Toggle value={theme} options={Object.values(Theme)} onChange={(v) => setTheme(v as Theme)} icon={<Palette size={14} />} formatLabel={(v) => t(`theme.${v}`)} sm />
                     {user && <Card user={user} sm right rounded />}
                     {user ? (
                         <Button onClick={handleLogout} sm aria-label={t("nav.logout")}>

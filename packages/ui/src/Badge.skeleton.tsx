@@ -2,7 +2,7 @@
  * Skeleton placeholder for Badge. Pill-shaped, small.
  *
  * Context: For status badges (Draft, Done, etc.) when loading.
- * No external skeleton library; uses bg-skeleton animate-pulse.
+ * No external skeleton library; uses bg-slate-700 animate-pulse.
  *
  * Example:
  *   {isLoading ? <BadgeSkeleton /> : <Badge>Draft</Badge>}
@@ -20,7 +20,7 @@ export const BadgeSkeleton: React.FC<BadgeSkeletonProps> = ({ width = "3rem" }) 
 
     return (
         <div
-            className="rounded-full bg-skeleton animate-pulse"
+            className="rounded-full bg-slate-700 animate-pulse"
             style={{ width: wCss, height: "1.25rem" }}
             aria-hidden
         />

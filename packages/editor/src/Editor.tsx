@@ -2,6 +2,7 @@
  * Geometry editor canvas: vertices and edges. Mode-driven interaction:
  * - Add: click empty → add vertex; click vertex → select / create edge.
  * - Connect: same but new vertex is auto-selected so next click connects.
+ * - Move: drag on canvas to pan the view; geometry unchanged.
  * - Erase: click vertex or edge → remove it.
  * Zoom and clean are internal; only onChange (geometry), onValidate, onSubmit are exposed.
  */
@@ -43,7 +44,12 @@ export const Editor = ({
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
     const [selectedEdgeIndex, setSelectedEdgeIndex] = useState<number | null>(null);
     const [mode, setMode] = useState<EditorMode>(EditorMode.Connect);
+    const [pan, setPan] = useState({ x: 0, y: 0 });
+    const [isPanning, setIsPanning] = useState(false);
+    const panStartRef = useRef<{ clientX: number; clientY: number; panX: number; panY: number } | null>(null);
+    const scaleRef = useRef(1);
     const containerRef = useRef<HTMLDivElement>(null);
+    const stageWrapperRef = useRef<HTMLDivElement>(null);
     const { t } = useLocale();
 
     const [containerSize, setContainerSize] = useState({ width, height });
@@ -60,6 +66,18 @@ export const Editor = ({
         return () => ro.disconnect();
     }, []);
 
+    const stageCursor =
+        mode === EditorMode.Move ? (isPanning ? "grabbing" : "grab") : mode === EditorMode.Erase ? "cell" : "crosshair";
+    useEffect(() => {
+        const id = requestAnimationFrame(() => {
+            const canvas = stageWrapperRef.current?.querySelector("canvas");
+            if (canvas) {
+                (canvas as HTMLCanvasElement).style.cursor = stageCursor;
+            }
+        });
+        return () => cancelAnimationFrame(id);
+    }, [stageCursor]);
+
     const effectiveWidth = containerSize.width;
     const effectiveHeight = containerSize.height;
 
@@ -67,6 +85,7 @@ export const Editor = ({
     const ZOOM_MAX = 4;
     const ZOOM_STEP = 1.2;
     const [scale, setScale] = useState(1);
+    scaleRef.current = scale;
     const handleZoomIn = useCallback(() => {
         setScale((s) => Math.min(ZOOM_MAX, s * ZOOM_STEP));
     }, []);
@@ -79,6 +98,7 @@ export const Editor = ({
         setEdges([]);
         setActiveIndex(null);
         setSelectedEdgeIndex(null);
+        setPan({ x: 0, y: 0 });
         onChange?.(emptyPolygon, []);
     }, [onChange]);
 
@@ -142,16 +162,58 @@ export const Editor = ({
         [vertices.length]
     );
 
+    const handleStageMouseDown = useCallback(
+        (e: { target: { getStage: () => unknown }; evt?: MouseEvent }) => {
+            if (mode !== EditorMode.Move) return;
+            const stage = e.target.getStage();
+            if (!stage || e.target !== stage) return;
+            const evt = e.evt;
+            if (!evt) return;
+            evt.preventDefault();
+            panStartRef.current = {
+                clientX: evt.clientX,
+                clientY: evt.clientY,
+                panX: pan.x,
+                panY: pan.y,
+            };
+            setIsPanning(true);
+        },
+        [mode, pan.x, pan.y]
+    );
+
+    useEffect(() => {
+        if (!isPanning) return;
+        const onMove = (e: MouseEvent) => {
+            const start = panStartRef.current;
+            if (!start) return;
+            const s = scaleRef.current;
+            setPan({
+                x: start.panX + (e.clientX - start.clientX) / s,
+                y: start.panY + (e.clientY - start.clientY) / s,
+            });
+        };
+        const onUp = () => {
+            panStartRef.current = null;
+            setIsPanning(false);
+        };
+        window.addEventListener("mousemove", onMove);
+        window.addEventListener("mouseup", onUp);
+        return () => {
+            window.removeEventListener("mousemove", onMove);
+            window.removeEventListener("mouseup", onUp);
+        };
+    }, [isPanning]);
+
     const handleStageClick = useCallback(
         (e: { target: { getStage: () => unknown } }) => {
-            if (mode === EditorMode.Erase) return;
+            if (mode === EditorMode.Erase || mode === EditorMode.Move) return;
             const stage = e.target.getStage();
             if (!stage || e.target !== stage) return;
             const pos = (stage as { getPointerPosition: () => { x: number; y: number } | null }).getPointerPosition?.();
             if (!pos) return;
-            addVertexAt(pos, mode === EditorMode.Connect);
+            addVertexAt({ x: pos.x - pan.x, y: pos.y - pan.y }, mode === EditorMode.Connect);
         },
-        [addVertexAt, mode]
+        [addVertexAt, mode, pan.x, pan.y]
     );
 
     const removeVertexAt = useCallback((index: number) => {
@@ -182,6 +244,7 @@ export const Editor = ({
                 removeVertexAt(index);
                 return;
             }
+            if (mode === EditorMode.Move) return;
             setSelectedEdgeIndex(null);
             if (activeIndex === index) {
                 setActiveIndex(null);
@@ -206,12 +269,15 @@ export const Editor = ({
                 removeEdgeAt(edgeIndex);
                 return;
             }
+            if (mode === EditorMode.Move) return;
             if (selectedEdgeIndex === edgeIndex) {
                 const [a, b] = edges[edgeIndex];
+                const wx = x - pan.x;
+                const wy = y - pan.y;
                 const newVertex: EditorVertex = {
-                    id: `v-${Date.now()}-${x}-${y}`,
-                    x,
-                    y,
+                    id: `v-${Date.now()}-${wx}-${wy}`,
+                    x: wx,
+                    y: wy,
                 };
                 const newIndex = vertices.length;
                 setVertices((v) => [...v, newVertex]);
@@ -228,7 +294,7 @@ export const Editor = ({
             }
             containerRef.current?.focus();
         },
-        [mode, selectedEdgeIndex, edges, vertices.length, removeEdgeAt]
+        [mode, selectedEdgeIndex, edges, vertices.length, removeEdgeAt, pan.x, pan.y]
     );
 
     const handleVertexDrag = useCallback((index: number, x: number, y: number) => {
@@ -366,6 +432,7 @@ export const Editor = ({
                             </Tooltip>
                         )}
                         <div
+                            ref={stageWrapperRef}
                             style={{
                                 position: "absolute",
                                 left: 0,
@@ -375,19 +442,20 @@ export const Editor = ({
                                 transform: `scale(${scale})`,
                                 transformOrigin: "0 0",
                                 zIndex: 2,
+                                cursor: stageCursor,
                             }}
                         >
                             <Stage
                                 width={stageWidth}
                                 height={stageHeight}
                                 onClick={handleStageClick}
+                                onMouseDown={handleStageMouseDown}
                                 style={{
                                     position: "relative",
-                                    cursor: "crosshair",
                                     borderRadius: 10,
                                 }}
                             >
-                                <Layer>
+                                <Layer x={pan.x} y={pan.y}>
                                     {allEdges.map(({ start, end }, i) => (
                                         <Edge
                                             key={`edge-${i}`}
