@@ -10,6 +10,7 @@
     "create": "Crear"
   },
   "editor": {
+    "clickToDrawPolygon": "Hacé click para dibujar tu polígono",
     "validate": "Validar",
     "submit": "Enviar",
     "untitledGallery": "Galería Sin Título",

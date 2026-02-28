@@ -162,7 +162,7 @@ export const EditorPage = () => {
     return (
         <WithEditorPageSkeleton loading={sessionLoading}>
             <Container padded spaced>
-                <Container padded spaced middle center>
+                <Container middle center>
                     <Input
                         type="text"
                         value={galleryTitle}
@@ -170,10 +170,11 @@ export const EditorPage = () => {
                         placeholder={t("editor.untitledGallery")}
                         aria-label={t("editor.untitledGallery")}
                         className="max-w-md w-full"
+                        lg
                     />
                 </Container>
                 <Container>
-                    <Container padded ref={editorRef} name="geometry-editor-wrapper w-full h-[70vh] min-h-[400px] relative" {...(!isMobile && { size: EDITOR_COL_DESKTOP })}>
+                    <Container ref={editorRef} name="geometry-editor-wrapper w-full h-[70vh] min-h-[400px] relative" {...(!isMobile && { size: EDITOR_COL_DESKTOP })}>
                         <Editor
                             width={editorSize.width}
                             height={editorSize.height}

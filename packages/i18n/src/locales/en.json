@@ -10,6 +10,7 @@
     "create": "Create"
   },
   "editor": {
+    "clickToDrawPolygon": "Click to draw your polygon",
     "validate": "Validate",
     "submit": "Submit",
     "untitledGallery": "Untitled Gallery",

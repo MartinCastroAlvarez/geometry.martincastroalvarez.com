@@ -44,6 +44,8 @@ interface ButtonProps {
     xs?: boolean;
     sm?: boolean;
     lg?: boolean;
+    /** When true, uses a gradient purple carbon background. */
+    primary?: boolean;
     disabled?: boolean;
     icon?: React.ReactNode;
     confirm?: boolean | string;
@@ -56,6 +58,7 @@ export const Button: React.FC<ButtonProps> = ({
     xs = false,
     sm = false,
     lg = false,
+    primary = false,
     disabled = false,
     icon,
     confirm,
@@ -66,11 +69,12 @@ export const Button: React.FC<ButtonProps> = ({
 
     if (!children && !icon) return null;
 
-    const baseClasses =
-        "inline-flex flex-row items-center justify-center gap-2 font-medium rounded-lg transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer border-2 border-slate-300 bg-white/5 hover:bg-white/15 hover:border-slate-200 active:bg-white/20";
+    const baseClasses = primary
+        ? "inline-flex flex-row items-center justify-center gap-2 font-medium rounded-lg transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-white"
+        : "inline-flex flex-row items-center justify-center gap-2 font-medium rounded-lg transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer border-2 border-slate-300 bg-white/5 hover:bg-white/15 hover:border-slate-200 active:bg-white/20";
 
     const getSizeClasses = (): string => {
-        if (xs) return "py-1 px-6 text-xs";
+        if (xs) return "py-0.5 px-1.5 text-[11px]";
         if (sm) return "py-1 px-6 text-xs";
         if (lg) return "py-1 px-6 text-sm";
         return "py-1 px-6 text-xs";
@@ -78,12 +82,14 @@ export const Button: React.FC<ButtonProps> = ({
 
     const sizeClasses = getSizeClasses();
     const combinedClasses = `${baseClasses} ${sizeClasses}`.trim();
+    const innerGapClass = xs ? "gap-1" : "gap-2";
 
     const cloneIconWithColor = (iconElement: React.ReactNode) => {
         if (!React.isValidElement(iconElement)) return iconElement;
         const element = iconElement as React.ReactElement<{ className?: string }>;
         const existingClassName = element.props.className || "";
-        return React.cloneElement(element, { className: `${existingClassName} text-white/70`.trim() });
+        const iconColorClass = primary ? "text-white" : "text-white/70";
+        return React.cloneElement(element, { className: `${existingClassName} ${iconColorClass}`.trim() });
     };
 
     const handleClick = useCallback(() => {
@@ -105,8 +111,22 @@ export const Button: React.FC<ButtonProps> = ({
 
     return (
         <>
-            <button type="button" onClick={handleClick} disabled={disabled} className={`geometry-button ${combinedClasses}`.trim()} style={{ border: "2px solid rgba(148, 163, 184, 0.3)" }} aria-label={ariaLabel}>
-                <span className="flex flex-row flex-nowrap items-center gap-2">
+            <button
+                type="button"
+                onClick={handleClick}
+                disabled={disabled}
+                className={`geometry-button ${combinedClasses}`.trim()}
+                style={
+                    primary
+                        ? {
+                              background: "linear-gradient(to right, #7c3aed, #6b21a8)",
+                              border: "none",
+                          }
+                        : { border: "2px solid rgba(148, 163, 184, 0.3)" }
+                }
+                aria-label={ariaLabel}
+            >
+                <span className={`flex flex-row flex-nowrap items-center ${innerGapClass}`}>
                     {icon && <span className="flex shrink-0 [&_svg]:inline-block [&_svg]:align-middle">{cloneIconWithColor(icon)}</span>}
                     {children && <span>{children}</span>}
                 </span>

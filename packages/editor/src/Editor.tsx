@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Stage, Layer } from "react-konva";
 import { Polygon } from "@geometry/domain";
+import { useLocale } from "@geometry/i18n";
 import { Container } from "@geometry/ui";
 import type { EditorVertex } from "./types";
 import { editorVerticesToPolygon } from "./adapters";
@@ -51,6 +52,7 @@ export const Editor = ({
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
     const [selectedEdgeIndex, setSelectedEdgeIndex] = useState<number | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const { t } = useLocale();
 
     const [containerSize, setContainerSize] = useState({ width, height });
     useEffect(() => {
@@ -268,9 +270,21 @@ export const Editor = ({
                 minHeight: 0,
             }}
         >
-            <div style={{ flex: "1 1 0", minHeight: 0, overflow: "hidden" }}>
-                <Container ref={containerRef} name="geometry-editor-canvas">
-                    {/* Canvas: grid fixed; only Stage (vertices/edges) scales with zoom */}
+            <div
+                style={{
+                    flex: "1 1 0",
+                    minHeight: 0,
+                    overflow: "hidden",
+                    display: "flex",
+                    flexDirection: "column",
+                }}
+            >
+                <div
+                    ref={containerRef}
+                    style={{ flex: 1, minHeight: 0, overflow: "hidden" }}
+                >
+                    <Container name="geometry-editor-canvas">
+                        {/* Canvas: grid fixed; only Stage (vertices/edges) scales with zoom */}
                 <div
                     className="opacity-60 overflow-hidden rounded-[10px]"
                     style={{
@@ -281,6 +295,33 @@ export const Editor = ({
                     }}
                 >
                         <Grid width={effectiveWidth} height={effectiveHeight} style={{ left: 0, top: 0, zIndex: 0 }} />
+                        {vertices.length === 0 && (
+                            <div
+                                aria-hidden
+                                style={{
+                                    position: "absolute",
+                                    top: 0,
+                                    left: 0,
+                                    width: effectiveWidth,
+                                    height: effectiveHeight,
+                                    pointerEvents: "none",
+                                    zIndex: 1,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                }}
+                            >
+                                <span
+                                    style={{
+                                        color: "#6b7280",
+                                        fontSize: "0.9375rem",
+                                        userSelect: "none",
+                                    }}
+                                >
+                                    {t("editor.clickToDrawPolygon")}
+                                </span>
+                            </div>
+                        )}
                         <div
                             style={{
                                 position: "absolute",
@@ -290,7 +331,7 @@ export const Editor = ({
                                 height: stageHeight,
                                 transform: `scale(${scale})`,
                                 transformOrigin: "0 0",
-                                zIndex: 1,
+                                zIndex: 2,
                             }}
                         >
                             <Stage
@@ -331,10 +372,11 @@ export const Editor = ({
                             </Stage>
                         </div>
                     </div>
-                </Container>
+                    </Container>
+                </div>
             </div>
             {vertices.length > 0 && (
-                <div style={{ flexShrink: 0 }}>
+                <div style={{ flexShrink: 0, padding: "0.75rem 1rem" }}>
                     <Container middle spaced right name="geometry-editor-toolbar">
                         <EditorToolbar
                             onZoomOut={handleZoomOut}

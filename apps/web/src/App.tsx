@@ -60,7 +60,7 @@ const App = () => {
             ) : (
             <Nav onClick={goHome}>
                 <Toolbar right>
-                    <Button onClick={goEditor} icon={<Plus size={14} />} sm>
+                    <Button onClick={goEditor} icon={<Plus size={14} />} sm primary>
                         {t("nav.create")}
                     </Button>
                     {user && (jobs?.data?.length ?? 0) > 0 && (

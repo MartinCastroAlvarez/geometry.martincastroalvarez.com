@@ -36,7 +36,7 @@ export interface BulletProps {
     onClick?: React.MouseEventHandler<HTMLDivElement>;
 }
 
-const defaultIcon = <Info className="size-4 text-slate-500 shrink-0" aria-hidden />;
+const defaultIcon = <Info className="size-4 text-muted shrink-0" aria-hidden />;
 
 export const Bullet: React.FC<BulletProps> = ({
     children,

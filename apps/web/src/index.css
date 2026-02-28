@@ -12,6 +12,8 @@
 
 @theme {
   --font-title: "Oswald", sans-serif;
+  /* Muted text (secondary content) – use with text-muted */
+  --color-muted: #475569;
   /* Body layout: minimal dark gradient (use with bg-body-gradient) */
   --background-image-body-gradient: linear-gradient(
     165deg,
@@ -37,7 +39,7 @@
 @source "../../packages/ui/src";
 
 /* Safelist: dynamic classes from packages that Tailwind may not detect */
-@source inline("p-4 gap-2 gap-3 gap-4 gap-6 rounded-xl rounded-2xl rounded-lg rounded-md rounded-full overflow-hidden overflow-visible overflow-y-auto overflow-x-hidden grid grid-cols-12 w-full flex flex-col flex-row flex-wrap flex-1 items-center justify-start justify-center justify-end col-span-1 col-span-2 col-span-3 col-span-4 col-span-5 col-span-6 col-span-7 col-span-8 col-span-9 col-span-10 col-span-11 col-span-12 cursor-pointer py-1 py-0.5 py-1.5 px-2.5 px-3 px-6 px-8 px-10 text-[11px] text-xs text-sm mr-2 shrink-0 flex-nowrap font-title max-w-md placeholder:text-white/40 bg-red-500/20 text-red-300 border-red-500/40 bg-green-500/20 text-green-300 border-green-500/40 bg-white/10 text-white/80 border-white/20 bg-slate-500/50 bg-body-gradient min-h-0 min-h-[100dvh] overscroll-contain animate-pulse [&_svg]:inline-block [&_svg]:align-middle hover:bg-white/15 hover:border-neutral-400 hover:border-white/20 active:bg-white/20 border-neutral-500");
+@source inline("text-muted p-4 gap-2 gap-3 gap-4 gap-6 rounded-xl rounded-2xl rounded-lg rounded-md rounded-full overflow-hidden overflow-visible overflow-y-auto overflow-x-hidden grid grid-cols-12 w-full flex flex-col flex-row flex-wrap flex-1 items-center justify-start justify-center justify-end col-span-1 col-span-2 col-span-3 col-span-4 col-span-5 col-span-6 col-span-7 col-span-8 col-span-9 col-span-10 col-span-11 col-span-12 cursor-pointer py-1 py-0.5 py-1.5 px-2.5 px-3 px-6 px-8 px-10 text-[11px] text-xs text-sm mr-2 shrink-0 flex-nowrap font-title max-w-md placeholder:text-white/40 bg-red-500/20 text-red-300 border-red-500/40 bg-green-500/20 text-green-300 border-green-500/40 bg-white/10 text-white/80 border-white/20 bg-slate-500/50 bg-body-gradient min-h-0 min-h-[100dvh] overscroll-contain animate-pulse [&_svg]:inline-block [&_svg]:align-middle hover:bg-white/15 hover:border-neutral-400 hover:border-white/20 active:bg-white/20 border-neutral-500");
 
 :root {
   /* Editor colors (read by Konva canvas) – sourced from Tailwind theme */

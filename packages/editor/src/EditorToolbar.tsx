@@ -28,16 +28,16 @@ export const EditorToolbar = ({
     return (
         <Container name="geometry-editor-toolbar">
             <Toolbar right>
-                <Button onClick={onZoomOut} icon={<Minus className="size-4 shrink-0 text-slate-200" aria-hidden />} aria-label="Zoom out" />
-                <Button onClick={onClean} icon={<Trash2 className="size-4 shrink-0 text-slate-200" aria-hidden />} aria-label="Clear" />
-                <Button onClick={onZoomIn} icon={<Plus className="size-4 shrink-0 text-slate-200" aria-hidden />} aria-label="Zoom in" />
+                <Button sm onClick={onZoomOut} icon={<Minus size={14} className="shrink-0 text-slate-200" aria-hidden />} aria-label="Zoom out" />
+                <Button sm onClick={onClean} icon={<Trash2 size={14} className="shrink-0 text-slate-200" aria-hidden />} aria-label="Clear" />
+                <Button sm onClick={onZoomIn} icon={<Plus size={14} className="shrink-0 text-slate-200" aria-hidden />} aria-label="Zoom in" />
                 {onValidate != null && (
-                    <Button onClick={onValidate} disabled={disabled} icon={<CheckCircle className="size-4 shrink-0 text-slate-200" aria-hidden />} sm>
+                    <Button sm onClick={onValidate} disabled={disabled} icon={<CheckCircle size={14} className="shrink-0 text-slate-200" aria-hidden />}>
                         {t("editor.validate")}
                     </Button>
                 )}
                 {onSubmit != null && (
-                    <Button onClick={onSubmit} disabled={disabled} icon={<Send className="size-4 shrink-0 text-slate-200" aria-hidden />} sm>
+                    <Button sm primary onClick={onSubmit} disabled={disabled} icon={<Send size={14} className="shrink-0 text-slate-200" aria-hidden />}>
                         {t("editor.submit")}
                     </Button>
                 )}
