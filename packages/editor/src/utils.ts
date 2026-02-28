@@ -36,7 +36,9 @@ export const findCycles = (
             if (i > 0 && v === start) break;
             cycle.push(v);
             const nexts = adj[v].filter((u) => u !== prev);
-            if (nexts.length !== 1) {
+            // At start (prev === -1) we have two neighbors; pick one. Otherwise exactly one next.
+            const expected = prev === -1 ? 2 : 1;
+            if (nexts.length !== expected) {
                 valid = false;
                 break;
             }
@@ -76,17 +78,17 @@ export const isInside = (a: EditorVertex[], b: EditorVertex[]): boolean => {
 };
 
 /** Compare two polygons by point equality (order and coordinates). */
-export function polyEquals(a: Polygon | undefined, b: Polygon | undefined): boolean {
+export const polyEquals = (a: Polygon | undefined, b: Polygon | undefined): boolean => {
     if (a === b) return true;
     if (!a || !b || a.points.length !== b.points.length) return false;
     return a.points.every((p, i) => p.x === b.points[i].x && p.y === b.points[i].y);
-}
+};
 
 /** Compare two arrays of polygons. */
-export function polyArrayEquals(a: Polygon[], b: Polygon[]): boolean {
+export const polyArrayEquals = (a: Polygon[], b: Polygon[]): boolean => {
     if (a.length !== b.length) return false;
     return a.every((p, i) => polyEquals(p, b[i]));
-}
+};
 
 /** Empty polygon singleton for defaults. */
 export const emptyPolygon = new Polygon([]);

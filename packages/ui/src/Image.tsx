@@ -29,7 +29,7 @@ export const Image: React.FC<ImageProps> = ({ src, size = 0, rounded = false }) 
     return (
         <div
             style={style}
-            className={`geometry-image ${rounded ? "rounded-full overflow-hidden" : ""}`.trim()}
+            className={`geometry-image grayscale ${rounded ? "rounded-full overflow-hidden" : ""}`.trim()}
         />
     );
 };

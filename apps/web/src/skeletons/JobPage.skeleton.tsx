@@ -28,6 +28,5 @@ export const JobPageSkeleton = () => (
     </Skeleton>
 );
 
-export function WithJobPageSkeleton({ loading, children }: { loading: boolean; children: ReactNode }) {
-    return loading ? <JobPageSkeleton /> : <>{children}</>;
-}
+export const WithJobPageSkeleton = ({ loading, children }: { loading: boolean; children: ReactNode }) =>
+    loading ? <JobPageSkeleton /> : <>{children}</>;

@@ -28,22 +28,22 @@ export type {
 } from "./types";
 export type { Summary } from "@geometry/domain";
 
-function request(
+const request = (
     url: string,
     jwtToken: string | null | undefined,
     options: RequestInit = {},
-): Promise<Response> {
+): Promise<Response> => {
     const headers = new Headers(options.headers);
     headers.set("Content-Type", "application/json");
     if (jwtToken) headers.set("X-Auth", jwtToken);
     return fetch(url, { ...options, headers });
-}
+};
 
-async function requestOrThrow(
+const requestOrThrow = async (
     url: string,
     jwtToken: string | null | undefined,
     options: RequestInit = {},
-): Promise<Response> {
+): Promise<Response> => {
     const response = await request(url, jwtToken, options);
     if (!response.ok) {
         if (response.status === 503) {
@@ -59,11 +59,11 @@ async function requestOrThrow(
         throw new Error(message);
     }
     return response;
-}
+};
 
-function requireToken(method: string): void {
+const requireToken = (method: string): void => {
     throw new Error(`JWT required for ${method}`);
-}
+};
 
 export class GeometryApiClient {
     private baseUrl: string;

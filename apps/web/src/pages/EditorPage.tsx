@@ -14,18 +14,14 @@
  *
  * Unrecoverable errors (network, 4xx/5xx, or validation failure messages) are shown in a Problem
  * block above the toolbar. While validation or create is pending, a skeleton replaces the summary
- * table. The summary panel otherwise shows either EditorSummaryTable (validation results) or, when
- * there is no summary, the same component falls back to EditorInfoTable (requirement bullets).
- * EditorRecommendation at the bottom displays a random tip. Session is required (skeleton while
- * useSession loads). Analytics: EDITOR_OPEN on mount.
+ * table. EditorReview shows a skeleton when loading, else validation results or the requirement list.
+ * A random tip is shown at the bottom. Session is required (skeleton while useSession loads). Analytics: EDITOR_OPEN on mount.
  */
 import { useCallback, useEffect, useRef, useState, startTransition } from "react";
 import { ArtGallery, Polygon } from "@geometry/domain";
-import { Editor } from "@geometry/editor";
+import { Editor, EditorReview } from "@geometry/editor";
 import { Container, Problem, Input, useDevice } from "@geometry/ui";
-import { WithEditorPageSkeleton, SummaryTableSkeleton } from "../skeletons";
-import { EditorSummaryTable } from "../components/EditorSummaryTable";
-import { EditorRecommendation } from "../components/EditorRecommendation";
+import { WithEditorPageSkeleton } from "../skeletons";
 import { useSession, useValidatePolygon, useCreateJob } from "@geometry/data";
 import { useLocale } from "@geometry/i18n";
 import { useAnalytics, GoogleAnalyticsActions, GoogleAnalyticsCategories } from "@geometry/analytics";
@@ -39,16 +35,12 @@ const EDITOR_ASPECT_RATIO = 0.65;
 
 const emptyGallery = new ArtGallery(new Polygon([]));
 
-const getErrorMessage = (e: unknown): string | undefined =>
-    e instanceof globalThis.Error ? e.message : e != null ? String(e) : undefined;
-
 export const EditorPage = () => {
     const { isMobile } = useDevice();
     const editorRef = useRef<HTMLDivElement>(null);
     const [editorSize, setEditorSize] = useState({ width: EDITOR_INITIAL_WIDTH, height: EDITOR_INITIAL_HEIGHT });
     const [gallery, setGallery] = useState<ArtGallery>(() => emptyGallery);
     const [validationResult, setValidationResult] = useState<Summary | null>(null);
-    const [unrecoverableError, setUnrecoverableError] = useState<string | null>(null);
     const [galleryTitle, setGalleryTitle] = useState("");
     const { isLoading: sessionLoading } = useSession();
     const { t } = useLocale();
@@ -56,24 +48,11 @@ export const EditorPage = () => {
     const validatePolygon = useValidatePolygon();
     const createJob = useCreateJob();
 
-    const mutationError =
-        getErrorMessage(createJob.error) ?? getErrorMessage(validatePolygon.error);
-
-    const errorMessage = (() => {
-        const r = mutationError ?? unrecoverableError;
-        return r === "Failed to fetch"
-            ? t("errors.failedToFetch")
-            : r === "SERVICE_UNAVAILABLE"
-              ? t("errors.serviceUnavailable")
-              : (r ?? "");
-    })();
+    const unrecoverableError =
+        createJob.error ?? validatePolygon.error;
 
     const boundaryPoints = gallery.perimeter.toDict().points;
     const obstaclesPoints = gallery.holes.map((h) => h.toDict().points);
-
-    useEffect(() => {
-        if (mutationError) setUnrecoverableError(mutationError);
-    }, [mutationError]);
 
     useEffect(() => {
         track({
@@ -96,21 +75,18 @@ export const EditorPage = () => {
     }, []);
 
     const handleValidate = useCallback(() => {
-        setUnrecoverableError(null);
+        validatePolygon.reset();
+        createJob.reset();
         setValidationResult(null);
         validatePolygon.mutate(
             { boundary: boundaryPoints, obstacles: obstaclesPoints },
-            {
-                onSuccess: (data) => setValidationResult(data),
-                onError: (err) => {
-                    setUnrecoverableError(err instanceof globalThis.Error ? err.message : String(err));
-                },
-            }
+            { onSuccess: (data) => setValidationResult(data) }
         );
-    }, [boundaryPoints, obstaclesPoints, validatePolygon]);
+    }, [boundaryPoints, obstaclesPoints, validatePolygon, createJob]);
 
     const handleSubmit = useCallback(() => {
-        setUnrecoverableError(null);
+        validatePolygon.reset();
+        createJob.reset();
         setValidationResult(null);
         validatePolygon.mutate(
             { boundary: boundaryPoints, obstacles: obstaclesPoints },
@@ -119,39 +95,20 @@ export const EditorPage = () => {
                     setValidationResult(data);
                     if (isValidationSuccess(data)) {
                         const title = galleryTitle.trim() || t("editor.untitledGallery");
-                        createJob.mutate(
-                            { boundary: boundaryPoints, obstacles: obstaclesPoints, title },
-                            {
-                                onError: (err) => {
-                                    setUnrecoverableError(err instanceof globalThis.Error ? err.message : String(err));
-                                },
-                            }
-                        );
+                        createJob.mutate({ boundary: boundaryPoints, obstacles: obstaclesPoints, title });
                     }
-                },
-                onError: (err) => {
-                    setUnrecoverableError(err instanceof globalThis.Error ? err.message : String(err));
                 },
             }
         );
     }, [boundaryPoints, obstaclesPoints, galleryTitle, t, validatePolygon, createJob]);
 
     const handleChange = useCallback(
-        (boundary?: Polygon, obstacles?: Polygon[]) => {
+        (next: ArtGallery | null) => {
             startTransition(() => {
-                setGallery((prev) => {
-                    const perimeter = boundary ?? prev.perimeter;
-                    const holes = obstacles ?? prev.holes;
-                    return new ArtGallery(perimeter, holes, prev.guards);
-                });
+                setGallery(next ?? emptyGallery);
                 setValidationResult(null);
-                setUnrecoverableError(null);
-                const empty =
-                    boundary != null && boundary.toDict().points.length === 0 && (!obstacles || obstacles.length === 0);
-                if (empty) {
-                    validatePolygon.reset();
-                    createJob.reset();
-                }
+                validatePolygon.reset();
+                createJob.reset();
             });
         },
         [validatePolygon, createJob]
@@ -174,27 +131,41 @@ export const EditorPage = () => {
                                 transparent
                             />
                         </Container>
-                        <Container ref={editorRef} name="geometry-editor-wrapper" className="w-full h-[70vh] min-h-[400px] relative">
+                        <Container>
+                        <div
+                            ref={editorRef}
+                            style={{ display: "grid", width: "100%", minHeight: EDITOR_INITIAL_HEIGHT }}
+                        >
                             <Editor
                                 width={editorSize.width}
                                 height={editorSize.height}
+                                gallery={gallery}
                                 onChange={handleChange}
-                                onValidate={handleValidate}
-                                onSubmit={handleSubmit}
-                                disabled={validatePolygon.isPending || createJob.isPending}
                             />
+                        </div>
                         </Container>
                     </Container>
                     <Container padded spaced left {...(!isMobile && { size: SUMMARY_COL_DESKTOP })}>
                         <Container size={isMobile ? 0 : 12}>
                             <br />
                         </Container>
-                        {errorMessage && <Problem>{errorMessage}</Problem>}
-                        {validatePolygon.isPending && <SummaryTableSkeleton variant="results" />}
-                        {!validatePolygon.isPending && <EditorSummaryTable summary={validationResult ?? undefined} />}
+                        {unrecoverableError != null && (
+                            <Problem>
+                                {unrecoverableError instanceof Error
+                                    ? unrecoverableError.message
+                                    : String(unrecoverableError)}
+                            </Problem>
+                        )}
+                        <EditorReview
+                            summary={validationResult ?? undefined}
+                            artGallery={gallery}
+                            isLoading={validatePolygon.isPending}
+                            onValidate={handleValidate}
+                            onSubmit={handleSubmit}
+                            disabled={validatePolygon.isPending || createJob.isPending}
+                        />
                     </Container>
                 </Container>
-                <EditorRecommendation />
             </Container>
         </WithEditorPageSkeleton>
     );

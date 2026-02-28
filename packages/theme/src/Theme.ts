@@ -11,6 +11,5 @@ export type Theme = (typeof Theme)[keyof typeof Theme];
 
 export const THEME_VALUES: Theme[] = Object.values(Theme);
 
-export function isTheme(value: string | null): value is Theme {
-    return value != null && THEME_VALUES.includes(value as Theme);
-}
+export const isTheme = (value: string | null): value is Theme =>
+    value != null && THEME_VALUES.includes(value as Theme);

@@ -16,12 +16,12 @@
   "dependencies": {
     "@geometry/domain": "workspace:*",
     "@geometry/i18n": "workspace:*",
+    "@geometry/theme": "workspace:*",
     "@geometry/ui": "workspace:*",
     "konva": "^9.3.1",
     "lucide-react": "^0.562.0",
     "react-konva": "^18.2.10",
-    "sonner": "^2.0.7",
-    "@geometry/theme": "workspace:*"
+    "sonner": "^2.0.7"
   },
   "peerDependencies": {
     "react": "^18.2.0",

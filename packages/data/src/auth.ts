@@ -16,12 +16,12 @@ import type { SessionResponse } from "./types";
 
 export type { SessionResponse } from "./types";
 
-function fetchWithToken(url: string, jwtToken: string, options: RequestInit = {}): Promise<Response> {
+const fetchWithToken = (url: string, jwtToken: string, options: RequestInit = {}): Promise<Response> => {
     const headers = new Headers(options.headers);
     headers.set("Content-Type", "application/json");
     headers.set("X-Auth", jwtToken);
     return fetch(url, { ...options, headers });
-}
+};
 
 export class AuthApiClient {
     private baseUrl: string;

@@ -9,12 +9,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Stage, Layer } from "react-konva";
-import { Polygon } from "@geometry/domain";
+import { ArtGallery, Polygon } from "@geometry/domain";
 import { useLocale } from "@geometry/i18n";
 import { Container, Tooltip } from "@geometry/ui";
 import type { EditorVertex } from "./types";
-import { editorVerticesToPolygon } from "./adapters";
-import { findCycles, signedArea, isInside, polyEquals, polyArrayEquals, emptyPolygon } from "./utils";
+import { artGalleryToEditorState, editorVerticesToPolygon } from "./adapters";
+import { findCycles, signedArea, isInside, polyEquals, polyArrayEquals } from "./utils";
 import { Edge } from "./Edge";
 import { Grid } from "./Grid";
 import { Vertex } from "./Vertex";
@@ -24,23 +24,24 @@ import { EditorMode } from "./EditorMode";
 export interface EditorProps {
     width: number;
     height: number;
-    onChange?: (boundary?: Polygon, obstacles?: Polygon[]) => void;
-    onValidate?: () => void;
-    onSubmit?: () => void;
-    /** When true, Validate and Submit in the toolbar are disabled (e.g. while a request is pending). */
-    disabled?: boolean;
+    /** Current gallery (perimeter + holes + guards). Editor initializes and syncs from this; onChange reports updates. */
+    gallery: ArtGallery;
+    /** Called with the updated ArtGallery or null when the canvas is cleared. */
+    onChange?: (gallery: ArtGallery | null) => void;
 }
 
 export const Editor = ({
     width,
     height,
+    gallery,
     onChange,
-    onValidate,
-    onSubmit,
-    disabled = false,
 }: EditorProps) => {
-    const [vertices, setVertices] = useState<EditorVertex[]>(() => []);
-    const [edges, setEdges] = useState<[number, number][]>(() => []);
+    const stateFromGallery = useMemo(
+        () => artGalleryToEditorState(gallery),
+        [gallery]
+    );
+    const [vertices, setVertices] = useState<EditorVertex[]>(() => stateFromGallery.vertices);
+    const [edges, setEdges] = useState<[number, number][]>(() => stateFromGallery.edges);
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
     const [selectedEdgeIndex, setSelectedEdgeIndex] = useState<number | null>(null);
     const [mode, setMode] = useState<EditorMode>(EditorMode.Connect);
@@ -99,7 +100,8 @@ export const Editor = ({
         setActiveIndex(null);
         setSelectedEdgeIndex(null);
         setPan({ x: 0, y: 0 });
-        onChange?.(emptyPolygon, []);
+        console.log("[Editor onChange] art gallery:", null);
+        onChange?.(null);
     }, [onChange]);
 
     const cycles = useMemo(() => findCycles(vertices, edges), [vertices, edges]);
@@ -134,14 +136,12 @@ export const Editor = ({
         const b = boundary ?? undefined;
         const o = obstacles;
         const prev = lastNotifiedRef.current;
-        if (prev && polyEquals(b, prev.boundary) && polyArrayEquals(o, prev.obstacles)) return;
-        // Defer parent notification to next frame so adding a point doesn't block the next click
-        const frameId = requestAnimationFrame(() => {
-            lastNotifiedRef.current = { boundary: b, obstacles: o };
-            onChange?.(b ?? emptyPolygon, o);
-        });
-        return () => cancelAnimationFrame(frameId);
-    }, [boundary, obstacles, onChange]);
+        if (prev && polyEquals(b ?? undefined, prev.boundary ?? undefined) && polyArrayEquals(o, prev.obstacles)) return;
+        lastNotifiedRef.current = { boundary: b, obstacles: o };
+        const nextGallery = b == null || b.points.length < 3 ? null : new ArtGallery(b, o, gallery.guards);
+        console.log("[Editor onChange] art gallery:", nextGallery);
+        onChange?.(nextGallery);
+    }, [boundary, obstacles, gallery.guards, onChange]);
 
     const addVertexAt = useCallback(
         (pos: { x: number; y: number }, connectToNext: boolean) => {
@@ -377,10 +377,10 @@ export const Editor = ({
                     ref={containerRef}
                     style={{ flex: 1, minHeight: 0, overflow: "hidden" }}
                 >
-                    <Container name="geometry-editor-canvas">
+                    <Container name="geometry-editor-canvas" middle>
                         {/* Canvas: grid fixed; only Stage (vertices/edges) scales with zoom */}
                 <div
-                    className="opacity-60 overflow-hidden rounded-[10px]"
+                    className="overflow-hidden rounded-[10px]"
                     style={{
                         position: "relative",
                         width: "100%",
@@ -388,7 +388,10 @@ export const Editor = ({
                         minHeight: height,
                     }}
                 >
-                        <Grid width={effectiveWidth} height={effectiveHeight} style={{ left: 0, top: 0, zIndex: 0 }} />
+                        <Grid
+                            width={effectiveWidth}
+                            height={effectiveHeight}
+                        />
                         {vertices.length === 0 && (
                             <Tooltip
                                 width={effectiveWidth}
@@ -497,9 +500,6 @@ export const Editor = ({
                             onZoomOut={handleZoomOut}
                             onClean={handleClean}
                             onZoomIn={handleZoomIn}
-                            onValidate={allVerticesDegreeTwo ? onValidate : undefined}
-                            onSubmit={allVerticesDegreeTwo ? onSubmit : undefined}
-                            disabled={disabled}
                         />
                     </Container>
                 </div>

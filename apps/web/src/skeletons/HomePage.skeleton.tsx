@@ -26,6 +26,5 @@ export const HomePageSkeleton = () => (
     </Skeleton>
 );
 
-export function WithHomePageSkeleton({ loading, children }: { loading: boolean; children: ReactNode }) {
-    return loading ? <HomePageSkeleton /> : <>{children}</>;
-}
+export const WithHomePageSkeleton = ({ loading, children }: { loading: boolean; children: ReactNode }) =>
+    loading ? <HomePageSkeleton /> : <>{children}</>;

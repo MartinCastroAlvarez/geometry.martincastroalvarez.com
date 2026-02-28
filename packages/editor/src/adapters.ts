@@ -3,13 +3,15 @@
  *
  * Context: polygonToEditorVertices / editorVerticesToPolygon use @geometry/domain Polygon and Point.
  * apiPolygonToEditorVertices / editorVerticesToApiPolygon use ApiPolygon ({ points: { x, y }[] }) for API payloads.
+ * artGalleryToEditorState converts ArtGallery (perimeter + holes) to flat vertices and edges for the editor.
  *
  * Example:
  *   const verts = polygonToEditorVertices(boundary);  const poly = editorVerticesToPolygon(verts);
  *   const api = editorVerticesToApiPolygon(verts);  // for POST/PATCH body
+ *   const { vertices, edges } = artGalleryToEditorState(gallery);
  */
 
-import { Point, Polygon } from "@geometry/domain";
+import { ArtGallery, Point, Polygon } from "@geometry/domain";
 import type { EditorVertex, ApiPolygon } from "./types";
 
 export const polygonToEditorVertices = (polygon: Polygon): EditorVertex[] => {
@@ -37,4 +39,29 @@ export const editorVerticesToApiPolygon = (vertices: EditorVertex[]): ApiPolygon
     return {
         points: vertices.map((v) => ({ x: v.x, y: v.y })),
     };
+};
+
+/** Build flat vertices and edges from an ArtGallery so the editor can display perimeter and holes. */
+export const artGalleryToEditorState = (gallery: ArtGallery): { vertices: EditorVertex[]; edges: [number, number][] } => {
+    const vertices: EditorVertex[] = [];
+    const edges: [number, number][] = [];
+    let offset = 0;
+
+    const addPolygon = (polygon: Polygon) => {
+        const verts = polygonToEditorVertices(polygon);
+        const n = verts.length;
+        for (let i = 0; i < n; i++) {
+            vertices.push(verts[i]);
+        }
+        for (let i = 0; i < n; i++) {
+            edges.push([offset + i, offset + (i + 1) % n] as [number, number]);
+        }
+        offset += n;
+    };
+
+    addPolygon(gallery.perimeter);
+    for (const hole of gallery.holes) {
+        addPolygon(hole);
+    }
+    return { vertices, edges };
 };

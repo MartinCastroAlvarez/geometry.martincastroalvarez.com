@@ -49,7 +49,7 @@ export const useGoogleAnalytics = (googleTagId: string | null) => {
     try {
       if (!window.dataLayer) {
         window.dataLayer = window.dataLayer || [];
-        window.gtag = function (...args: unknown[]) {
+        window.gtag = (...args: unknown[]) => {
           window.dataLayer.push(args);
         };
         setTimeout(() => {

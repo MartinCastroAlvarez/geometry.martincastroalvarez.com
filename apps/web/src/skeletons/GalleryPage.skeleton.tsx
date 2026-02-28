@@ -16,6 +16,5 @@ export const GalleryPageSkeleton = () => (
     </Skeleton>
 );
 
-export function WithGalleryPageSkeleton({ loading, children }: { loading: boolean; children: ReactNode }) {
-    return loading ? <GalleryPageSkeleton /> : <>{children}</>;
-}
+export const WithGalleryPageSkeleton = ({ loading, children }: { loading: boolean; children: ReactNode }) =>
+    loading ? <GalleryPageSkeleton /> : <>{children}</>;

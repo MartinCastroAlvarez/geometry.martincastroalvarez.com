@@ -20,6 +20,5 @@ export const SUMMARY_STATUS_KEY = "status" as const;
  * Returns true only when the validation response has overall status "success"
  * (all sub-validations passed). Use to show the Submit button.
  */
-export function isValidationSuccess(summary: Summary): boolean {
-    return summary[SUMMARY_STATUS_KEY] === "success";
-}
+export const isValidationSuccess = (summary: Summary): boolean =>
+    summary[SUMMARY_STATUS_KEY] === "success";

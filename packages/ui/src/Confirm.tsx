@@ -27,17 +27,11 @@ const Confirm: React.FC<{
     if (!isOpen) return null;
     return (
         <div
-            className="geometry-confirm fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-sm"
+            className="geometry-confirm fixed inset-0 z-50 flex items-center p-8 justify-center bg-slate-950/85 backdrop-blur-sm"
             onClick={onCancel}
         >
-            <Container
-                name="geometry-confirm-dialog"
-                padded
-                rounded
-                solid
-                className="w-full max-w-md"
-                onClick={(e) => e.stopPropagation()}
-            >
+            <div className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+                <Container name="geometry-confirm-dialog" padded rounded solid>
                 <div className="flex flex-col gap-4">
                     <Container>
                         <Title lg>{t("common.confirmTitle")}</Title>
@@ -54,7 +48,8 @@ const Confirm: React.FC<{
                         </Button>
                     </Toolbar>
                 </div>
-            </Container>
+                </Container>
+            </div>
         </div>
     );
 };

@@ -56,7 +56,6 @@ export const Tooltip: React.FC<TooltipProps> = ({
                 left: overlayLeft,
                 width,
                 height,
-                padding: "0.5rem",
                 display: "flex",
                 alignItems,
                 justifyContent,
@@ -64,8 +63,8 @@ export const Tooltip: React.FC<TooltipProps> = ({
                 ...(z != null && { zIndex: z }),
             }}
         >
-            <div className="geometry-tooltip rounded-lg flex items-center justify-center p-3 pointer-events-none border-0 bg-transparent">
-                <Text center xs>
+            <div className="geometry-tooltip rounded-lg flex items-center justify-center p-2 pointer-events-none border-0 bg-transparent">
+                <Text center xs muted>
                     {children}
                 </Text>
             </div>

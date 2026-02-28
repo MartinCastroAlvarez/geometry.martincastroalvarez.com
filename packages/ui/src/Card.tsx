@@ -12,11 +12,11 @@ import { Image } from "./Image";
 
 const PICSUM = "https://picsum.photos/200";
 
-function imageSizeFromSizeProps(xs?: boolean, _sm?: boolean, lg?: boolean): number {
+const imageSizeFromSizeProps = (xs?: boolean, _sm?: boolean, lg?: boolean): number => {
     if (xs) return 20;
     if (lg) return 36;
     return 28; // sm default
-}
+};
 
 export interface CardProps {
     user: User | null | undefined;

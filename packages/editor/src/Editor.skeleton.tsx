@@ -18,7 +18,7 @@ export interface EditorSkeletonProps {
 const POLYGON_SIZE_FRACTION = 0.55;
 const SIZE_VARIATION = 0.25;
 
-function useRandomPolygon(editorHeight: number) {
+const useRandomPolygon = (editorHeight: number) => {
     return useMemo(() => {
         const baseSize = editorHeight * POLYGON_SIZE_FRACTION;
         const variation = baseSize * SIZE_VARIATION * (2 * Math.random() - 1);
@@ -26,7 +26,7 @@ function useRandomPolygon(editorHeight: number) {
         const rotation = Math.random() * 360;
         return { size: polygonSize, rotation };
     }, [editorHeight]);
-}
+};
 
 export const EditorSkeleton = ({ size }: EditorSkeletonProps) => {
     const height = size;

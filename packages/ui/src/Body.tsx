@@ -32,7 +32,9 @@ export const Body: React.FC<BodyProps> = ({ children }) => {
             <Container>
                 <Container size={hideSides ? 0 : 2} />
                 <Container size={hideSides ? 12 : 8}>
-                    {children}
+                    {React.Children.map(children, (child) => (
+                        <div className="col-span-12">{child}</div>
+                    ))}
                 </Container>
             </Container>
         </div>

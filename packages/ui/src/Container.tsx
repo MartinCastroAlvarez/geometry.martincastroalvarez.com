@@ -5,6 +5,9 @@
  * with middle/bottom becomes flex. Supports padded, spaced, rounded, solid and left/center/right.
  * Forwards ref and common DOM events (click, keyboard, drag, touch, etc.).
  *
+ * Do not add a className prop. For custom layout/sizing, wrap Container in a plain div
+ * with the desired className (e.g. <div className="w-full max-w-md"><Container>...</Container></div>).
+ *
  * Example:
  *   <Container size={6} padded rounded><Content /></Container>
  *   <Container middle spaced left><Buttons>...</Buttons></Container>
@@ -14,7 +17,6 @@ import React, { forwardRef } from "react";
 
 export interface ContainerProps {
     name?: string;
-    className?: string;
     size?: number;
     padded?: boolean;
     spaced?: boolean;
@@ -59,7 +61,6 @@ const colSpanClasses: Record<number, string> = {
 
 export const Container = forwardRef<HTMLDivElement, ContainerProps>(({
     name = "geometry-container",
-    className,
     size = 12,
     padded = false,
     spaced = false,
@@ -106,8 +107,8 @@ export const Container = forwardRef<HTMLDivElement, ContainerProps>(({
     }
 
     classes.push(colSpanClasses[size]);
-    if (padded) classes.push("p-4");
-    if (spaced) classes.push("gap-2");
+    if (padded) classes.push("p-2");
+    if (spaced) classes.push("gap-1");
     if (rounded) classes.push("rounded-xl");
     if (solid) classes.push("bg-slate-900", "text-slate-100");
     if (left) classes.push("text-left");
@@ -115,7 +116,6 @@ export const Container = forwardRef<HTMLDivElement, ContainerProps>(({
     else if (center) classes.push("text-center");
 
     if (onClick) classes.push("cursor-pointer");
-    if (className) classes.push(className);
     const finalClassName = classes.join(" ");
 
     return (

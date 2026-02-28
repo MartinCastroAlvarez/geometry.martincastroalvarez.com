@@ -4,11 +4,10 @@
  * stacked on mobile; EditorSkeleton matches Editor (grid, pulse, polygon).
  */
 import type { ReactNode } from "react";
-import { Skeleton, Container, InputSkeleton, TextSkeleton, useDevice } from "@geometry/ui";
-import { EditorSkeleton } from "@geometry/editor";
-import { SummaryTableSkeleton } from "./EditorSummaryTable.skeleton";
+import { Skeleton, Container, InputSkeleton, useDevice } from "@geometry/ui";
+import { EditorSkeleton, EditorReviewSkeleton } from "@geometry/editor";
 
-const EDITOR_SKELETON_HEIGHT = 400;
+const EDITOR_SKELETON_HEIGHT = 600;
 const EDITOR_COL_DESKTOP = 8;
 const SUMMARY_COL_DESKTOP = 4;
 
@@ -28,17 +27,13 @@ export const EditorPageSkeleton = () => {
                         <EditorSkeleton size={EDITOR_SKELETON_HEIGHT} />
                     </Container>
                     <Container padded spaced left size={isMobile ? 12 : SUMMARY_COL_DESKTOP} name="editor-summary-skeleton-col min-h-[280px]">
-                        <SummaryTableSkeleton variant="requirements" />
+                        <EditorReviewSkeleton variant="requirements" />
                     </Container>
-                </Container>
-                <Container padded spaced center>
-                    <TextSkeleton sm width="80%" />
                 </Container>
             </Container>
         </Skeleton>
     );
 };
 
-export function WithEditorPageSkeleton({ loading, children }: { loading: boolean; children: ReactNode }) {
-    return loading ? <EditorPageSkeleton /> : <>{children}</>;
-}
+export const WithEditorPageSkeleton = ({ loading, children }: { loading: boolean; children: ReactNode }) =>
+    loading ? <EditorPageSkeleton /> : <>{children}</>;
