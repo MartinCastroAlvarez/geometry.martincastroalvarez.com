@@ -42,6 +42,7 @@
     "defaultConfirmMessage": "Are you sure?"
   },
   "validation": {
+    "resultsTitle": "Validation results",
     "POLYGON_CONVEX_OK": "Polygon is convex.",
     "POLYGON_NOT_CONVEX": "Polygon is not convex.",
     "POLYGON_CCW_OK": "Polygon is counter-clockwise.",
@@ -56,6 +57,16 @@
     "OBSTACLE_NOT_CONTAINED": "Obstacle is not fully inside the boundary.",
     "OBSTACLE_OVERLAPS": "Obstacle overlaps another obstacle.",
     "OBSTACLE_NO_OVERLAP": "Obstacle does not overlap others.",
-    "CHECK_SKIPPED": "Check skipped (invalid or earlier error)."
+    "CHECK_SKIPPED": "Check skipped (invalid or earlier error).",
+    "ALL_VALIDATIONS_PASSED": "All validations passed.",
+    "VALIDATIONS_FAILED_OR_PENDING": "One or more validations failed or are pending.",
+    "requirementsTitle": "Requirements for polygons and obstacles",
+    "requirementBoundaryConvex": "Boundary must be convex",
+    "requirementBoundaryCcw": "Boundary must be counter-clockwise",
+    "requirementBoundarySimple": "Boundary must be simple (no self-intersection)",
+    "requirementObstacleConvex": "Each obstacle must be convex",
+    "requirementObstacleCw": "Each obstacle must be clockwise",
+    "requirementObstacleContained": "Each obstacle must be fully inside the boundary",
+    "requirementObstacleNoOverlap": "No two obstacles may overlap"
   }
 }

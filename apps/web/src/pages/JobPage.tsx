@@ -1,10 +1,17 @@
 /**
  * Single job page: detail, title edit, publish/unpublish.
  *
- * Context: useJob(id) loads job; usePublish/useUnpublish/useUpdateJob for mutations.
- * Title is synced from job.meta.title and saved on blur. Publish/Unpublish only
- * when job.status === "success". Protected by PrivateRoute. Shows JobPageSkeleton
- * while session or job is loading.
+ * Context: This page shows the detail view for one job, identified by the URL param :id. It is
+ * protected (e.g. via PrivateRoute), so the user must be authenticated. useJob(id) fetches the job;
+ * useSession is used to gate the loading state so we show JobPageSkeleton until both session and
+ * job data are resolved.
+ *
+ * The page displays the job id (truncated), status (success/failed) as a Badge, and an editable
+ * title input. The title is initialized from job.meta.title and persisted on blur via useUpdateJob.
+ * Publish and Unpublish buttons are only rendered when job.status === "success"; they call
+ * usePublish and useUnpublish with the job id. A "Back to Jobs" link navigates to the jobs list.
+ * If the id param is missing, a short message is shown. Analytics: JOB_VIEW is tracked when the
+ * job has loaded, with the job id as the label.
  */
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
@@ -35,26 +42,28 @@ export const JobPage = () => {
         }
     }, [id, jobLoading, job, track]);
 
-    if (!id) return <Container padded spaced size={12}><Text>Job ID required</Text></Container>;
+    if (!id) return <Container padded spaced><Text>Job ID required</Text></Container>;
 
-    const handlePublish = () => publish.mutate(id!);
-    const handleUnpublish = () => unpublish.mutate(id!);
+    const jobData = job!;
+    const loading = sessionLoading || jobLoading || !job;
+    const handlePublish = () => publish.mutate(id);
+    const handleUnpublish = () => unpublish.mutate(id);
     const handleUpdateTitle = () => {
         if (title.trim() && id) updateJob.mutate({ jobId: id, meta: { title: title.trim() } });
     };
 
     return (
-        <WithJobPageSkeleton loading={sessionLoading || jobLoading || !job}>
-            <Container padded spaced size={12}>
+        <WithJobPageSkeleton loading={loading}>
+            <Container padded spaced>
             <Container center>
                 <Title xl center>
-                    Job {job!.id.slice(0, 12)}...
+                    Job {jobData.id.slice(0, 12)}...
                 </Title>
-                <Badge danger={job!.status === "failed"} success={job!.status === "success"}>
-                    {job!.status}
+                <Badge danger={jobData.status === "failed"} success={jobData.status === "success"}>
+                    {jobData.status}
                 </Badge>
             </Container>
-            <Container padded spaced size={12}>
+            <Container padded spaced>
                 <Input
                     type="text"
                     placeholder="Title"
@@ -64,8 +73,8 @@ export const JobPage = () => {
                     className="max-w-md"
                 />
             </Container>
-            <Container padded spaced size={12}>
-                {job!.status === "success" && (
+            <Container padded spaced>
+                {jobData.status === "success" && (
                     <>
                         <Button onClick={handlePublish} disabled={publish.isPending}>
                             {publish.isPending ? "Publishing..." : "Publish"}
@@ -76,7 +85,7 @@ export const JobPage = () => {
                     </>
                 )}
             </Container>
-            <Container padded spaced size={12}>
+            <Container padded spaced>
                 <Link to="/jobs">
                     <Button>Back to Jobs</Button>
                 </Link>

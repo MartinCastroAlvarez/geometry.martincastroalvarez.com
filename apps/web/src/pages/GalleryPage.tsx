@@ -1,9 +1,14 @@
 /**
  * Public gallery view by ID.
  *
- * Context: useArtGallery(id) fetches published gallery; shows title and id. Route
- * /:id (after /jobs, /design) is public—no session required. Shows GalleryPageSkeleton
- * while gallery is loading.
+ * Context: This page displays a single published art gallery by its ID from the URL (route param :id).
+ * It is intended for public, shareable links—no authentication is required. useArtGallery(id) fetches
+ * the gallery from the API; the response includes title and id, which are shown centered at the top.
+ *
+ * If the ID is missing (e.g. navigation to /gallery without an id), the page shows a short message
+ * that the gallery ID is required. While the gallery is loading or missing, GalleryPageSkeleton wraps
+ * the content so the layout remains consistent. Analytics: GALLERY_VIEW is tracked when the gallery
+ * has loaded successfully, with the gallery id as the label.
  */
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
@@ -16,6 +21,7 @@ export const GalleryPage = () => {
     const { id } = useParams<{ id: string }>();
     const { gallery, isLoading } = useArtGallery(id ?? null);
     const { track } = useAnalytics();
+    const loading = isLoading || !gallery;
 
     useEffect(() => {
         if (id && !isLoading && gallery) {
@@ -27,11 +33,11 @@ export const GalleryPage = () => {
         }
     }, [id, isLoading, gallery, track]);
 
-    if (!id) return <Container padded spaced size={12}><Text>Gallery ID required</Text></Container>;
+    if (!id) return <Container padded spaced><Text>Gallery ID required</Text></Container>;
 
     return (
-        <WithGalleryPageSkeleton loading={isLoading || !gallery}>
-            <Container padded spaced size={12}>
+        <WithGalleryPageSkeleton loading={loading}>
+            <Container padded spaced>
             <Container center>
                 <Title xl center>
                     {gallery!.title ?? "Untitled Art Gallery"}

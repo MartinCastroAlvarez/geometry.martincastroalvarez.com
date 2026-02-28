@@ -39,9 +39,8 @@ export class Polygon {
      * Returns true if inside, false if outside or on boundary.
      */
     contains(point: Point): boolean {
-        const ring = this.points.map(p => p.toArray());
-        const result = robustPointInPolygon(ring, point.toArray());
-        return result === -1;
+        const ring = this.points.map((p) => p.toArray());
+        return robustPointInPolygon(ring, point.toArray()) === -1;
     }
 
     addPoint(point: Point): Polygon {

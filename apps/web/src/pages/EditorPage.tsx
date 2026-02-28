@@ -1,62 +1,58 @@
 /**
  * Art gallery editor page: polygon boundary and obstacles.
  *
- * Context: Holds ArtGallery (perimeter + holes) in state; Editor from @geometry/editor
- * gets boundary and obstacles, reports changes via onChange. Toolbar has Validate and Submit;
- * Validate calls v1/polygon, Submit creates the job. Unrecoverable errors show in Problem above the toolbar (below the editor); validation results (200 with checks)
- * show in SummaryTable below the error.
+ * Context: This is the main design surface where users draw and edit art gallery polygons. It holds
+ * an ArtGallery (perimeter polygon + hole polygons) in React state and passes boundary and obstacles
+ * to the Editor from @geometry/editor, which reports geometry changes via onChange. The layout is
+ * responsive: on desktop the editor and summary sit side-by-side (e.g. 8/4 columns); on mobile they
+ * stack. The editor size is driven by a ResizeObserver on the wrapper so it scales with the viewport.
+ *
+ * Users can set an optional title (synced to job meta on submit). The toolbar shows Validate and
+ * Submit: Validate calls the v1/polygon API and displays the returned Summary in the summary panel
+ * (success/error badges and notes); Submit runs validation and on success creates a job via
+ * useCreateJob, then the app can navigate to the job.
+ *
+ * Unrecoverable errors (network, 4xx/5xx, or validation failure messages) are shown in a Problem
+ * block above the toolbar. While validation or create is pending, a skeleton replaces the summary
+ * table. The summary panel otherwise shows either EditorSummaryTable (validation results) or, when
+ * there is no summary, the same component falls back to EditorInfoTable (requirement bullets).
+ * EditorRecommendation at the bottom displays a random tip. Session is required (skeleton while
+ * useSession loads). Analytics: EDITOR_OPEN on mount.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ArtGallery, Polygon } from "@geometry/domain";
 import { Editor } from "@geometry/editor";
-import { Container, Toolbar, Button, Problem, Input, Logo } from "@geometry/ui";
+import { Container, Problem, Input, useDevice } from "@geometry/ui";
 import { WithEditorPageSkeleton, SummaryTableSkeleton } from "../skeletons";
-import { SummaryTable } from "../components/SummaryTable";
+import { EditorSummaryTable } from "../components/EditorSummaryTable";
+import { EditorRecommendation } from "../components/EditorRecommendation";
+import { EditorTools } from "../components/EditorTools";
 import { useSession, useValidatePolygon, useCreateJob } from "@geometry/data";
 import { useLocale } from "@geometry/i18n";
 import { useAnalytics, GoogleAnalyticsActions, GoogleAnalyticsCategories } from "@geometry/analytics";
 import { isValidationSuccess, type Summary } from "@geometry/domain";
 
-const emptyGallery = new ArtGallery(new Polygon([]));
+const EDITOR_COL_DESKTOP = 8;
+const SUMMARY_COL_DESKTOP = 4;
+const EDITOR_INITIAL_WIDTH = 850;
+const EDITOR_INITIAL_HEIGHT = 550;
+const EDITOR_ASPECT_RATIO = 0.65;
 
-const EDITOR_TIP_KEYS = [
-    "editor.tips.clickToAdd",
-    "editor.tips.doubleClickHole",
-    "editor.tips.clickEdgeToSplit",
-    "editor.tips.connectTwoVertices",
-    "editor.tips.largestIsBoundary",
-    "editor.tips.dragVertices",
-    "editor.tips.deleteKey",
-    "editor.tips.arrowKeysScroll",
-    "editor.tips.validateThenSubmit",
-] as const;
+const emptyGallery = new ArtGallery(new Polygon([]));
 
 const getErrorMessage = (e: unknown): string | undefined =>
     e instanceof globalThis.Error ? e.message : e != null ? String(e) : undefined;
 
-const TrashIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <polyline points="3 6 5 6 21 6" />
-        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-        <line x1="10" y1="11" x2="10" y2="17" />
-        <line x1="14" y1="11" x2="14" y2="17" />
-    </svg>
-);
-
 export const EditorPage = () => {
+    const { isMobile } = useDevice();
     const editorRef = useRef<HTMLDivElement>(null);
-    const [editorSize, setEditorSize] = useState({ width: 850, height: 550 });
+    const [editorSize, setEditorSize] = useState({ width: EDITOR_INITIAL_WIDTH, height: EDITOR_INITIAL_HEIGHT });
     const [gallery, setGallery] = useState<ArtGallery>(() => emptyGallery);
     const [validationResult, setValidationResult] = useState<Summary | null>(null);
     const [unrecoverableError, setUnrecoverableError] = useState<string | null>(null);
     const [galleryTitle, setGalleryTitle] = useState("");
-    const [editorHasVertices, setEditorHasVertices] = useState(false);
     const { isLoading: sessionLoading } = useSession();
     const { t } = useLocale();
-    const tipKey = useMemo(
-        () => EDITOR_TIP_KEYS[Math.floor(Math.random() * EDITOR_TIP_KEYS.length)],
-        []
-    );
     const { track } = useAnalytics();
     const validatePolygon = useValidatePolygon();
     const createJob = useCreateJob();
@@ -64,18 +60,17 @@ export const EditorPage = () => {
     const mutationError =
         getErrorMessage(createJob.error) ?? getErrorMessage(validatePolygon.error);
 
-    const rawError = mutationError ?? unrecoverableError;
-    const errorMessage =
-        rawError === "Failed to fetch"
+    const errorMessage = (() => {
+        const r = mutationError ?? unrecoverableError;
+        return r === "Failed to fetch"
             ? t("errors.failedToFetch")
-            : rawError === "SERVICE_UNAVAILABLE"
+            : r === "SERVICE_UNAVAILABLE"
               ? t("errors.serviceUnavailable")
-              : (rawError ?? "");
+              : (r ?? "");
+    })();
 
-    const hasContent =
-        gallery.perimeter.points.length >= 1 ||
-        gallery.holes.some((h) => h.points.length >= 1);
-    const showToolbar = editorHasVertices || hasContent;
+    const boundaryPoints = gallery.perimeter.toDict().points;
+    const obstaclesPoints = gallery.holes.map((h) => h.toDict().points);
 
     useEffect(() => {
         if (mutationError) setUnrecoverableError(mutationError);
@@ -94,15 +89,12 @@ export const EditorPage = () => {
         const ro = new ResizeObserver((entries) => {
             const { width } = entries[0]?.contentRect ?? {};
             if (width != null && width > 0) {
-                setEditorSize({ width, height: Math.round(width * 0.65) });
+                setEditorSize({ width, height: Math.round(width * EDITOR_ASPECT_RATIO) });
             }
         });
         ro.observe(el);
         return () => ro.disconnect();
     }, []);
-
-    const boundaryPoints = gallery.perimeter.points.map((p) => ({ x: p.x, y: p.y }));
-    const obstaclesPoints = gallery.holes.map((h) => h.points.map((p) => ({ x: p.x, y: p.y })));
 
     const handleValidate = useCallback(() => {
         setUnrecoverableError(null);
@@ -110,9 +102,7 @@ export const EditorPage = () => {
         validatePolygon.mutate(
             { boundary: boundaryPoints, obstacles: obstaclesPoints },
             {
-                onSuccess: (data) => {
-                    setValidationResult(data);
-                },
+                onSuccess: (data) => setValidationResult(data),
                 onError: (err) => {
                     setUnrecoverableError(err instanceof globalThis.Error ? err.message : String(err));
                 },
@@ -122,25 +112,30 @@ export const EditorPage = () => {
 
     const handleSubmit = useCallback(() => {
         setUnrecoverableError(null);
-        const title = galleryTitle.trim() || t("editor.untitledGallery");
-        createJob.mutate(
-            { boundary: boundaryPoints, obstacles: obstaclesPoints, title },
+        setValidationResult(null);
+        validatePolygon.mutate(
+            { boundary: boundaryPoints, obstacles: obstaclesPoints },
             {
+                onSuccess: (data) => {
+                    setValidationResult(data);
+                    if (isValidationSuccess(data)) {
+                        const title = galleryTitle.trim() || t("editor.untitledGallery");
+                        createJob.mutate(
+                            { boundary: boundaryPoints, obstacles: obstaclesPoints, title },
+                            {
+                                onError: (err) => {
+                                    setUnrecoverableError(err instanceof globalThis.Error ? err.message : String(err));
+                                },
+                            }
+                        );
+                    }
+                },
                 onError: (err) => {
                     setUnrecoverableError(err instanceof globalThis.Error ? err.message : String(err));
                 },
             }
         );
-    }, [boundaryPoints, obstaclesPoints, galleryTitle, t, createJob]);
-
-    const handleClean = useCallback(() => {
-        setGallery(new ArtGallery(new Polygon([])));
-        setEditorHasVertices(false);
-        setValidationResult(null);
-        setUnrecoverableError(null);
-        validatePolygon.reset();
-        createJob.reset();
-    }, [validatePolygon, createJob]);
+    }, [boundaryPoints, obstaclesPoints, galleryTitle, t, validatePolygon, createJob]);
 
     const handleChange = useCallback(
         (boundary?: Polygon, obstacles?: Polygon[]) => {
@@ -155,10 +150,18 @@ export const EditorPage = () => {
         []
     );
 
+    const handleClean = useCallback(() => {
+        setGallery(emptyGallery);
+        setValidationResult(null);
+        setUnrecoverableError(null);
+        validatePolygon.reset();
+        createJob.reset();
+    }, [validatePolygon, createJob]);
+
     return (
         <WithEditorPageSkeleton loading={sessionLoading}>
-            <Container padded spaced size={12}>
-                <Container padded spaced size={12} middle center>
+            <Container padded spaced>
+                <Container padded spaced middle center>
                     <Input
                         type="text"
                         value={galleryTitle}
@@ -168,61 +171,29 @@ export const EditorPage = () => {
                         className="max-w-md w-full"
                     />
                 </Container>
-                <Container ref={editorRef} name="geometry-editor-wrapper w-full max-h-[70vh]" size={12}>
-                    <Editor
-                        boundary={gallery.perimeter}
-                        obstacles={gallery.holes}
-                        width={editorSize.width}
-                        height={editorSize.height}
-                        onChange={handleChange}
-                        onVerticesChange={setEditorHasVertices}
-                    />
-                </Container>
-                <Container padded spaced size={12}>
-                    <p
-                        className="w-full text-sm text-white/60 font-normal leading-relaxed"
-                        style={{ textAlign: "center" }}
-                    >
-                        {t(tipKey)}
-                    </p>
-                </Container>
-                {showToolbar && (
-                <Container padded spaced size={12}>
-                    <Toolbar>
-                        <Button
-                            onClick={handleClean}
+                <Container>
+                    <Container padded ref={editorRef} name="geometry-editor-wrapper w-full max-h-[70vh] relative" {...(!isMobile && { size: EDITOR_COL_DESKTOP })}>
+                        <Editor
+                            width={editorSize.width}
+                            height={editorSize.height}
+                            onChange={handleChange}
+                            onZoomOut={() => {}}
+                            onClean={handleClean}
+                            onZoomIn={() => {}}
+                        />
+                    </Container>
+                    <Container padded spaced left {...(!isMobile && { size: SUMMARY_COL_DESKTOP })}>
+                        <EditorTools
                             disabled={validatePolygon.isPending || createJob.isPending}
-                            icon={<TrashIcon />}
-                            aria-label={t("toolbar.clear")}
-                        >
-                            {t("toolbar.clear")}
-                        </Button>
-                        <Button
-                            onClick={handleValidate}
-                            disabled={validatePolygon.isPending || createJob.isPending}
-                            icon={<Logo size={16} />}
-                        >
-                            {t("editor.validate")}
-                        </Button>
-                        {validationResult && isValidationSuccess(validationResult) && (
-                            <Button
-                                onClick={handleSubmit}
-                                disabled={validatePolygon.isPending || createJob.isPending}
-                                icon={<Logo size={16} />}
-                            >
-                                {t("editor.submit")}
-                            </Button>
-                        )}
-                    </Toolbar>
+                            onValidate={handleValidate}
+                            onSubmit={handleSubmit}
+                        />
+                        {errorMessage && <Problem>{errorMessage}</Problem>}
+                        {validatePolygon.isPending && <SummaryTableSkeleton variant="results" />}
+                        {!validatePolygon.isPending && <EditorSummaryTable summary={validationResult ?? undefined} />}
+                    </Container>
                 </Container>
-                )}
-                <Container padded spaced size={12}>
-                    <Problem>{errorMessage}</Problem>
-                </Container>
-            {validatePolygon.isPending && <SummaryTableSkeleton />}
-            {validationResult && !validatePolygon.isPending && (
-                <SummaryTable summary={validationResult} />
-            )}
+                <EditorRecommendation />
             </Container>
         </WithEditorPageSkeleton>
     );

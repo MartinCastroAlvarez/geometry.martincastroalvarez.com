@@ -13,8 +13,8 @@ const CELLS = ROWS * COLS;
 const EDITOR_SKELETON_HEIGHT = 220;
 
 export const JobsPageSkeleton = () => (
-    <Container padded spaced size={12}>
-        <Container size={12} name="geometry-jobs-skeleton-grid">
+    <Container padded spaced>
+        <Container name="geometry-jobs-skeleton-grid">
             {Array.from({ length: CELLS }, (_, i) => (
                 <Container key={i} size={12 / COLS}>
                     <EditorSkeleton size={EDITOR_SKELETON_HEIGHT} />

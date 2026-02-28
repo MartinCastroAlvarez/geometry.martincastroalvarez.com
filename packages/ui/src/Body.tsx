@@ -21,15 +21,16 @@ interface BodyProps {
 }
 
 export const Body: React.FC<BodyProps> = ({ children }) => {
-    const { isMobile } = useDevice();
+    const { isMobile, isTablet } = useDevice();
+    const hideSides = isMobile || isTablet;
 
     return (
         <div className="geometry-body flex flex-col flex-1 min-h-0 overflow-hidden font-sans bg-body-gradient text-white">
             <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain">
                 <div className="max-w-6xl mx-auto w-full px-4 md:px-6 py-6 flex flex-col gap-6">
-                    <Container size={12}>
-                        <Container size={isMobile ? 0 : 2} />
-                        <Container size={isMobile ? 12 : 8}>
+                    <Container>
+                        <Container size={hideSides ? 0 : 2} />
+                        <Container size={hideSides ? 12 : 8}>
                             {children}
                         </Container>
                     </Container>

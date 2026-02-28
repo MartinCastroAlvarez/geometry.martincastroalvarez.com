@@ -7,6 +7,8 @@ import type { CSSProperties } from "react";
 
 const GRID_STYLE: CSSProperties = {
     position: "absolute",
+    opacity: 0.25,
+    pointerEvents: "none",
     backgroundColor: "rgba(2, 6, 23, 0.85)",
     backgroundImage: `
         linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),

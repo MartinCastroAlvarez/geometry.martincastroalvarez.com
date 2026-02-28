@@ -7,7 +7,7 @@
  *
  * Example:
  *   <Container size={6} padded rounded><Content /></Container>
- *   <Container middle spaced size={12} left><Buttons>...</Buttons></Container>
+ *   <Container middle spaced left><Buttons>...</Buttons></Container>
  */
 
 import React, { forwardRef } from "react";

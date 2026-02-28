@@ -2,7 +2,7 @@
  * Point and PointDict: 2D coordinates and serialization.
  *
  * Context: Immutable (x, y) with fromDict/toDict for API; equals, distanceTo, toArray for geometry.
- * Base for Polygon vertices, Guard positions, and robust-point-in-polygon input.
+ * Base for Polygon vertices and Guard positions.
  *
  * Example:
  *   const p = Point.fromDict({ x: 1, y: 2 });  p.toArray();  // [1, 2]

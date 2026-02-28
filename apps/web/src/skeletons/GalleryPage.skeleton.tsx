@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { Container, TitleSkeleton, TextSkeleton } from "@geometry/ui";
 
 export const GalleryPageSkeleton = () => (
-    <Container padded spaced size={12}>
+    <Container padded spaced>
         <Container center>
             <TitleSkeleton xl width="14rem" />
             <TextSkeleton md width="8rem" />

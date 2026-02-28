@@ -222,6 +222,8 @@ class PolygonValidationCode(str, Enum):
     OBSTACLE_OVERLAPS = "OBSTACLE_OVERLAPS"
     OBSTACLE_NO_OVERLAP = "OBSTACLE_NO_OVERLAP"
     CHECK_SKIPPED = "CHECK_SKIPPED"
+    ALL_VALIDATIONS_PASSED = "ALL_VALIDATIONS_PASSED"
+    VALIDATIONS_FAILED_OR_PENDING = "VALIDATIONS_FAILED_OR_PENDING"
 
     @classmethod
     def parse(cls, value: str | None) -> PolygonValidationCode:

@@ -1,7 +1,7 @@
 /**
  * Domain package barrel: geometry and app entities.
  *
- * Context: Re-exports Point, User, Polygon, ArtGallery, Job, Gallery, ConvexComponent, Ear, Guard, and types.
+ * Context: Re-exports Point, User, Polygon, ArtGallery, Job, Gallery, ConvexComponent, Ear, Guard.
  * Used by packages/data and apps for API DTOs and UI models.
  *
  * Example:
@@ -18,4 +18,3 @@ export * from './ConvexComponent';
 export * from './Ear';
 export * from './Guard';
 export * from './Summary';
-export * from './types';

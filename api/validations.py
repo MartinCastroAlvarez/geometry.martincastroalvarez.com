@@ -28,6 +28,7 @@ from typing import cast
 from controllers import Controller
 from controllers import ControllerRequest
 from controllers import ControllerResponse
+from enums import PolygonValidationCode
 from enums import Status
 from exceptions import ValidationBoundaryMustBeListError
 from exceptions import ValidationBoundaryRequiredError
@@ -154,11 +155,13 @@ class PolygonValidation(Validation):
             convex: bool = boundary.is_convex()
             status: Status = Status.SUCCESS if convex else Status.FAILED
             result["polygon.convex"] = status
-            result["polygon.convex.note"] = "Polygon is convex." if convex else "Polygon is not convex."
+            result["polygon.convex.note"] = (
+                PolygonValidationCode.POLYGON_CONVEX_OK.value if convex else PolygonValidationCode.POLYGON_NOT_CONVEX.value
+            )
         except Exception as e:
             logger.debug("PolygonValidation.execute() | polygon.convex error: %s", e)
             result["polygon.convex"] = Status.PENDING
-            result["polygon.convex.note"] = "Check skipped (invalid or earlier error)."
+            result["polygon.convex.note"] = PolygonValidationCode.CHECK_SKIPPED.value
         return result
 
     def validate_boundary_ccw(self, boundary: Polygon) -> ValidationResult:
@@ -168,11 +171,11 @@ class PolygonValidation(Validation):
             ccw: bool = boundary.is_ccw()
             status: Status = Status.SUCCESS if ccw else Status.FAILED
             result["polygon.ccw"] = status
-            result["polygon.ccw.note"] = "Polygon is counter-clockwise." if ccw else "Polygon is not counter-clockwise."
+            result["polygon.ccw.note"] = PolygonValidationCode.POLYGON_CCW_OK.value if ccw else PolygonValidationCode.POLYGON_NOT_CCW.value
         except Exception as e:
             logger.debug("PolygonValidation.execute() | polygon.ccw error: %s", e)
             result["polygon.ccw"] = Status.PENDING
-            result["polygon.ccw.note"] = "Check skipped (invalid or earlier error)."
+            result["polygon.ccw.note"] = PolygonValidationCode.CHECK_SKIPPED.value
         return result
 
     def validate_boundary_simplicity(self, boundary: Polygon) -> ValidationResult:
@@ -182,11 +185,13 @@ class PolygonValidation(Validation):
             simple: bool = boundary.is_simple()
             status: Status = Status.SUCCESS if simple else Status.FAILED
             result["polygon.simplicity"] = status
-            result["polygon.simplicity.note"] = "Polygon is simple (no self-intersection)." if simple else "Polygon is not simple (self-intersects)."
+            result["polygon.simplicity.note"] = (
+                PolygonValidationCode.POLYGON_SIMPLE_OK.value if simple else PolygonValidationCode.POLYGON_NOT_SIMPLE.value
+            )
         except Exception as e:
             logger.debug("PolygonValidation.execute() | polygon.simplicity error: %s", e)
             result["polygon.simplicity"] = Status.PENDING
-            result["polygon.simplicity.note"] = "Check skipped (invalid or earlier error)."
+            result["polygon.simplicity.note"] = PolygonValidationCode.CHECK_SKIPPED.value
         return result
 
     def validate_obstacles_convex(self, obstacles: Table[Polygon]) -> ValidationResult:
@@ -199,11 +204,13 @@ class PolygonValidation(Validation):
                 convex: bool = obs.is_convex()
                 status: Status = Status.SUCCESS if convex else Status.FAILED
                 result[f"{prefix}.convex"] = status
-                result[f"{prefix}.convex.note"] = "Obstacle is convex." if convex else "Obstacle is not convex."
+                result[f"{prefix}.convex.note"] = (
+                    PolygonValidationCode.OBSTACLE_CONVEX_OK.value if convex else PolygonValidationCode.OBSTACLE_NOT_CONVEX.value
+                )
             except Exception as e:
                 logger.debug("PolygonValidation.execute() | %s.convex error: %s", prefix, e)
                 result[f"{prefix}.convex"] = Status.PENDING
-                result[f"{prefix}.convex.note"] = "Check skipped (invalid or earlier error)."
+                result[f"{prefix}.convex.note"] = PolygonValidationCode.CHECK_SKIPPED.value
         return result
 
     def validate_obstacles_cw(self, obstacles: Table[Polygon]) -> ValidationResult:
@@ -216,11 +223,11 @@ class PolygonValidation(Validation):
                 cw: bool = obs.is_cw()
                 status: Status = Status.SUCCESS if cw else Status.FAILED
                 result[f"{prefix}.cw"] = status
-                result[f"{prefix}.cw.note"] = "Obstacle is clockwise." if cw else "Obstacle is not clockwise."
+                result[f"{prefix}.cw.note"] = PolygonValidationCode.OBSTACLE_CW_OK.value if cw else PolygonValidationCode.OBSTACLE_NOT_CW.value
             except Exception as e:
                 logger.debug("PolygonValidation.execute() | %s.cw error: %s", prefix, e)
                 result[f"{prefix}.cw"] = Status.PENDING
-                result[f"{prefix}.cw.note"] = "Check skipped (invalid or earlier error)."
+                result[f"{prefix}.cw.note"] = PolygonValidationCode.CHECK_SKIPPED.value
         return result
 
     def validate_obstacles_contained(self, boundary: Polygon, obstacles: Table[Polygon]) -> ValidationResult:
@@ -234,12 +241,12 @@ class PolygonValidation(Validation):
                 status: Status = Status.SUCCESS if contained else Status.FAILED
                 result[f"{prefix}.contained"] = status
                 result[f"{prefix}.contained.note"] = (
-                    "Obstacle is fully inside the boundary." if contained else "Obstacle is not fully inside the boundary."
+                    PolygonValidationCode.OBSTACLE_CONTAINED_OK.value if contained else PolygonValidationCode.OBSTACLE_NOT_CONTAINED.value
                 )
             except Exception as e:
                 logger.debug("PolygonValidation.execute() | %s.contained error: %s", prefix, e)
                 result[f"{prefix}.contained"] = Status.PENDING
-                result[f"{prefix}.contained.note"] = "Check skipped (invalid or earlier error)."
+                result[f"{prefix}.contained.note"] = PolygonValidationCode.CHECK_SKIPPED.value
         return result
 
     def validate_obstacles_overlaps(self, obstacles: Table[Polygon]) -> ValidationResult:
@@ -252,11 +259,13 @@ class PolygonValidation(Validation):
                 overlaps_another: bool = any(obs.intersects(other, inclusive=True) for other in obstacles_list if other is not obs)
                 status: Status = Status.FAILED if overlaps_another else Status.SUCCESS
                 result[f"{prefix}.overlaps"] = status
-                result[f"{prefix}.overlaps.note"] = "Obstacle overlaps another obstacle." if overlaps_another else "Obstacle does not overlap others."
+                result[f"{prefix}.overlaps.note"] = (
+                    PolygonValidationCode.OBSTACLE_OVERLAPS.value if overlaps_another else PolygonValidationCode.OBSTACLE_NO_OVERLAP.value
+                )
             except Exception as e:
                 logger.debug("PolygonValidation.execute() | %s.overlaps error: %s", prefix, e)
                 result[f"{prefix}.overlaps"] = Status.PENDING
-                result[f"{prefix}.overlaps.note"] = "Check skipped (invalid or earlier error)."
+                result[f"{prefix}.overlaps.note"] = PolygonValidationCode.CHECK_SKIPPED.value
         return result
 
     def execute(self, validated_input: ValidationRequest) -> ValidationResponse:
@@ -279,6 +288,10 @@ class PolygonValidation(Validation):
             merged.update(r)
         overall: Status = _overall_status(merged)
         merged["status"] = overall
-        merged["status.note"] = "All validations passed." if overall == Status.SUCCESS else "One or more validations failed or are pending."
+        merged["status.note"] = (
+            PolygonValidationCode.ALL_VALIDATIONS_PASSED.value
+            if overall == Status.SUCCESS
+            else PolygonValidationCode.VALIDATIONS_FAILED_OR_PENDING.value
+        )
         out: PolygonValidationResponse = _normalize_result(merged)
         return cast(ValidationResponse, out)

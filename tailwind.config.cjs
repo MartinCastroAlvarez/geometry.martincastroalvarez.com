@@ -23,5 +23,9 @@ module.exports = {
         "gap-3",
         "gap-4",
         "gap-6",
+        "border-2",
+        "border-slate-400",
+        "border-slate-300",
+        "border-slate-200",
     ],
 };

@@ -82,7 +82,7 @@ const App = () => {
                 </Toolbar>
             </Nav>
             )}
-            <Container padded spaced size={12}>
+            <Container padded spaced>
                 <AppRoutes />
             </Container>
         </Body>

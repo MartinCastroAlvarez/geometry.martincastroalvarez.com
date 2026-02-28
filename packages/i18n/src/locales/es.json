@@ -42,6 +42,7 @@
     "defaultConfirmMessage": "¿Estás seguro?"
   },
   "validation": {
+    "resultsTitle": "Resultados de validación",
     "POLYGON_CONVEX_OK": "El polígono es convexo.",
     "POLYGON_NOT_CONVEX": "El polígono no es convexo.",
     "POLYGON_CCW_OK": "El polígono es en sentido antihorario.",
@@ -56,6 +57,16 @@
     "OBSTACLE_NOT_CONTAINED": "El obstáculo no está completamente dentro del borde.",
     "OBSTACLE_OVERLAPS": "El obstáculo se superpone con otro.",
     "OBSTACLE_NO_OVERLAP": "El obstáculo no se superpone con otros.",
-    "CHECK_SKIPPED": "Comprobación omitida (inválido o error previo)."
+    "CHECK_SKIPPED": "Comprobación omitida (inválido o error previo).",
+    "ALL_VALIDATIONS_PASSED": "Todas las validaciones pasaron.",
+    "VALIDATIONS_FAILED_OR_PENDING": "Una o más validaciones fallaron o están pendientes.",
+    "requirementsTitle": "Requisitos para polígonos y obstáculos",
+    "requirementBoundaryConvex": "El borde debe ser convexo",
+    "requirementBoundaryCcw": "El borde debe ser en sentido antihorario",
+    "requirementBoundarySimple": "El borde debe ser simple (sin autointersección)",
+    "requirementObstacleConvex": "Cada obstáculo debe ser convexo",
+    "requirementObstacleCw": "Cada obstáculo debe ser en sentido horario",
+    "requirementObstacleContained": "Cada obstáculo debe estar completamente dentro del borde",
+    "requirementObstacleNoOverlap": "Ningún obstáculo puede superponerse con otro"
   }
 }

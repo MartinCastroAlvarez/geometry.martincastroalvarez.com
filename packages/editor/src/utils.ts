@@ -1,8 +1,9 @@
 /**
- * Geometry calculations for the editor: cycle detection, signed area, point-in-polygon.
+ * Geometry calculations for the editor: cycle detection, signed area, point-in-polygon,
+ * and polygon comparison.
  */
 
-import { Point } from "@geometry/domain";
+import { Point, Polygon } from "@geometry/domain";
 import type { EditorVertex } from "./types";
 import { editorVerticesToPolygon } from "./adapters";
 
@@ -73,3 +74,19 @@ export const isInside = (a: EditorVertex[], b: EditorVertex[]): boolean => {
     const poly = editorVerticesToPolygon(b);
     return poly.contains(p);
 };
+
+/** Compare two polygons by point equality (order and coordinates). */
+export function polyEquals(a: Polygon | undefined, b: Polygon | undefined): boolean {
+    if (a === b) return true;
+    if (!a || !b || a.points.length !== b.points.length) return false;
+    return a.points.every((p, i) => p.x === b.points[i].x && p.y === b.points[i].y);
+}
+
+/** Compare two arrays of polygons. */
+export function polyArrayEquals(a: Polygon[], b: Polygon[]): boolean {
+    if (a.length !== b.length) return false;
+    return a.every((p, i) => polyEquals(p, b[i]));
+}
+
+/** Empty polygon singleton for defaults. */
+export const emptyPolygon = new Polygon([]);

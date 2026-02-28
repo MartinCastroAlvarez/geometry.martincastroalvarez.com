@@ -39,6 +39,8 @@ export const EditorSkeleton = ({ size }: EditorSkeletonProps) => {
         flexShrink: 0,
         borderRadius: 12,
         overflow: "hidden",
+        border: "none",
+        outline: "none",
     };
 
     return (
@@ -48,8 +50,8 @@ export const EditorSkeleton = ({ size }: EditorSkeletonProps) => {
                 className="animate-pulse"
                 style={{
                     position: "absolute",
-                    inset: 8,
-                    borderRadius: 8,
+                    inset: 0,
+                    borderRadius: 12,
                     backgroundColor: "rgba(148, 163, 184, 0.2)",
                 }}
             />

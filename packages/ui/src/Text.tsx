@@ -26,6 +26,8 @@ interface TextProps {
     right?: boolean;
     size?: number;
     truncate?: boolean;
+    /** Line height: relaxed (default), snug, or tight. Use snug/tight in list items for better alignment with icons. */
+    leading?: "relaxed" | "snug" | "tight";
     onClick?: React.MouseEventHandler<HTMLDivElement>;
 }
 
@@ -34,6 +36,7 @@ export const Text: React.FC<TextProps> = ({
     xs = false, sm = false, md = false, lg = false, xl = false, xxl = false, xxxl = false,
     center = false, left: _left = false, right = false,
     size, truncate = false,
+    leading: leadingProp = "relaxed",
     onClick = () => {},
 }) => {
     void _left;
@@ -42,10 +45,11 @@ export const Text: React.FC<TextProps> = ({
     let sizeClass = xs ? "text-xs" : sm ? "text-sm" : md ? "text-md" : lg ? "text-lg" : xl ? "text-xl" : xxl ? "text-2xl" : xxxl ? "text-3xl" : "text-base";
     let alignmentClass = center ? "text-center" : right ? "text-right" : "text-left";
     const truncateClass = truncate ? "truncate" : "";
+    const leadingClass = leadingProp === "tight" ? "leading-tight" : leadingProp === "snug" ? "leading-snug" : "leading-relaxed";
 
     return (
         <Container center name="geometry-text">
-            <div onClick={onClick} style={maxWidthStyle} className={`display-block w-full mx-auto text-white/60 font-normal leading-relaxed ${sizeClass} ${alignmentClass} ${truncateClass}`}>
+            <div onClick={onClick} style={maxWidthStyle} className={`display-block w-full mx-auto text-white/60 font-normal ${leadingClass} ${sizeClass} ${alignmentClass} ${truncateClass}`}>
                 {children}
             </div>
         </Container>

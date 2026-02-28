@@ -20,7 +20,7 @@ type DeviceInfo = {
 };
 
 const MOBILE_BREAKPOINT = 600;
-const TABLET_BREAKPOINT = 900;
+const TABLET_BREAKPOINT = 1000;
 
 export const useDevice = (): DeviceInfo => {
     const [width, setWidth] = useState(typeof window !== "undefined" ? window.innerWidth : MOBILE_BREAKPOINT);

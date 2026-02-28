@@ -27,7 +27,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ children, left = false, center
     void _center;
     const justifyClass = right ? "justify-end" : left ? "justify-start" : "justify-center";
     return (
-        <Container middle spaced size={12} left={left} center={!left && !right} right={right} name="geometry-toolbar">
+        <Container middle spaced left={left} center={!left && !right} right={right} name="geometry-toolbar">
             <div className={`flex flex-row flex-wrap items-center gap-2 w-full ${justifyClass}`}>
                 {children}
             </div>
@@ -67,7 +67,7 @@ export const Button: React.FC<ButtonProps> = ({
     if (!children && !icon) return null;
 
     const baseClasses =
-        "inline-flex flex-row items-center justify-center gap-2 font-medium rounded-lg transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer border-2 border-gray-500 bg-white/5 hover:bg-white/15 hover:border-gray-400 active:bg-white/20";
+        "inline-flex flex-row items-center justify-center gap-2 font-medium rounded-lg transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer border-2 border-slate-300 bg-white/5 hover:bg-white/15 hover:border-slate-200 active:bg-white/20";
 
     const getSizeClasses = (): string => {
         if (xs) return "py-1 px-6 text-xs";
@@ -105,7 +105,7 @@ export const Button: React.FC<ButtonProps> = ({
 
     return (
         <>
-            <button type="button" onClick={handleClick} disabled={disabled} className={`geometry-button ${combinedClasses}`.trim()} aria-label={ariaLabel}>
+            <button type="button" onClick={handleClick} disabled={disabled} className={`geometry-button ${combinedClasses}`.trim()} style={{ border: "2px solid rgba(148, 163, 184, 0.3)" }} aria-label={ariaLabel}>
                 <span className="flex flex-row flex-nowrap items-center gap-2">
                     {icon && <span className="flex shrink-0 [&_svg]:inline-block [&_svg]:align-middle">{cloneIconWithColor(icon)}</span>}
                     {children && <span>{children}</span>}
