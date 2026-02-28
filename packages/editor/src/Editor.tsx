@@ -12,7 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Stage, Layer } from "react-konva";
 import { Polygon } from "@geometry/domain";
 import { useLocale } from "@geometry/i18n";
-import { Container } from "@geometry/ui";
+import { Container, Text, Tooltip } from "@geometry/ui";
 import type { EditorVertex } from "./types";
 import { editorVerticesToPolygon } from "./adapters";
 import { findCycles, signedArea, isInside, polyEquals, polyArrayEquals, emptyPolygon } from "./utils";
@@ -296,31 +296,15 @@ export const Editor = ({
                 >
                         <Grid width={effectiveWidth} height={effectiveHeight} style={{ left: 0, top: 0, zIndex: 0 }} />
                         {vertices.length === 0 && (
-                            <div
-                                aria-hidden
-                                style={{
-                                    position: "absolute",
-                                    top: 0,
-                                    left: 0,
-                                    width: effectiveWidth,
-                                    height: effectiveHeight,
-                                    pointerEvents: "none",
-                                    zIndex: 1,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                }}
+                            <Tooltip
+                                width={effectiveWidth}
+                                height={effectiveHeight}
+                                zIndex={1}
                             >
-                                <span
-                                    style={{
-                                        color: "#6b7280",
-                                        fontSize: "0.9375rem",
-                                        userSelect: "none",
-                                    }}
-                                >
+                                <Text center muted>
                                     {t("editor.clickToDrawPolygon")}
-                                </span>
-                            </div>
+                                </Text>
+                            </Tooltip>
                         )}
                         <div
                             style={{
