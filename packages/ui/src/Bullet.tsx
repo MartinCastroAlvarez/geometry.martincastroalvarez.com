@@ -1,18 +1,25 @@
 /**
  * List item with an icon and text. Icon sits in a fixed-width column, top-aligned when text wraps.
- * Forwards the same size/alignment props as Text (xs, sm, lg, etc.).
+ * danger shows a red warning icon (same red as Problem); success shows a green tick; otherwise
+ * uses icon prop or default info icon. Forwards the same size/alignment props as Text (xs, sm, lg, etc.).
  *
  * Example:
- *   <Bullet icon={<Minus className="size-4 text-slate-400" />} sm>Requirement one.</Bullet>
+ *   <Bullet sm>Requirement one.</Bullet>
+ *   <Bullet danger sm>Validation failed.</Bullet>
+ *   <Bullet success sm>OK.</Bullet>
  */
 
 import React from "react";
-import { Minus } from "lucide-react";
+import { Check, Info, TriangleAlert } from "lucide-react";
 import { Text } from "./Text";
 
 export interface BulletProps {
     children: React.ReactNode;
-    /** Icon shown in the bullet column; defaults to Minus. */
+    /** When true, show warning icon in Problem red. */
+    danger?: boolean;
+    /** When true, show tick icon in green. */
+    success?: boolean;
+    /** Icon shown in the bullet column when neither danger nor success; defaults to info. */
     icon?: React.ReactNode;
     xs?: boolean;
     sm?: boolean;
@@ -29,11 +36,13 @@ export interface BulletProps {
     onClick?: React.MouseEventHandler<HTMLDivElement>;
 }
 
-const defaultIcon = <Minus className="size-4 text-slate-400" aria-hidden />;
+const defaultIcon = <Info className="size-4 text-slate-500 shrink-0" aria-hidden />;
 
 export const Bullet: React.FC<BulletProps> = ({
     children,
-    icon = defaultIcon,
+    danger = false,
+    success = false,
+    icon,
     xs,
     sm,
     md,
@@ -48,10 +57,14 @@ export const Bullet: React.FC<BulletProps> = ({
     truncate,
     onClick,
 }) => {
+    const resolvedIcon =
+        danger ? <TriangleAlert className="size-4 text-red-300 shrink-0" aria-hidden /> :
+        success ? <Check className="size-4 text-green-300 shrink-0" aria-hidden /> :
+        (icon ?? defaultIcon);
     return (
         <div className="geometry-bullet flex gap-2 items-start w-full">
-            <span className="shrink-0 w-5 h-[1.25em] flex items-center justify-center" aria-hidden>
-                {icon}
+            <span className="shrink-0 min-w-5 h-[1.25em] flex items-center justify-center" aria-hidden>
+                {resolvedIcon}
             </span>
             <div className="flex-1 min-w-0">
                 <Text
@@ -68,6 +81,7 @@ export const Bullet: React.FC<BulletProps> = ({
                     size={size}
                     truncate={truncate}
                     leading="tight"
+                    muted
                     onClick={onClick}
                 >
                     {children}

@@ -9,7 +9,6 @@
  * Example:
  *   <EditorInfoTable />
  */
-import { CircleCheck } from "lucide-react";
 import { useLocale } from "@geometry/i18n";
 import { Container, Bullet } from "@geometry/ui";
 
@@ -29,7 +28,7 @@ export const EditorInfoTable = () => {
         <Container padded spaced rounded solid left>
             {REQUIREMENT_KEYS.map((key) => (
                 <Container key={key}>
-                    <Bullet sm left icon={<CircleCheck className="size-4 text-slate-400 shrink-0" aria-hidden />}>
+                    <Bullet sm left>
                         {t(key)}
                     </Bullet>
                 </Container>

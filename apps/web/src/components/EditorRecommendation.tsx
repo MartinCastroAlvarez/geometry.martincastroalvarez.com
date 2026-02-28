@@ -33,7 +33,7 @@ export const EditorRecommendation = () => {
     );
     return (
         <Container padded spaced center middle>
-            <Text sm center>{t(message)}</Text>
+            <Text sm center muted>{t(message)}</Text>
         </Container>
     );
 };

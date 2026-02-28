@@ -28,6 +28,8 @@ interface TextProps {
     truncate?: boolean;
     /** Line height: relaxed (default), snug, or tight. Use snug/tight in list items for better alignment with icons. */
     leading?: "relaxed" | "snug" | "tight";
+    /** When true, use a more muted (lighter) text color. */
+    muted?: boolean;
     onClick?: React.MouseEventHandler<HTMLDivElement>;
 }
 
@@ -37,6 +39,7 @@ export const Text: React.FC<TextProps> = ({
     center = false, left: _left = false, right = false,
     size, truncate = false,
     leading: leadingProp = "relaxed",
+    muted = false,
     onClick = () => {},
 }) => {
     void _left;
@@ -46,10 +49,11 @@ export const Text: React.FC<TextProps> = ({
     let alignmentClass = center ? "text-center" : right ? "text-right" : "text-left";
     const truncateClass = truncate ? "truncate" : "";
     const leadingClass = leadingProp === "tight" ? "leading-tight" : leadingProp === "snug" ? "leading-snug" : "leading-relaxed";
+    const colorClass = muted ? "text-muted" : "text-white/60";
 
     return (
         <Container center name="geometry-text">
-            <div onClick={onClick} style={maxWidthStyle} className={`display-block w-full mx-auto text-white/60 font-normal ${leadingClass} ${sizeClass} ${alignmentClass} ${truncateClass}`}>
+            <div onClick={onClick} style={maxWidthStyle} className={`display-block w-full mx-auto ${colorClass} font-normal ${leadingClass} ${sizeClass} ${alignmentClass} ${truncateClass}`}>
                 {children}
             </div>
         </Container>

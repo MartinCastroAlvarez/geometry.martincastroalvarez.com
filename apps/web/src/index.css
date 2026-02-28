@@ -20,6 +20,17 @@
     #1a1f2e 70%,
     #0f172a 100%
   );
+
+  /* Editor palette (Konva canvas) – use with bg-editor-bg, border-editor-border, etc. */
+  --color-editor-bg: rgba(2, 6, 23, 0.85);
+  --color-editor-border: rgba(255, 255, 255, 0.12);
+  --color-editor-vertex: #a3a3a3;
+  --color-editor-vertex-active: #d4d4d4;
+  --color-editor-vertex-first: #737373;
+  --color-editor-edge: rgba(163, 163, 163, 0.65);
+  --color-editor-edge-closed: #737373;
+  --color-editor-stroke: rgba(2, 6, 23, 0.9);
+  --color-editor-stroke-hover: #ffffff;
 }
 
 /* Ensure Tailwind scans the UI package (workspace) for dynamic classes */
@@ -29,16 +40,16 @@
 @source inline("p-4 gap-2 gap-3 gap-4 gap-6 rounded-xl rounded-2xl rounded-lg rounded-md rounded-full overflow-hidden overflow-visible overflow-y-auto overflow-x-hidden grid grid-cols-12 w-full flex flex-col flex-row flex-wrap flex-1 items-center justify-start justify-center justify-end col-span-1 col-span-2 col-span-3 col-span-4 col-span-5 col-span-6 col-span-7 col-span-8 col-span-9 col-span-10 col-span-11 col-span-12 cursor-pointer py-1 py-0.5 py-1.5 px-2.5 px-3 px-6 px-8 px-10 text-[11px] text-xs text-sm mr-2 shrink-0 flex-nowrap font-title max-w-md placeholder:text-white/40 bg-red-500/20 text-red-300 border-red-500/40 bg-green-500/20 text-green-300 border-green-500/40 bg-white/10 text-white/80 border-white/20 bg-slate-500/50 bg-body-gradient min-h-0 min-h-[100dvh] overscroll-contain animate-pulse [&_svg]:inline-block [&_svg]:align-middle hover:bg-white/15 hover:border-neutral-400 hover:border-white/20 active:bg-white/20 border-neutral-500");
 
 :root {
-  /* Editor colors (read by Konva canvas) - carbon/neutral palette */
-  --editor-bg: rgba(2, 6, 23, 0.85);
-  --editor-border: rgba(255, 255, 255, 0.12);
-  --editor-vertex: #a3a3a3;
-  --editor-vertex-active: #d4d4d4;
-  --editor-vertex-first: #737373;
-  --editor-edge: rgba(163, 163, 163, 0.65);
-  --editor-edge-closed: #737373;
-  --editor-stroke: rgba(2, 6, 23, 0.9);
-  --editor-stroke-hover: #ffffff;
+  /* Editor colors (read by Konva canvas) – sourced from Tailwind theme */
+  --editor-bg: var(--color-editor-bg);
+  --editor-border: var(--color-editor-border);
+  --editor-vertex: var(--color-editor-vertex);
+  --editor-vertex-active: var(--color-editor-vertex-active);
+  --editor-vertex-first: var(--color-editor-vertex-first);
+  --editor-edge: var(--color-editor-edge);
+  --editor-edge-closed: var(--color-editor-edge-closed);
+  --editor-stroke: var(--color-editor-stroke);
+  --editor-stroke-hover: var(--color-editor-stroke-hover);
 
   font-family: Inter, system-ui, -apple-system, sans-serif;
   line-height: 1.5;

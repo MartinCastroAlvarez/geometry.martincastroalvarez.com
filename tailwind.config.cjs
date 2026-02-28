@@ -5,6 +5,9 @@ module.exports = {
             fontFamily: {
                 title: ["Oswald", "sans-serif"],
             },
+            colors: {
+                muted: "#475569", /* slate-600, more gray for secondary text */
+            },
         },
     },
     content: [

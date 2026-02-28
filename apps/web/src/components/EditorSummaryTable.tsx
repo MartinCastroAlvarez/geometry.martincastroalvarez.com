@@ -13,9 +13,8 @@
  *   <EditorSummaryTable summary={validationResult ?? undefined} />
  *   // With no summary: <EditorSummaryTable />  → shows EditorInfoTable
  */
-import { Check, CircleAlert } from "lucide-react";
 import { useLocale } from "@geometry/i18n";
-import { Container, Badge, Text } from "@geometry/ui";
+import { Container, Bullet } from "@geometry/ui";
 import type { Summary } from "@geometry/domain";
 import { EditorInfoTable } from "./EditorInfoTable";
 
@@ -71,22 +70,18 @@ export const EditorSummaryTable = ({ summary }: EditorSummaryTableProps) => {
 
     return (
         <Container padded spaced rounded solid left>
-            {sorted.map(({ key, status, note }) => {
-                const localizedNote = getLocalizedNote(note);
-                const StatusIcon = status === "SUCCESS" ? Check : CircleAlert;
-                return (
-                    <Container key={key} size={12} spaced>
-                        <Container size={2} left>
-                            <Badge danger={status === "ERROR"} success={status === "SUCCESS"}>
-                                <StatusIcon className="size-3.5 shrink-0" aria-hidden aria-label={status} />
-                            </Badge>
-                        </Container>
-                        <Container size={10} left>
-                            <Text sm left>{localizedNote}</Text>
-                        </Container>
-                    </Container>
-                );
-            })}
+            {sorted.map(({ key, status, note }) => (
+                <Container key={key}>
+                    <Bullet
+                        danger={status === "ERROR"}
+                        success={status === "SUCCESS"}
+                        sm
+                        left
+                    >
+                        {getLocalizedNote(note)}
+                    </Bullet>
+                </Container>
+            ))}
         </Container>
     );
 };

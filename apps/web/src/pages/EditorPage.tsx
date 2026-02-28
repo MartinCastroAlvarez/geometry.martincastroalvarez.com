@@ -19,14 +19,13 @@
  * EditorRecommendation at the bottom displays a random tip. Session is required (skeleton while
  * useSession loads). Analytics: EDITOR_OPEN on mount.
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, startTransition } from "react";
 import { ArtGallery, Polygon } from "@geometry/domain";
 import { Editor } from "@geometry/editor";
 import { Container, Problem, Input, useDevice } from "@geometry/ui";
 import { WithEditorPageSkeleton, SummaryTableSkeleton } from "../skeletons";
 import { EditorSummaryTable } from "../components/EditorSummaryTable";
 import { EditorRecommendation } from "../components/EditorRecommendation";
-import { EditorTools } from "../components/EditorTools";
 import { useSession, useValidatePolygon, useCreateJob } from "@geometry/data";
 import { useLocale } from "@geometry/i18n";
 import { useAnalytics, GoogleAnalyticsActions, GoogleAnalyticsCategories } from "@geometry/analytics";
@@ -139,13 +138,15 @@ export const EditorPage = () => {
 
     const handleChange = useCallback(
         (boundary?: Polygon, obstacles?: Polygon[]) => {
-            setGallery((prev) => {
-                const perimeter = boundary ?? prev.perimeter;
-                const holes = obstacles ?? prev.holes;
-                return new ArtGallery(perimeter, holes, prev.guards);
+            startTransition(() => {
+                setGallery((prev) => {
+                    const perimeter = boundary ?? prev.perimeter;
+                    const holes = obstacles ?? prev.holes;
+                    return new ArtGallery(perimeter, holes, prev.guards);
+                });
+                setValidationResult(null);
+                setUnrecoverableError(null);
             });
-            setValidationResult(null);
-            setUnrecoverableError(null);
         },
         []
     );
@@ -172,7 +173,7 @@ export const EditorPage = () => {
                     />
                 </Container>
                 <Container>
-                    <Container padded ref={editorRef} name="geometry-editor-wrapper w-full max-h-[70vh] relative" {...(!isMobile && { size: EDITOR_COL_DESKTOP })}>
+                    <Container padded ref={editorRef} name="geometry-editor-wrapper w-full h-[70vh] min-h-[400px] relative" {...(!isMobile && { size: EDITOR_COL_DESKTOP })}>
                         <Editor
                             width={editorSize.width}
                             height={editorSize.height}
@@ -180,14 +181,12 @@ export const EditorPage = () => {
                             onZoomOut={() => {}}
                             onClean={handleClean}
                             onZoomIn={() => {}}
+                            onValidate={handleValidate}
+                            onSubmit={handleSubmit}
+                            disabled={validatePolygon.isPending || createJob.isPending}
                         />
                     </Container>
                     <Container padded spaced left {...(!isMobile && { size: SUMMARY_COL_DESKTOP })}>
-                        <EditorTools
-                            disabled={validatePolygon.isPending || createJob.isPending}
-                            onValidate={handleValidate}
-                            onSubmit={handleSubmit}
-                        />
                         {errorMessage && <Problem>{errorMessage}</Problem>}
                         {validatePolygon.isPending && <SummaryTableSkeleton variant="results" />}
                         {!validatePolygon.isPending && <EditorSummaryTable summary={validationResult ?? undefined} />}

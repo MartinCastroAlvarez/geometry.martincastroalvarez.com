@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Stage, Layer } from "react-konva";
 import { Polygon } from "@geometry/domain";
+import { Container } from "@geometry/ui";
 import type { EditorVertex } from "./types";
 import { editorVerticesToPolygon } from "./adapters";
 import { findCycles, signedArea, isInside, polyEquals, polyArrayEquals, emptyPolygon } from "./utils";
@@ -27,6 +28,10 @@ export interface EditorProps {
     onZoomOut?: () => void;
     onClean?: () => void;
     onZoomIn?: () => void;
+    onValidate?: () => void;
+    onSubmit?: () => void;
+    /** When true, Validate and Submit in the toolbar are disabled (e.g. while a request is pending). */
+    disabled?: boolean;
 }
 
 export const Editor = ({
@@ -37,6 +42,9 @@ export const Editor = ({
     onZoomOut,
     onClean,
     onZoomIn,
+    onValidate,
+    onSubmit,
+    disabled = false,
 }: EditorProps) => {
     const [vertices, setVertices] = useState<EditorVertex[]>(() => []);
     const [edges, setEdges] = useState<[number, number][]>(() => []);
@@ -60,6 +68,19 @@ export const Editor = ({
 
     const effectiveWidth = containerSize.width;
     const effectiveHeight = containerSize.height;
+
+    const ZOOM_MIN = 0.25;
+    const ZOOM_MAX = 4;
+    const ZOOM_STEP = 1.2;
+    const [scale, setScale] = useState(1);
+    const handleZoomIn = useCallback(() => {
+        setScale((s) => Math.min(ZOOM_MAX, s * ZOOM_STEP));
+        onZoomIn?.();
+    }, [onZoomIn]);
+    const handleZoomOut = useCallback(() => {
+        setScale((s) => Math.max(ZOOM_MIN, s / ZOOM_STEP));
+        onZoomOut?.();
+    }, [onZoomOut]);
 
     const handleClean = useCallback(() => {
         setVertices([]);
@@ -97,8 +118,12 @@ export const Editor = ({
         const o = obstacles;
         const prev = lastNotifiedRef.current;
         if (prev && polyEquals(b, prev.boundary) && polyArrayEquals(o, prev.obstacles)) return;
-        lastNotifiedRef.current = { boundary: b, obstacles: o };
-        onChange?.(b ?? emptyPolygon, o);
+        // Defer parent notification to next frame so adding a point doesn't block the next click
+        const frameId = requestAnimationFrame(() => {
+            lastNotifiedRef.current = { boundary: b, obstacles: o };
+            onChange?.(b ?? emptyPolygon, o);
+        });
+        return () => cancelAnimationFrame(frameId);
     }, [boundary, obstacles, onChange]);
 
     useEffect(() => {
@@ -221,80 +246,107 @@ export const Editor = ({
             .map(([a, b]) => ({ start: vertices[a], end: vertices[b] }));
     }, [vertices, edges]);
 
+    // When zoomed out (scale < 1), expand the canvas so the polygon can extend further; limit grows with zoom-out.
+    const stageWidth = scale <= 1 ? effectiveWidth / scale : effectiveWidth;
+    const stageHeight = scale <= 1 ? effectiveHeight / scale : effectiveHeight;
     const dragBounds = useMemo(
-        () => ({ width: effectiveWidth, height: effectiveHeight }),
-        [effectiveWidth, effectiveHeight]
+        () => ({ width: stageWidth, height: stageHeight }),
+        [stageWidth, stageHeight]
     );
 
     return (
         <div
-            ref={containerRef}
             tabIndex={-1}
             role="application"
             aria-label="Geometry editor"
             onKeyDown={handleKeyDown}
             style={{
-                position: "relative",
-                width: "100%",
-                minHeight: height,
-                flexShrink: 0,
-                borderRadius: 12,
-                overflow: "visible",
                 outline: "none",
+                display: "flex",
+                flexDirection: "column",
+                height: "100%",
+                minHeight: 0,
             }}
         >
-            {/* Canvas at 0.6 opacity so the rest of the UI stays in focus; overflow hidden so Stage stays within bounds */}
-            <div className="opacity-60 overflow-hidden rounded-[10px]" style={{ position: "relative", width: "100%", height: "100%", minHeight: height }}>
-                <Grid width={effectiveWidth} height={effectiveHeight} />
-                <Stage
-                    width={effectiveWidth}
-                    height={effectiveHeight}
-                    onClick={handleStageClick}
+            <div style={{ flex: "1 1 0", minHeight: 0, overflow: "hidden" }}>
+                <Container ref={containerRef} name="geometry-editor-canvas">
+                    {/* Canvas: grid fixed; only Stage (vertices/edges) scales with zoom */}
+                <div
+                    className="opacity-60 overflow-hidden rounded-[10px]"
                     style={{
                         position: "relative",
-                        zIndex: 1,
-                        cursor: "crosshair",
-                        borderRadius: 10,
+                        width: "100%",
+                        height: effectiveHeight,
+                        minHeight: height,
                     }}
                 >
-                    <Layer>
-                        {allEdges.map(({ start, end }, i) => (
-                            <Edge
-                                key={`edge-${i}`}
-                                start={start}
-                                end={end}
-                                edgeIndex={i}
-                                selected={selectedEdgeIndex === i}
-                                onClick={handleEdgeClick}
-                            />
-                        ))}
-                        {vertices.map((v, i) => (
-                            <Vertex
-                                key={v.id}
-                                vertex={v}
-                                index={i}
-                                isActive={activeIndex === i}
-                                onClick={handleVertexClick}
-                                onDragMove={handleVertexDrag}
-                                onDragEnd={handleVertexDragEnd}
-                                draggable
-                                dragBounds={dragBounds}
-                            />
-                        ))}
-                    </Layer>
-                </Stage>
+                        <Grid width={effectiveWidth} height={effectiveHeight} style={{ left: 0, top: 0, zIndex: 0 }} />
+                        <div
+                            style={{
+                                position: "absolute",
+                                left: 0,
+                                top: 0,
+                                width: stageWidth,
+                                height: stageHeight,
+                                transform: `scale(${scale})`,
+                                transformOrigin: "0 0",
+                                zIndex: 1,
+                            }}
+                        >
+                            <Stage
+                                width={stageWidth}
+                                height={stageHeight}
+                                onClick={handleStageClick}
+                                style={{
+                                    position: "relative",
+                                    cursor: "crosshair",
+                                    borderRadius: 10,
+                                }}
+                            >
+                                <Layer>
+                                    {allEdges.map(({ start, end }, i) => (
+                                        <Edge
+                                            key={`edge-${i}`}
+                                            start={start}
+                                            end={end}
+                                            edgeIndex={i}
+                                            selected={selectedEdgeIndex === i}
+                                            onClick={handleEdgeClick}
+                                        />
+                                    ))}
+                                    {vertices.map((v, i) => (
+                                        <Vertex
+                                            key={v.id}
+                                            vertex={v}
+                                            index={i}
+                                            isActive={activeIndex === i}
+                                            onClick={handleVertexClick}
+                                            onDragMove={handleVertexDrag}
+                                            onDragEnd={handleVertexDragEnd}
+                                            draggable
+                                            dragBounds={dragBounds}
+                                        />
+                                    ))}
+                                </Layer>
+                            </Stage>
+                        </div>
+                    </div>
+                </Container>
             </div>
-            {/* Floating toolbar: full opacity, bottom-right with margin, visible panel */}
-            <div
-                className="flex flex-row items-center gap-2 rounded-lg bg-slate-800/95 px-3 py-2 shadow-lg border border-slate-600/50"
-                style={{ position: "absolute", bottom: 16, right: 16, zIndex: 50 }}
-            >
-                <EditorToolbar
-                    onZoomOut={onZoomOut ?? (() => {})}
-                    onClean={handleClean}
-                    onZoomIn={onZoomIn ?? (() => {})}
-                />
-            </div>
+            {vertices.length > 0 && (
+                <div style={{ flexShrink: 0 }}>
+                    <Container middle spaced right name="geometry-editor-toolbar">
+                        <EditorToolbar
+                            onZoomOut={handleZoomOut}
+                            onClean={handleClean}
+                            onZoomIn={handleZoomIn}
+                            onValidate={onValidate}
+                            onSubmit={onSubmit}
+                            disabled={disabled}
+                        />
+                    </Container>
+                </div>
+            )}
         </div>
     );
 };

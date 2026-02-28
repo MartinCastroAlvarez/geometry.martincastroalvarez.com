@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import logging
 from abc import abstractmethod
+from collections import Counter
 from typing import Any
 from typing import cast
 
@@ -75,13 +76,54 @@ def _normalize_result(result: ValidationResult) -> dict[str, str]:
     return out
 
 
+def _point_tuple(p: Any) -> tuple[float, float] | None:
+    """Normalize a point-like item to (x, y). Returns None if not a valid point."""
+    if isinstance(p, (list, tuple)) and len(p) >= 2:
+        try:
+            return (float(p[0]), float(p[1]))
+        except (TypeError, ValueError):
+            return None
+    if isinstance(p, dict) and "x" in p and "y" in p:
+        try:
+            return (float(p["x"]), float(p["y"]))
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def _points_have_degree_gt2(points: list[Any]) -> bool:
+    """True if any point (by coordinates) appears more than once (degree > 2 in closed polygon)."""
+    tuples: list[tuple[float, float]] = []
+    for p in points:
+        t = _point_tuple(p)
+        if t is not None:
+            tuples.append(t)
+    if not tuples:
+        return False
+    counts = Counter(tuples)
+    return any(c > 1 for c in counts.values())
+
+
+def _status_values(merged: ValidationResult) -> list[Status]:
+    """Extract status values from merged (status keys only; values may be Status or str)."""
+    out: list[Status] = []
+    for k, v in merged.items():
+        if k.endswith(".note"):
+            continue
+        if isinstance(v, Status):
+            out.append(v)
+        elif isinstance(v, str) and v in ("success", "failed", "pending"):
+            out.append(Status(v))
+    return out
+
+
 def _overall_status(merged: ValidationResult) -> Status:
     """
     Compute overall status from all status keys in merged result.
-    Uses only keys whose value is a Status (not *.note string keys).
+    Uses only keys whose value is a Status or status string (not *.note string keys).
     SUCCESS only if every such value is Status.SUCCESS; else PENDING if any is PENDING; else FAILED.
     """
-    status_values = [v for v in merged.values() if isinstance(v, Status)]
+    status_values = _status_values(merged)
     if not status_values:
         return Status.PENDING
     if all(s == Status.SUCCESS for s in status_values):
@@ -147,6 +189,62 @@ class PolygonValidation(Validation):
         boundary_poly: Polygon = Polygon.unserialize(boundary)
         obstacles_table: Table[Polygon] = Table.unserialize(obstacle_polys)
         return PolygonValidationRequest(boundary=boundary_poly, obstacles=obstacles_table)
+
+    def validate_vertex_degree_raw(self, body: dict[str, Any]) -> ValidationResult:
+        """
+        Check boundary and obstacles for repeated vertices (degree > 2).
+        Runs on raw body so we can report this before Polygon construction would raise.
+        """
+        result: ValidationResult = {}
+        boundary: Any = body.get("boundary")
+        obstacles: Any = body.get("obstacles")
+        if boundary is not None:
+            if isinstance(boundary, dict) and "points" in boundary:
+                boundary = boundary["points"]
+            if isinstance(boundary, list):
+                has_repeated = _points_have_degree_gt2(boundary)
+                status: Status = Status.FAILED if has_repeated else Status.SUCCESS
+                result["polygon.vertex_degree"] = status
+                result["polygon.vertex_degree.note"] = (
+                    PolygonValidationCode.POLYGON_VERTEX_DEGREE_GT2.value if has_repeated else PolygonValidationCode.POLYGON_VERTEX_DEGREE_OK.value
+                )
+        obstacle_list: list[Any] = obstacles if isinstance(obstacles, list) else []
+        for idx, obs in enumerate(obstacle_list):
+            prefix: str = f"obstacles.{idx}"
+            points: Any = obs["points"] if isinstance(obs, dict) and "points" in obs else obs
+            if not isinstance(points, list):
+                result[f"{prefix}.vertex_degree"] = Status.PENDING
+                result[f"{prefix}.vertex_degree.note"] = PolygonValidationCode.CHECK_SKIPPED.value
+                continue
+            has_repeated = _points_have_degree_gt2(points)
+            status = Status.FAILED if has_repeated else Status.SUCCESS
+            result[f"{prefix}.vertex_degree"] = status
+            result[f"{prefix}.vertex_degree.note"] = (
+                PolygonValidationCode.OBSTACLE_VERTEX_DEGREE_GT2.value if has_repeated else PolygonValidationCode.OBSTACLE_VERTEX_DEGREE_OK.value
+            )
+        return result
+
+    def handler(self, body: dict[str, Any]) -> ValidationResponse:
+        """Run vertex-degree check first (on raw body), then validate + execute; merge results."""
+        degree_result: ValidationResult = self.validate_vertex_degree_raw(body)
+        degree_failed = any(v == Status.FAILED for k, v in degree_result.items() if not k.endswith(".note") and isinstance(v, Status))
+        if degree_failed:
+            merged: ValidationResult = dict(degree_result)
+            merged["status"] = Status.FAILED
+            merged["status.note"] = PolygonValidationCode.VALIDATIONS_FAILED_OR_PENDING.value
+            return cast(ValidationResponse, _normalize_result(merged))
+        validated_input = self.validate(body)
+        exec_result: ValidationResult = dict(self.execute(validated_input))
+        for k, v in degree_result.items():
+            exec_result[k] = v
+        overall = _overall_status(exec_result)
+        exec_result["status"] = overall
+        exec_result["status.note"] = (
+            PolygonValidationCode.ALL_VALIDATIONS_PASSED.value
+            if overall == Status.SUCCESS
+            else PolygonValidationCode.VALIDATIONS_FAILED_OR_PENDING.value
+        )
+        return cast(ValidationResponse, _normalize_result(exec_result))
 
     def validate_boundary_convex(self, boundary: Polygon) -> ValidationResult:
         """Check boundary convexity. Returns status and note keys."""
