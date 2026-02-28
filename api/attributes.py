@@ -31,6 +31,7 @@ import re
 from datetime import date
 from datetime import datetime
 from datetime import timedelta
+from datetime import timezone
 from typing import Any
 from urllib.parse import ParseResult
 from urllib.parse import urlparse
@@ -122,7 +123,7 @@ class Timestamp(str):
         >>> "T" in str(ts)
         True
         """
-        return cls(datetime.utcnow())
+        return cls(datetime.now(timezone.utc))
 
     @classmethod
     def from_iso(cls, value: Any) -> Timestamp:
@@ -139,12 +140,12 @@ class Timestamp(str):
             raise ValidationError(f"Timestamp.from_iso expects a string, got {type(value).__name__}")
         raw: str = value.strip()
         if not raw:
-            return super().__new__(cls, datetime.utcnow().strftime(cls.ISO_FORMAT))
+            return super().__new__(cls, datetime.now(timezone.utc).strftime(cls.ISO_FORMAT))
         try:
             if "T" in raw:
                 dt: datetime = datetime.fromisoformat(raw.replace("Z", "+00:00"))
             else:
-                dt = datetime.strptime(raw[:19], "%Y-%m-%d %H:%M:%S")
+                dt = datetime.strptime(raw[:19], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
             return super().__new__(cls, dt.strftime(cls.ISO_FORMAT))
         except ValueError as err:
             raise ValidationError(f"Invalid ISO timestamp: {raw!r}") from err
@@ -171,7 +172,7 @@ class Timestamp(str):
         try:
             if "T" in raw:
                 return datetime.fromisoformat(raw.replace("Z", "+00:00"))
-            return datetime.strptime(raw[:19], "%Y-%m-%d %H:%M:%S")
+            return datetime.strptime(raw[:19], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
         except ValueError as err:
             raise ValidationError(f"Invalid date/time: {raw!r}") from err
 
@@ -192,7 +193,7 @@ class Countdown(int):
     True
     """
 
-    FAR_FUTURE: datetime = datetime(9999, 12, 31, 23, 59, 59, 999999)
+    FAR_FUTURE: datetime = datetime(9999, 12, 31, 23, 59, 59, 999999, tzinfo=timezone.utc)
     PRECISION: int = 8
 
     def __new__(cls, value: Any) -> Countdown:
@@ -206,7 +207,11 @@ class Countdown(int):
 
     @classmethod
     def from_datetime(cls, value: datetime) -> Countdown:
-        """Build Countdown from a datetime."""
+        """Build Countdown from a datetime. Naive datetimes are treated as UTC."""
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        else:
+            value = value.astimezone(timezone.utc)
         delta: timedelta = cls.FAR_FUTURE - value
         multiplier: int = 10**cls.PRECISION
         result: int = int(delta.total_seconds() * multiplier)

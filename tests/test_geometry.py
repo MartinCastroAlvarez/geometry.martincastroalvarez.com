@@ -16,9 +16,6 @@ from geometry import Segment
 from geometry import Walk
 
 
-# --- ConvexComponent ---
-
-
 class TestConvexComponent:
     """Test ConvexComponent (convex polygon, __and__ returns ConvexComponent)."""
 
@@ -48,9 +45,6 @@ class TestConvexComponent:
         result = c & d
         assert isinstance(result, ConvexComponent)
         assert len(result) == 2
-
-
-# --- Point ---
 
 
 class TestPoint:
@@ -201,11 +195,8 @@ class TestPoint:
         assert p.x == Decimal("10") and p.y == Decimal("20")
 
     def test_unserialize_non_str_non_list_raises(self):
-        with pytest.raises(ValidationError, match="str \\(JSON\\), list"):
+        with pytest.raises(ValidationError, match="str \\(JSON\\), or list"):
             Point.unserialize(42)
-
-
-# --- Interval ---
 
 
 class TestInterval:
@@ -330,9 +321,6 @@ class TestInterval:
             Interval.unserialize(["x", "y"])
 
 
-# --- Box ---
-
-
 class TestBox:
     """Test Box (axis-aligned)."""
 
@@ -449,9 +437,6 @@ class TestBox:
             b.contains(1)
 
 
-# --- Walk ---
-
-
 class TestWalk:
     """Test Walk (start, center, end) orientation."""
 
@@ -495,9 +480,6 @@ class TestWalk:
             w[3]
 
 
-# --- Ear ---
-
-
 class TestEar:
     """Test Ear (triangle, ccw or cw)."""
 
@@ -534,9 +516,6 @@ class TestEar:
         p = Polygon([Point([0, 0]), Point([0.5, 1]), Point([1, 0])])
         result = e & p
         assert isinstance(result, ConvexComponent)
-
-
-# --- Segment ---
 
 
 class TestSegment:
@@ -658,9 +637,6 @@ class TestSegment:
             Segment.unserialize([])
         with pytest.raises(ValidationError, match="exactly 2 Point"):
             Segment.unserialize([Point([0, 0]).serialize()])
-
-
-# --- Polygon ---
 
 
 class TestPolygon:

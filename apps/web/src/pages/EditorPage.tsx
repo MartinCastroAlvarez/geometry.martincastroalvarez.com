@@ -40,6 +40,8 @@ export const EditorPage = () => {
     const editorRef = useRef<HTMLDivElement>(null);
     const [editorSize, setEditorSize] = useState({ width: EDITOR_INITIAL_WIDTH, height: EDITOR_INITIAL_HEIGHT });
     const [gallery, setGallery] = useState<ArtGallery>(() => emptyGallery);
+    /** When the editor reports invalid geometry (e.g. not all vertices have 2 edges), this is null so we hide Validate/Submit. */
+    const [validGallery, setValidGallery] = useState<ArtGallery | null>(null);
     const [validationResult, setValidationResult] = useState<Summary | null>(null);
     const [galleryTitle, setGalleryTitle] = useState("");
     const { isLoading: sessionLoading } = useSession();
@@ -116,6 +118,7 @@ export const EditorPage = () => {
         (next: ArtGallery | null) => {
             startTransition(() => {
                 setGallery(next ?? emptyGallery);
+                setValidGallery(next);
                 setValidationResult(null);
                 validateJobMutation.reset();
                 createJob.reset();
@@ -162,7 +165,7 @@ export const EditorPage = () => {
                         <div className="col-span-12 w-full min-w-0">
                             <EditorReview
                                 summary={validationResult ?? undefined}
-                                artGallery={gallery}
+                                artGallery={validGallery}
                                 errorMessage={errorMessage}
                                 isLoading={validateJobMutation.isPending}
                                 onValidate={handleValidate}

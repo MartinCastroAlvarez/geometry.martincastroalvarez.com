@@ -98,7 +98,7 @@ const EditorSummaryTable = ({ summary }: EditorSummaryTableProps) => {
     };
 
     return (
-        <Container padded spaced rounded left>
+        <Container padded spaced rounded left height={300}>
             {sorted.map(({ key, status, note }) => (
                 <Container key={key}>
                     <Bullet
@@ -106,6 +106,8 @@ const EditorSummaryTable = ({ summary }: EditorSummaryTableProps) => {
                         success={status === "SUCCESS"}
                         sm
                         left
+                        truncate
+                        spaced
                     >
                         {getLocalizedNote(note)}
                     </Bullet>

@@ -13,7 +13,7 @@
 
 import type { Summary } from "@geometry/domain";
 import { GEOMETRY_API_URL } from "./constants";
-import { toPolygonPayloadWire } from "./adapters";
+import { toJobPayloadWire, toPolygonPayloadWire } from "./adapters";
 import type {
     ListResponse,
     DetailsResponse,
@@ -124,7 +124,7 @@ export class GeometryApiClient {
         title?: string,
     ): Promise<GeometryApiJob> {
         if (this.jwtToken == null || this.jwtToken === "") requireToken("createJob");
-        const body = toPolygonPayloadWire({ boundary, obstacles }) as Record<string, unknown>;
+        const body = toJobPayloadWire({ boundary, obstacles }) as Record<string, unknown>;
         if (title != null && title !== "") body.title = title;
         const response = await requestOrThrow(`${this.baseUrl}/v1/jobs`, this.jwtToken, {
             method: "POST",

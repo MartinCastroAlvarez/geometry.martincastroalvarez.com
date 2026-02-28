@@ -131,29 +131,36 @@ export const Editor = ({
         return { boundary, obstacles };
     }, [cycles, EMPTY_HOLES]);
 
-    const lastNotifiedRef = useRef<{ boundary: Polygon | undefined; obstacles: Polygon[] } | null>(null);
+    /** Tracks last onChange payload: 'null' when we sent null, or { boundary, obstacles } when we sent a gallery. */
+    const lastNotifiedRef = useRef<{ boundary: Polygon | undefined; obstacles: Polygon[] } | "null" | undefined>(undefined);
     useLayoutEffect(() => {
         const b = boundary ?? undefined;
         const o = obstacles;
         const prev = lastNotifiedRef.current;
-        const skip = prev && polyEquals(b ?? undefined, prev.boundary ?? undefined) && polyArrayEquals(o, prev.obstacles);
         const boundaryPts = b?.points?.length ?? 0;
+        const nextGallery =
+            !allVerticesDegreeTwo || b == null || boundaryPts < 3
+                ? null
+                : new ArtGallery(b, o, gallery.guards);
+        const skip =
+            (nextGallery === null && prev === "null") ||
+            (nextGallery !== null && prev !== undefined && prev !== "null" && polyEquals(b ?? undefined, prev.boundary ?? undefined) && polyArrayEquals(o, prev.obstacles));
         const willCallOnChange = !skip;
-        const nextGallery = b == null || boundaryPts < 3 ? null : new ArtGallery(b, o, gallery.guards);
         console.log("[Editor] notify effect", {
             vertices: vertices.length,
             edges: edges.length,
             cycles: cycles.length,
+            allVerticesDegreeTwo,
             boundaryPts,
             skip: skip ? "yes (same as last)" : "no",
             willCallOnChange,
             nextGallery: willCallOnChange ? (nextGallery ? `ArtGallery(${boundaryPts} pts)` : "null") : "-",
         });
         if (skip) return;
-        lastNotifiedRef.current = { boundary: b, obstacles: o };
+        lastNotifiedRef.current = nextGallery === null ? "null" : { boundary: b, obstacles: o };
         console.log("[Editor] onChange(", nextGallery ?? "null", ")");
         onChange?.(nextGallery);
-    }, [boundary, obstacles, gallery.guards, onChange, vertices.length, edges.length, cycles.length]);
+    }, [boundary, obstacles, gallery.guards, onChange, vertices.length, edges.length, cycles.length, allVerticesDegreeTwo]);
 
     const addVertexAt = useCallback(
         (pos: { x: number; y: number }, connectToNext: boolean) => {

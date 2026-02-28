@@ -77,7 +77,7 @@ export const pointToWireFormat = (p: { x: number; y: number }): [number, number]
 export const pointsToWireFormat = (points: Array<{ x: number; y: number }>): Array<[number, number]> =>
     points.map(pointToWireFormat);
 
-/** Build the exact JSON body for validatePolygon and createJob (points as [x, y] lists). */
+/** Build the exact JSON body for validatePolygon (boundary/obstacles as { points: [...] }). */
 export function toPolygonPayloadWire(payload: {
     boundary: Array<{ x: number; y: number }>;
     obstacles: Array<Array<{ x: number; y: number }>>;
@@ -88,6 +88,20 @@ export function toPolygonPayloadWire(payload: {
     return {
         boundary: { points: pointsToWireFormat(payload.boundary) },
         obstacles: payload.obstacles.map((obs) => ({ points: pointsToWireFormat(obs) })),
+    };
+}
+
+/** Build the exact JSON body for createJob (boundary as list of points; API expects boundary list, not { points }). */
+export function toJobPayloadWire(payload: {
+    boundary: Array<{ x: number; y: number }>;
+    obstacles: Array<Array<{ x: number; y: number }>>;
+}): {
+    boundary: Array<[number, number]>;
+    obstacles: Array<Array<[number, number]>>;
+} {
+    return {
+        boundary: pointsToWireFormat(payload.boundary),
+        obstacles: payload.obstacles.map((obs) => pointsToWireFormat(obs)),
     };
 }
 

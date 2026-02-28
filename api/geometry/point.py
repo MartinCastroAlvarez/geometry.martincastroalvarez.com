@@ -127,7 +127,7 @@ class Point(list, Serializable[str]):
     @classmethod
     def unserialize(cls, data: str | list[Any]) -> Point:
         """
-        Build Point from list of strings, list of decimals, or JSON str.
+        Build Point from list of numbers (int or float), list of strings, or JSON str.
         Raises ValidationError on invalid JSON or data.
         """
         if isinstance(data, str):
@@ -142,5 +142,6 @@ class Point(list, Serializable[str]):
                 raise ValidationError("Point.unserialize JSON must be list of at least 2 values")
             return cls((loaded[0], loaded[1]))
         if isinstance(data, (list, tuple)) and len(data) >= 2:
+            # Accept int or float; __init__ converts via Decimal(str(...))
             return cls((data[0], data[1]))
-        raise ValidationError("Point.unserialize expects str (JSON), list of strings, or list of decimals")
+        raise ValidationError("Point.unserialize expects str (JSON), or list of two numbers (int or float)")
