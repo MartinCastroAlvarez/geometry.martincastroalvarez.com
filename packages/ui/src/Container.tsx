@@ -14,6 +14,7 @@ import React, { forwardRef } from "react";
 
 interface ContainerProps {
     name?: string;
+    className?: string;
     size?: number;
     padded?: boolean;
     spaced?: boolean;
@@ -58,6 +59,7 @@ const colSpanClasses: Record<number, string> = {
 
 export const Container = forwardRef<HTMLDivElement, ContainerProps>(({
     name = "geometry-container",
+    className,
     size = 12,
     padded = false,
     spaced = false,
@@ -80,7 +82,8 @@ export const Container = forwardRef<HTMLDivElement, ContainerProps>(({
 
     const hasContainerChildren = React.Children.toArray(children).some((child) => {
         if (React.isValidElement(child)) {
-            return child.type === Container || (child.type as React.ComponentType & { displayName?: string })?.displayName === "Container";
+            const t = child.type as React.ComponentType & { displayName?: string };
+            return child.type === Container || t?.displayName === "Container" || t?.displayName === "Skeleton";
         }
         return false;
     });
@@ -106,12 +109,13 @@ export const Container = forwardRef<HTMLDivElement, ContainerProps>(({
     if (padded) classes.push("p-4");
     if (spaced) classes.push("gap-2");
     if (rounded) classes.push("rounded-xl");
-    if (solid) classes.push("bg-slate-900/60", "text-slate-100");
+    if (solid) classes.push("bg-dark-bg", "text-dark");
     if (left) classes.push("text-left");
     else if (right) classes.push("text-right");
     else if (center) classes.push("text-center");
 
     if (onClick) classes.push("cursor-pointer");
+    if (className) classes.push(className);
     const finalClassName = classes.join(" ");
 
     return (

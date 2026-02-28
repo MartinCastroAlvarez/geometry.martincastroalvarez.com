@@ -64,7 +64,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
                 ...(z != null && { zIndex: z }),
             }}
         >
-            <div className="geometry-tooltip rounded-lg border border-white/10 bg-white/5 flex items-center justify-center p-3">
+            <div className="geometry-tooltip rounded-lg border-0 flex items-center justify-center p-3">
                 <Text center muted xs>
                     {children}
                 </Text>

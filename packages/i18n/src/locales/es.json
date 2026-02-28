@@ -10,6 +10,11 @@
     "create": "Crear"
   },
   "editor": {
+    "mode": {
+      "add": "Vértices",
+      "connect": "Aristas",
+      "erase": "Borrar"
+    },
     "clickToDrawPolygon": "Hacé click para dibujar tu polígono",
     "atLeastThreePointsRequired": "Se necesitan al menos 3 puntos",
     "closePolygonToContinue": "Cerrá el polígono para continuar",
@@ -24,6 +29,7 @@
       "clickEdgeToSplit": "Hacé click en una arista para seleccionarla, luego hacé click de nuevo para agregar un vértice y partir la arista.",
       "connectTwoVertices": "Hacé click en un vértice y después en otro para conectarlos con una nueva arista.",
       "largestIsBoundary": "La figura cerrada más grande es el borde de la habitación; las figuras cerradas más chicas adentro son obstáculos.",
+      "obstaclesNoOverlap": "Los obstáculos no deben intersectarse ni contener unos a otros.",
       "dragVertices": "Arrastrá los vértices para moverlos y ajustar el polígono.",
       "deleteKey": "Seleccioná un vértice o arista y presioná Delete o Backspace para eliminarlo.",
       "arrowKeysScroll": "Usá las flechas del teclado para desplazar el canvas cuando el dibujo es más grande que la vista.",

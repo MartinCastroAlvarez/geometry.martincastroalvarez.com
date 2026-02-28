@@ -15,11 +15,14 @@ export interface ToggleProps {
   value: string;
   options: string[];
   onChange: (value: string) => void;
-  icon?: React.ReactNode;
+  /** Static icon shown for all options, or function (currentValue) => icon for per-option icon */
+  icon?: React.ReactNode | ((value: string) => React.ReactNode);
+  /** Optional label for the button (e.g. localized); defaults to value */
+  formatLabel?: (value: string) => React.ReactNode;
   sm?: boolean;
 }
 
-export const Toggle = ({ value, options, onChange, icon, sm = false }: ToggleProps) => {
+export const Toggle = ({ value, options, onChange, icon, formatLabel, sm = false }: ToggleProps) => {
   if (options.length === 0) return null;
 
   const currentIndex = options.indexOf(value);
@@ -31,9 +34,12 @@ export const Toggle = ({ value, options, onChange, icon, sm = false }: TogglePro
     onChange(nextValue);
   }, [index, options, onChange]);
 
+  const resolvedIcon = icon === undefined ? undefined : typeof icon === "function" ? icon(value) : icon;
+  const label = formatLabel ? formatLabel(value) : value;
+
   return (
-    <Button onClick={handleClick} icon={icon} sm={sm}>
-      {value}
+    <Button onClick={handleClick} icon={resolvedIcon} sm={sm}>
+      {label}
     </Button>
   );
 };

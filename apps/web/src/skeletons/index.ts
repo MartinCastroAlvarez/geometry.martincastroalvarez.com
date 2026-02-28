@@ -1,3 +1,4 @@
+export { NavSkeleton } from "./Nav.skeleton";
 export { HomePageSkeleton, WithHomePageSkeleton } from "./HomePage.skeleton";
 export { JobsPageSkeleton, WithJobsPageSkeleton } from "./JobsPage.skeleton";
 export { JobPageSkeleton, WithJobPageSkeleton } from "./JobPage.skeleton";

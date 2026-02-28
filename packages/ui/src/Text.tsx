@@ -1,7 +1,7 @@
 /**
  * Body text: size (xs–xxxl), alignment (left/center/right), optional truncate and max width.
  *
- * Context: Renders inside a center-aligned Container; applies text-white/60 and size/alignment
+ * Context: Renders inside a center-aligned Container; applies text-primary or text-muted and size/alignment
  * classes. size prop sets maxWidth in px. Empty or whitespace-only children render null.
  *
  * Example:
@@ -49,7 +49,7 @@ export const Text: React.FC<TextProps> = ({
     let alignmentClass = center ? "text-center" : right ? "text-right" : "text-left";
     const truncateClass = truncate ? "truncate" : "";
     const leadingClass = leadingProp === "tight" ? "leading-tight" : leadingProp === "snug" ? "leading-snug" : "leading-relaxed";
-    const colorClass = muted ? "text-muted" : "text-white/60";
+    const colorClass = muted ? "text-muted" : "text-primary";
 
     return (
         <Container center name="geometry-text">

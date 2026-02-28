@@ -22,11 +22,16 @@ const REQUIREMENT_KEYS = [
     "validation.requirementObstacleNoOverlap",
 ] as const;
 
-export const EditorInfoTable = () => {
+type EditorInfoTableProps = { excludeRequirements?: string[] };
+
+export const EditorInfoTable = ({ excludeRequirements }: EditorInfoTableProps = {}) => {
     const { t } = useLocale();
+    const keys = excludeRequirements?.length
+        ? REQUIREMENT_KEYS.filter((k) => !excludeRequirements.includes(k))
+        : [...REQUIREMENT_KEYS];
     return (
-        <Container padded spaced rounded solid left>
-            {REQUIREMENT_KEYS.map((key) => (
+        <Container padded spaced rounded left>
+            {keys.map((key) => (
                 <Container key={key}>
                     <Bullet sm left>
                         {t(key)}

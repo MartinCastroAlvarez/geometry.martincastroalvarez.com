@@ -26,7 +26,7 @@ export const Nav = ({ children, onClick }: NavProps) => {
     const { isMobile } = useDevice();
 
     return (
-        <Container padded spaced middle rounded solid name="geometry-nav">
+        <Container padded spaced middle rounded name="geometry-nav">
             <Container onClick={onClick} spaced size={isMobile ? 12 : 2} left>
                 <div className="flex flex-row items-center gap-3">
                     <Logo size={LOGO_SIZE} />

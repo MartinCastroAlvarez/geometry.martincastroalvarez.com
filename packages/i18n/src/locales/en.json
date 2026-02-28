@@ -10,6 +10,11 @@
     "create": "Create"
   },
   "editor": {
+    "mode": {
+      "add": "Vertices",
+      "connect": "Edges",
+      "erase": "Erase"
+    },
     "clickToDrawPolygon": "Click to draw your polygon",
     "atLeastThreePointsRequired": "At least 3 points are required",
     "closePolygonToContinue": "Close the polygon to continue",
@@ -24,6 +29,7 @@
       "clickEdgeToSplit": "Click an edge to select it, then click it again to add a vertex and split the edge.",
       "connectTwoVertices": "Click one vertex, then another to connect them with a new edge.",
       "largestIsBoundary": "The largest closed shape is the room boundary; smaller closed shapes inside it become obstacles.",
+      "obstaclesNoOverlap": "Obstacles must not intersect or contain each other.",
       "dragVertices": "Drag vertices to move them and adjust the polygon.",
       "deleteKey": "Select a vertex or edge, then press Delete or Backspace to remove it.",
       "arrowKeysScroll": "Use the arrow keys to scroll the canvas when the drawing is larger than the view.",

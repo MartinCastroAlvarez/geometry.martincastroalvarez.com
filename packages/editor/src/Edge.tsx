@@ -1,11 +1,11 @@
 /**
- * Single edge line between two vertices; hover/selected styling; optional click to add vertex on edge.
+ * Single edge line between two vertices; same color as Vertex (Tailwind --color-primary), no border.
  *
- * Context: Renders a Konva Line from start to end. Stroke and width come from editorColors (selected > hover > default).
- * When onClick is provided, click/tap pass (x, y) of the pointer so the parent can insert a new vertex on the edge.
+ * Context: Konva Line; stroke from editorColors.color (Tailwind theme). When onClick is provided,
+ * click/tap pass (x, y) so the parent can insert a new vertex on the edge.
  *
  * Example:
- *   <Edge start={v1} end={v2} edgeIndex={i} selected onClick={handleEdgeClick} />
+ *   <Edge start={v1} end={v2} edgeIndex={i} onClick={handleEdgeClick} />
  */
 
 import { memo, useState } from "react";
@@ -20,21 +20,19 @@ export interface EdgeProps {
     closed?: boolean;
     selected?: boolean;
     onClick?: (edgeIndex: number, x: number, y: number) => void;
+    /** Canvas scale (zoom); used to keep visual stroke width constant. Default 1. */
+    scale?: number;
 }
 
-const EdgeComponent = ({ start, end, edgeIndex, selected = false, onClick }: EdgeProps) => {
+const EdgeComponent = ({ start, end, edgeIndex, selected = false, onClick, scale = 1 }: EdgeProps) => {
     const [isHovered, setIsHovered] = useState(false);
-    const stroke = selected
-        ? editorColors.vertexActive
-        : isHovered
-          ? editorColors.strokeHover
-          : editorColors.edge;
-    const strokeWidth = selected ? 4 : isHovered ? 3 : 2;
+    const baseStrokeWidth = selected ? 4 : isHovered ? 3 : 2;
+    const strokeWidth = baseStrokeWidth / scale;
 
     return (
         <Line
             points={[start.x, start.y, end.x, end.y]}
-            stroke={stroke}
+            stroke={editorColors.color}
             strokeWidth={strokeWidth}
             hitStrokeWidth={20}
             lineCap="round"

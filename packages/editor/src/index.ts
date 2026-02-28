@@ -10,6 +10,7 @@
 
 export * from './Edge'
 export * from './Editor'
+export * from './EditorMode'
 export * from './Editor.skeleton'
 export * from './EditorToolbar'
 export * from './Polygon.skeleton'

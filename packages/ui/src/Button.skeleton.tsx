@@ -2,7 +2,7 @@
  * Skeleton placeholder for Button. Matches Button layout (pill-shaped, with optional size).
  *
  * Context: Used by Nav.skeleton and anywhere a button is shown while loading.
- * No external skeleton library; uses bg-slate-500/50 animate-pulse (same approach as time app).
+ * No external skeleton library; uses bg-skeleton animate-pulse.
  *
  * Example:
  *   {isLoading ? <ButtonSkeleton sm /> : <Button sm>Create</Button>}
@@ -43,7 +43,7 @@ export const ButtonSkeleton: React.FC<ButtonSkeletonProps> = ({
 
     return (
         <div
-            className="rounded-lg bg-slate-500/50 animate-pulse shrink-0"
+            className="rounded-lg bg-skeleton animate-pulse shrink-0"
             style={{ width: wCss, height: hCss }}
             aria-hidden
         />

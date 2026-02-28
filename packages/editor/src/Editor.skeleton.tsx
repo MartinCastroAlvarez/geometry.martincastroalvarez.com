@@ -52,7 +52,7 @@ export const EditorSkeleton = ({ size }: EditorSkeletonProps) => {
                     position: "absolute",
                     inset: 0,
                     borderRadius: 12,
-                    backgroundColor: "rgba(148, 163, 184, 0.2)",
+                    backgroundColor: "color-mix(in srgb, var(--color-skeleton) 40%, transparent)",
                 }}
             />
             <PolygonSkeleton size={polygonSize} rotation={rotation} />

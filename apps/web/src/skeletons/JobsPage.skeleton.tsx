@@ -3,7 +3,7 @@
  * WithJobsPageSkeleton shows skeleton when loading, otherwise renders children.
  */
 import type { ReactNode } from "react";
-import { Container } from "@geometry/ui";
+import { Skeleton } from "@geometry/ui";
 import { EditorSkeleton } from "@geometry/editor";
 
 const ROWS = 4;
@@ -13,15 +13,15 @@ const CELLS = ROWS * COLS;
 const EDITOR_SKELETON_HEIGHT = 220;
 
 export const JobsPageSkeleton = () => (
-    <Container padded spaced>
-        <Container name="geometry-jobs-skeleton-grid">
+    <Skeleton padded spaced>
+        <Skeleton name="geometry-jobs-skeleton-grid">
             {Array.from({ length: CELLS }, (_, i) => (
-                <Container key={i} size={12 / COLS}>
+                <Skeleton key={i} size={12 / COLS}>
                     <EditorSkeleton size={EDITOR_SKELETON_HEIGHT} />
-                </Container>
+                </Skeleton>
             ))}
-        </Container>
-    </Container>
+        </Skeleton>
+    </Skeleton>
 );
 
 export function WithJobsPageSkeleton({ loading, children }: { loading: boolean; children: ReactNode }) {

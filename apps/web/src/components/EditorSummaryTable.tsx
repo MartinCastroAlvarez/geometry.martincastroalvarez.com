@@ -55,7 +55,16 @@ type EditorSummaryTableProps = { summary?: Summary | null };
 export const EditorSummaryTable = ({ summary }: EditorSummaryTableProps) => {
     const { t } = useLocale();
     const rows = summary ? summaryRows(summary) : [];
-    if (rows.length === 0) return <EditorInfoTable />;
+    if (rows.length === 0) {
+        return (
+            <EditorInfoTable
+                excludeRequirements={[
+                    "validation.requirementBoundaryCcw",
+                    "validation.requirementObstacleCw",
+                ]}
+            />
+        );
+    }
     const order = (a: string, b: string) => (a === "ERROR" ? -1 : a === "SUCCESS" ? 0 : 1) - (b === "ERROR" ? -1 : b === "SUCCESS" ? 0 : 1);
     const sorted = [...rows].sort((a, b) => order(a.status, b.status));
     const getLocalizedNote = (note: string): string => {
@@ -69,7 +78,7 @@ export const EditorSummaryTable = ({ summary }: EditorSummaryTableProps) => {
     };
 
     return (
-        <Container padded spaced rounded solid left>
+        <Container padded spaced rounded left>
             {sorted.map(({ key, status, note }) => (
                 <Container key={key}>
                     <Bullet

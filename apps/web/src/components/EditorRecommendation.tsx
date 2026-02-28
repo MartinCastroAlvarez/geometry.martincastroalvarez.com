@@ -19,6 +19,7 @@ const EDITOR_TIP_KEYS = [
     "editor.tips.clickEdgeToSplit",
     "editor.tips.connectTwoVertices",
     "editor.tips.largestIsBoundary",
+    "editor.tips.obstaclesNoOverlap",
     "editor.tips.dragVertices",
     "editor.tips.deleteKey",
     "editor.tips.arrowKeysScroll",

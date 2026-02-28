@@ -1,11 +1,11 @@
 /**
- * Draggable vertex circle with first/active/hover styling and optional drag/click handlers.
+ * Draggable vertex circle; same color as Edge (Tailwind --color-primary), no border.
  *
- * Context: Renders a Konva Circle; radius and fill/stroke come from editorColors (isFirst, isActive, hover).
- * dragBoundFunc clamps position to dragBounds [0,0]–[width,height] when provided. onDragMove receives (x, y).
+ * Context: Konva Circle; fill from editorColors.color (Tailwind theme). No stroke.
+ * dragBoundFunc clamps position to dragBounds [0,0]–[width,height] when provided.
  *
  * Example:
- *   <Vertex vertex={v} index={i} isActive onDragMove={handleVertexDrag} onClick={handleVertexClick} />
+ *   <Vertex vertex={v} index={i} onDragMove={handleVertexDrag} onClick={handleVertexClick} />
  */
 
 import { memo, useState } from "react";
@@ -26,6 +26,8 @@ export interface VertexProps {
     dragBounds?: { width: number; height: number };
     /** When set, constrain drag to this rect instead of [0,0]–[dragBounds.width,dragBounds.height] */
     contentBounds?: { minX: number; minY: number; maxX: number; maxY: number };
+    /** Canvas scale (zoom); used to keep visual size constant (radius divided by scale). Default 1. */
+    scale?: number;
 }
 
 const VertexComponent = ({
@@ -39,10 +41,11 @@ const VertexComponent = ({
     draggable = true,
     dragBounds,
     contentBounds,
+    scale = 1,
 }: VertexProps) => {
     const [isHovered, setIsHovered] = useState(false);
-    const radius = isActive ? 8 : isFirst ? 7 : isHovered ? 6 : 5;
-    const strokeWidth = isHovered ? 3 : 2;
+    const baseRadius = isActive ? 8 : isFirst ? 7 : isHovered ? 6 : 5;
+    const radius = baseRadius / scale;
 
     const dragBoundFunc =
         onDragMove && (contentBounds || dragBounds)
@@ -63,17 +66,13 @@ const VertexComponent = ({
               }
             : undefined;
 
-    const fill = isFirst ? editorColors.vertexFirst : isActive ? editorColors.vertexActive : editorColors.vertex;
-    const stroke = isHovered ? editorColors.strokeHover : fill;
-
     return (
         <Circle
             x={vertex.x}
             y={vertex.y}
             radius={radius}
-            fill={fill}
-            stroke={stroke}
-            strokeWidth={strokeWidth}
+            fill={editorColors.color}
+            strokeWidth={0}
             draggable={draggable && !!onDragMove}
             cursor="pointer"
             dragBoundFunc={dragBoundFunc}

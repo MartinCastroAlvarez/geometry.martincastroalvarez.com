@@ -9,14 +9,13 @@
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Clock, Globe, Plus } from "lucide-react";
-import { Toaster, Nav, NavSkeleton, Container, Body, Toolbar, Button, Toggle, Card } from "@geometry/ui";
+import { Toaster, Nav, Container, Body, Toolbar, Button, Toggle, Card } from "@geometry/ui";
+import { NavSkeleton } from "./skeletons";
 import { useSession, useLogout, useJobs } from "@geometry/data";
 import { useLocale, Language } from "@geometry/i18n";
 import { useAnalytics, GoogleAnalyticsActions, GoogleAnalyticsCategories } from "@geometry/analytics";
 import { AppRoutes } from "./Routes";
 import "./index.css";
-
-const LANG_OPTIONS = [Language.EN, Language.ES];
 
 const App = () => {
     const navigate = useNavigate();
@@ -68,7 +67,7 @@ const App = () => {
                             {t("nav.history")}
                         </Button>
                     )}
-                    <Toggle value={language} options={LANG_OPTIONS} onChange={(v) => setLanguage(v as Language)} icon={<Globe size={14} />} sm />
+                    <Toggle value={language} options={Object.values(Language)} onChange={(v) => setLanguage(v as Language)} icon={<Globe size={14} />} sm />
                     {user && <Card user={user} sm right rounded />}
                     {user ? (
                         <Button onClick={handleLogout} sm aria-label={t("nav.logout")}>

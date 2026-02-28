@@ -22,7 +22,7 @@ export const PolygonSkeleton = ({ size, rotation }: PolygonSkeletonProps) => (
             width: size,
             height: size,
             borderRadius: 6,
-            backgroundColor: "rgba(148, 163, 184, 0.45)",
+            backgroundColor: "color-mix(in srgb, var(--color-skeleton) 45%, transparent)",
             transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
             transformOrigin: "center",
         }}

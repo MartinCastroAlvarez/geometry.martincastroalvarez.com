@@ -70,8 +70,8 @@ export const Button: React.FC<ButtonProps> = ({
     if (!children && !icon) return null;
 
     const baseClasses = primary
-        ? "inline-flex flex-row items-center justify-center gap-2 font-medium rounded-lg transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-white"
-        : "inline-flex flex-row items-center justify-center gap-2 font-medium rounded-lg transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer border-2 border-slate-300 bg-white/5 hover:bg-white/15 hover:border-slate-200 active:bg-white/20";
+        ? "appearance-none inline-flex flex-row items-center justify-center gap-2 font-medium rounded-lg transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-ring disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer border border-transparent bg-primary-gradient text-white"
+        : "appearance-none inline-flex flex-row items-center justify-center gap-2 font-medium rounded-lg transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-ring disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer border border-slate-300 bg-transparent hover:bg-surface-hover hover:border-primary active:bg-surface-active text-primary";
 
     const getSizeClasses = (): string => {
         if (xs) return "py-0.5 px-1.5 text-[11px]";
@@ -88,7 +88,7 @@ export const Button: React.FC<ButtonProps> = ({
         if (!React.isValidElement(iconElement)) return iconElement;
         const element = iconElement as React.ReactElement<{ className?: string }>;
         const existingClassName = element.props.className || "";
-        const iconColorClass = primary ? "text-white" : "text-white/70";
+        const iconColorClass = primary ? "text-white" : "text-muted";
         return React.cloneElement(element, { className: `${existingClassName} ${iconColorClass}`.trim() });
     };
 
@@ -116,14 +116,6 @@ export const Button: React.FC<ButtonProps> = ({
                 onClick={handleClick}
                 disabled={disabled}
                 className={`geometry-button ${combinedClasses}`.trim()}
-                style={
-                    primary
-                        ? {
-                              background: "linear-gradient(to right, #7c3aed, #6b21a8)",
-                              border: "none",
-                          }
-                        : { border: "2px solid rgba(148, 163, 184, 0.3)" }
-                }
                 aria-label={ariaLabel}
             >
                 <span className={`flex flex-row flex-nowrap items-center ${innerGapClass}`}>

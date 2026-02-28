@@ -1,15 +1,15 @@
 /**
  * Shared grid background for Editor and EditorSkeleton.
- * Dark blue background with 24px grid lines.
+ * Uses theme --color-ring (apps/web tailwind) for background; 24px grid lines.
  */
 
 import type { CSSProperties } from "react";
 
 const GRID_STYLE: CSSProperties = {
     position: "absolute",
-    opacity: 0.25,
+    opacity: 0.35,
     pointerEvents: "none",
-    backgroundColor: "rgba(2, 6, 23, 0.85)",
+    backgroundColor: "color-mix(in srgb, var(--color-ring) 85%, transparent)",
     backgroundImage: `
         linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
         linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px)

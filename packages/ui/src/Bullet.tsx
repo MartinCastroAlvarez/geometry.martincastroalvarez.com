@@ -56,12 +56,12 @@ export const Bullet: React.FC<BulletProps> = ({
     onClick,
 }) => {
     const resolvedIcon =
-        danger ? <TriangleAlert size={BULLET_ICON_SIZE} className="shrink-0 text-red-300" aria-hidden /> :
-        success ? <Check size={BULLET_ICON_SIZE} className="shrink-0 text-green-300" aria-hidden /> :
+        danger ? <TriangleAlert size={BULLET_ICON_SIZE} className="shrink-0 text-danger" aria-hidden /> :
+        success ? <Check size={BULLET_ICON_SIZE} className="shrink-0 text-success" aria-hidden /> :
         defaultIcon;
     return (
         <div className="geometry-bullet flex gap-4 items-start w-full mt-2">
-            <span className="shrink-0 w-4 min-w-4 mt-2 h-[1.25em] flex items-center justify-center" aria-hidden>
+            <span className="shrink-0 w-4 min-w-4 h-[1.25em] flex items-start justify-center pt-[calc((1.25em-15px)/2)]" aria-hidden>
                 {resolvedIcon}
             </span>
             <div className="flex-1 min-w-0">

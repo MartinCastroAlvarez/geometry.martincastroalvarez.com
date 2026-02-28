@@ -1,11 +1,9 @@
 /**
- * Geometry editor canvas: vertices and edges. Simple interaction model:
- * 1. Click empty space → add vertex
- * 2. Click vertex → make it active
- * 3. Click another vertex when one is active → create edge
- * 4. Click edge → make edge active
- * 5. Click active edge → split edge (new vertex, connect)
- * 6. Drag vertices
+ * Geometry editor canvas: vertices and edges. Mode-driven interaction:
+ * - Add: click empty → add vertex; click vertex → select / create edge.
+ * - Connect: same but new vertex is auto-selected so next click connects.
+ * - Erase: click vertex or edge → remove it.
+ * Zoom and clean are internal; only onChange (geometry), onValidate, onSubmit are exposed.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -20,15 +18,12 @@ import { Edge } from "./Edge";
 import { Grid } from "./Grid";
 import { Vertex } from "./Vertex";
 import { EditorToolbar } from "./EditorToolbar";
+import { EditorMode } from "./EditorMode";
 
 export interface EditorProps {
     width: number;
     height: number;
     onChange?: (boundary?: Polygon, obstacles?: Polygon[]) => void;
-    onVerticesChange?: (hasVertices: boolean) => void;
-    onZoomOut?: () => void;
-    onClean?: () => void;
-    onZoomIn?: () => void;
     onValidate?: () => void;
     onSubmit?: () => void;
     /** When true, Validate and Submit in the toolbar are disabled (e.g. while a request is pending). */
@@ -39,10 +34,6 @@ export const Editor = ({
     width,
     height,
     onChange,
-    onVerticesChange,
-    onZoomOut,
-    onClean,
-    onZoomIn,
     onValidate,
     onSubmit,
     disabled = false,
@@ -51,6 +42,7 @@ export const Editor = ({
     const [edges, setEdges] = useState<[number, number][]>(() => []);
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
     const [selectedEdgeIndex, setSelectedEdgeIndex] = useState<number | null>(null);
+    const [mode, setMode] = useState<EditorMode>(EditorMode.Connect);
     const containerRef = useRef<HTMLDivElement>(null);
     const { t } = useLocale();
 
@@ -77,12 +69,10 @@ export const Editor = ({
     const [scale, setScale] = useState(1);
     const handleZoomIn = useCallback(() => {
         setScale((s) => Math.min(ZOOM_MAX, s * ZOOM_STEP));
-        onZoomIn?.();
-    }, [onZoomIn]);
+    }, []);
     const handleZoomOut = useCallback(() => {
         setScale((s) => Math.max(ZOOM_MIN, s / ZOOM_STEP));
-        onZoomOut?.();
-    }, [onZoomOut]);
+    }, []);
 
     const handleClean = useCallback(() => {
         setVertices([]);
@@ -90,8 +80,7 @@ export const Editor = ({
         setActiveIndex(null);
         setSelectedEdgeIndex(null);
         onChange?.(emptyPolygon, []);
-        onClean?.();
-    }, [onChange, onClean]);
+    }, [onChange]);
 
     const cycles = useMemo(() => findCycles(vertices, edges), [vertices, edges]);
 
@@ -134,36 +123,65 @@ export const Editor = ({
         return () => cancelAnimationFrame(frameId);
     }, [boundary, obstacles, onChange]);
 
-    useEffect(() => {
-        onVerticesChange?.(vertices.length > 0);
-    }, [vertices.length, onVerticesChange]);
-
-    const addVertexAt = useCallback((pos: { x: number; y: number }) => {
-        setSelectedEdgeIndex(null);
-        const newVertex: EditorVertex = {
-            id: `v-${Date.now()}-${pos.x}-${pos.y}`,
-            x: pos.x,
-            y: pos.y,
-        };
-        const newIndex = vertices.length;
-        setVertices((prev) => [...prev, newVertex]);
-        setActiveIndex(newIndex);
-        containerRef.current?.focus();
-    }, [vertices.length]);
+    const addVertexAt = useCallback(
+        (pos: { x: number; y: number }, connectToNext: boolean) => {
+            setSelectedEdgeIndex(null);
+            const newVertex: EditorVertex = {
+                id: `v-${Date.now()}-${pos.x}-${pos.y}`,
+                x: pos.x,
+                y: pos.y,
+            };
+            const newIndex = vertices.length;
+            setVertices((prev) => [...prev, newVertex]);
+            if (connectToNext && vertices.length >= 1) {
+                setEdges((prev) => [...prev, [vertices.length - 1, newIndex]]);
+            }
+            setActiveIndex(connectToNext ? newIndex : null);
+            containerRef.current?.focus();
+        },
+        [vertices.length]
+    );
 
     const handleStageClick = useCallback(
         (e: { target: { getStage: () => unknown } }) => {
+            if (mode === EditorMode.Erase) return;
             const stage = e.target.getStage();
             if (!stage || e.target !== stage) return;
             const pos = (stage as { getPointerPosition: () => { x: number; y: number } | null }).getPointerPosition?.();
             if (!pos) return;
-            addVertexAt(pos);
+            addVertexAt(pos, mode === EditorMode.Connect);
         },
-        [addVertexAt]
+        [addVertexAt, mode]
     );
+
+    const removeVertexAt = useCallback((index: number) => {
+        setVertices((prev) => prev.filter((_, i) => i !== index));
+        setEdges((prev) =>
+            prev
+                .filter(([a, b]) => a !== index && b !== index)
+                .map(([a, b]) => [
+                    a > index ? a - 1 : a,
+                    b > index ? b - 1 : b,
+                ] as [number, number])
+        );
+        setActiveIndex(null);
+        setSelectedEdgeIndex(null);
+        containerRef.current?.focus();
+    }, []);
+
+    const removeEdgeAt = useCallback((edgeIndex: number) => {
+        setEdges((prev) => prev.filter((_, i) => i !== edgeIndex));
+        setSelectedEdgeIndex(null);
+        setActiveIndex(null);
+        containerRef.current?.focus();
+    }, []);
 
     const handleVertexClick = useCallback(
         (index: number) => {
+            if (mode === EditorMode.Erase) {
+                removeVertexAt(index);
+                return;
+            }
             setSelectedEdgeIndex(null);
             if (activeIndex === index) {
                 setActiveIndex(null);
@@ -179,11 +197,15 @@ export const Editor = ({
             setActiveIndex(index);
             containerRef.current?.focus();
         },
-        [activeIndex, edges]
+        [mode, activeIndex, edges, removeVertexAt]
     );
 
     const handleEdgeClick = useCallback(
         (edgeIndex: number, x: number, y: number) => {
+            if (mode === EditorMode.Erase) {
+                removeEdgeAt(edgeIndex);
+                return;
+            }
             if (selectedEdgeIndex === edgeIndex) {
                 const [a, b] = edges[edgeIndex];
                 const newVertex: EditorVertex = {
@@ -206,7 +228,7 @@ export const Editor = ({
             }
             containerRef.current?.focus();
         },
-        [selectedEdgeIndex, edges, vertices.length]
+        [mode, selectedEdgeIndex, edges, vertices.length, removeEdgeAt]
     );
 
     const handleVertexDrag = useCallback((index: number, x: number, y: number) => {
@@ -374,6 +396,7 @@ export const Editor = ({
                                             edgeIndex={i}
                                             selected={selectedEdgeIndex === i}
                                             onClick={handleEdgeClick}
+                                            scale={scale}
                                         />
                                     ))}
                                     {vertices.map((v, i) => (
@@ -387,6 +410,7 @@ export const Editor = ({
                                             onDragEnd={handleVertexDragEnd}
                                             draggable
                                             dragBounds={dragBounds}
+                                            scale={scale}
                                         />
                                     ))}
                                 </Layer>
@@ -396,10 +420,12 @@ export const Editor = ({
                     </Container>
                 </div>
             </div>
-            {vertices.length > 0 && (
+            {vertices.length >= 1 && (
                 <div style={{ flexShrink: 0, padding: "0.75rem 0" }}>
                     <Container middle spaced right name="geometry-editor-toolbar">
                         <EditorToolbar
+                            mode={mode}
+                            onModeChange={setMode}
                             onZoomOut={handleZoomOut}
                             onClean={handleClean}
                             onZoomIn={handleZoomIn}

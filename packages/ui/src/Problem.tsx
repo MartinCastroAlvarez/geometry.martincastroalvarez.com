@@ -17,7 +17,7 @@ interface ProblemProps {
     children?: React.ReactNode;
 }
 
-const bannerClasses = "flex flex-row items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-red-500/20 text-red-300 border border-red-500/40";
+const bannerClasses = "flex flex-row items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-danger-bg text-danger border border-danger";
 
 export const Problem: React.FC<ProblemProps> = ({ children }) => {
     if (children == null) return null;

@@ -146,48 +146,49 @@ export const EditorPage = () => {
                 });
                 setValidationResult(null);
                 setUnrecoverableError(null);
+                const empty =
+                    boundary != null && boundary.toDict().points.length === 0 && (!obstacles || obstacles.length === 0);
+                if (empty) {
+                    validatePolygon.reset();
+                    createJob.reset();
+                }
             });
         },
-        []
+        [validatePolygon, createJob]
     );
-
-    const handleClean = useCallback(() => {
-        setGallery(emptyGallery);
-        setValidationResult(null);
-        setUnrecoverableError(null);
-        validatePolygon.reset();
-        createJob.reset();
-    }, [validatePolygon, createJob]);
 
     return (
         <WithEditorPageSkeleton loading={sessionLoading}>
             <Container padded spaced>
-                <Container middle center>
-                    <Input
-                        type="text"
-                        value={galleryTitle}
-                        onChange={(e) => setGalleryTitle(e.target.value)}
-                        placeholder={t("editor.untitledGallery")}
-                        aria-label={t("editor.untitledGallery")}
-                        className="max-w-md w-full"
-                        lg
-                    />
-                </Container>
                 <Container>
-                    <Container ref={editorRef} name="geometry-editor-wrapper w-full h-[70vh] min-h-[400px] relative" {...(!isMobile && { size: EDITOR_COL_DESKTOP })}>
-                        <Editor
-                            width={editorSize.width}
-                            height={editorSize.height}
-                            onChange={handleChange}
-                            onZoomOut={() => {}}
-                            onClean={handleClean}
-                            onZoomIn={() => {}}
-                            onValidate={handleValidate}
-                            onSubmit={handleSubmit}
-                            disabled={validatePolygon.isPending || createJob.isPending}
-                        />
+                    <Container {...(!isMobile && { size: EDITOR_COL_DESKTOP })}>
+                        <Container middle center>
+                            <Input
+                                type="text"
+                                value={galleryTitle}
+                                onChange={(e) => setGalleryTitle(e.target.value)}
+                                placeholder={t("editor.untitledGallery")}
+                                aria-label={t("editor.untitledGallery")}
+                                className="max-w-md w-full"
+                                lg
+                                transparent
+                            />
+                        </Container>
+                        <Container ref={editorRef} name="geometry-editor-wrapper w-full h-[70vh] min-h-[400px] relative">
+                            <Editor
+                                width={editorSize.width}
+                                height={editorSize.height}
+                                onChange={handleChange}
+                                onValidate={handleValidate}
+                                onSubmit={handleSubmit}
+                                disabled={validatePolygon.isPending || createJob.isPending}
+                            />
+                        </Container>
                     </Container>
                     <Container padded spaced left {...(!isMobile && { size: SUMMARY_COL_DESKTOP })}>
+                        <Container size={isMobile ? 0 : 12}>
+                            <br />
+                        </Container>
                         {errorMessage && <Problem>{errorMessage}</Problem>}
                         {validatePolygon.isPending && <SummaryTableSkeleton variant="results" />}
                         {!validatePolygon.isPending && <EditorSummaryTable summary={validationResult ?? undefined} />}

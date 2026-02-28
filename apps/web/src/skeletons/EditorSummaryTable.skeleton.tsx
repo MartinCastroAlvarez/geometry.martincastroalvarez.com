@@ -2,7 +2,7 @@
  * Skeleton for EditorSummaryTable: requirements list or validation results.
  * Used when validation is loading (results variant) or as placeholder for the summary column.
  */
-import { Container, BadgeSkeleton, BulletSkeleton, TextSkeleton } from "@geometry/ui";
+import { Skeleton, BadgeSkeleton, BulletSkeleton, TextSkeleton } from "@geometry/ui";
 
 const SUMMARY_ROW_COUNT = 7;
 const SUMMARY_RESULT_ROW_WIDTHS: (string | number)[] = ["75%", "82%", "68%", "90%", "72%", "85%", "78%"];
@@ -15,15 +15,15 @@ export interface SummaryTableSkeletonProps {
 }
 
 export const SummaryTableSkeleton = ({ variant = "results" }: SummaryTableSkeletonProps) => (
-    <Container padded spaced rounded solid left>
+    <Skeleton padded spaced rounded left>
         {variant === "requirements"
             ? Array.from({ length: SUMMARY_ROW_COUNT }, (_, i) => (
-                  <Container key={i}>
+                  <Skeleton key={i}>
                       <BulletSkeleton sm width={SUMMARY_REQUIREMENT_ROW_WIDTHS[i]} />
-                  </Container>
+                  </Skeleton>
               ))
             : Array.from({ length: SUMMARY_ROW_COUNT }, (_, i) => (
-                  <Container key={i}>
+                  <Skeleton key={i}>
                       <div className="flex items-start gap-2 min-h-[1.5rem]">
                           <span className="shrink-0 mt-0.5">
                               <BadgeSkeleton width="4rem" />
@@ -32,7 +32,7 @@ export const SummaryTableSkeleton = ({ variant = "results" }: SummaryTableSkelet
                               <TextSkeleton sm width={SUMMARY_RESULT_ROW_WIDTHS[i]} lines={1} />
                           </span>
                       </div>
-                  </Container>
+                  </Skeleton>
               ))}
-    </Container>
+    </Skeleton>
 );
