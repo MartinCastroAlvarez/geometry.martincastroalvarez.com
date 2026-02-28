@@ -11,8 +11,12 @@
   },
   "editor": {
     "clickToDrawPolygon": "Click to draw your polygon",
+    "atLeastThreePointsRequired": "At least 3 points are required",
+    "closePolygonToContinue": "Close the polygon to continue",
+    "nextStepValidateSubmit": "Next: validate the polygon, then submit",
     "validate": "Validate",
     "submit": "Submit",
+    "optimize": "Optimize",
     "untitledGallery": "Untitled Gallery",
     "tips": {
       "clickToAdd": "Click on the canvas to add a point; click elsewhere to connect points and form a shape.",

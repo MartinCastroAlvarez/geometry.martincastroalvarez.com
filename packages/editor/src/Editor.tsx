@@ -12,7 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Stage, Layer } from "react-konva";
 import { Polygon } from "@geometry/domain";
 import { useLocale } from "@geometry/i18n";
-import { Container, Text, Tooltip } from "@geometry/ui";
+import { Container, Tooltip } from "@geometry/ui";
 import type { EditorVertex } from "./types";
 import { editorVerticesToPolygon } from "./adapters";
 import { findCycles, signedArea, isInside, polyEquals, polyArrayEquals, emptyPolygon } from "./utils";
@@ -94,6 +94,12 @@ export const Editor = ({
     }, [onChange, onClean]);
 
     const cycles = useMemo(() => findCycles(vertices, edges), [vertices, edges]);
+
+    const allVerticesDegreeTwo = useMemo(() => {
+        if (vertices.length === 0) return false;
+        const degree = (i: number) => edges.filter(([a, b]) => a === i || b === i).length;
+        return vertices.every((_, i) => degree(i) === 2);
+    }, [vertices, edges]);
 
     const EMPTY_HOLES: Polygon[] = useMemo(() => [], []);
     const { boundary, obstacles } = useMemo(() => {
@@ -299,11 +305,42 @@ export const Editor = ({
                             <Tooltip
                                 width={effectiveWidth}
                                 height={effectiveHeight}
-                                zIndex={1}
+                                z={1}
                             >
-                                <Text center muted>
-                                    {t("editor.clickToDrawPolygon")}
-                                </Text>
+                                {t("editor.clickToDrawPolygon")}
+                            </Tooltip>
+                        )}
+                        {vertices.length === 2 && (
+                            <Tooltip
+                                width={effectiveWidth}
+                                height={effectiveHeight}
+                                z={1}
+                                right
+                                bottom
+                            >
+                                {t("editor.atLeastThreePointsRequired")}
+                            </Tooltip>
+                        )}
+                        {vertices.length >= 3 && !allVerticesDegreeTwo && (
+                            <Tooltip
+                                width={effectiveWidth}
+                                height={effectiveHeight}
+                                z={1}
+                                right
+                                bottom
+                            >
+                                {t("editor.closePolygonToContinue")}
+                            </Tooltip>
+                        )}
+                        {vertices.length > 0 && allVerticesDegreeTwo && (
+                            <Tooltip
+                                width={effectiveWidth}
+                                height={effectiveHeight}
+                                z={1}
+                                right
+                                bottom
+                            >
+                                {t("editor.nextStepValidateSubmit")}
                             </Tooltip>
                         )}
                         <div
@@ -360,14 +397,14 @@ export const Editor = ({
                 </div>
             </div>
             {vertices.length > 0 && (
-                <div style={{ flexShrink: 0, padding: "0.75rem 1rem" }}>
+                <div style={{ flexShrink: 0, padding: "0.75rem 0" }}>
                     <Container middle spaced right name="geometry-editor-toolbar">
                         <EditorToolbar
                             onZoomOut={handleZoomOut}
                             onClean={handleClean}
                             onZoomIn={handleZoomIn}
-                            onValidate={onValidate}
-                            onSubmit={onSubmit}
+                            onValidate={allVerticesDegreeTwo ? onValidate : undefined}
+                            onSubmit={allVerticesDegreeTwo ? onSubmit : undefined}
                             disabled={disabled}
                         />
                     </Container>

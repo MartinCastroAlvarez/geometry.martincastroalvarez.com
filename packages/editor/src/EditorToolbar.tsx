@@ -38,7 +38,7 @@ export const EditorToolbar = ({
                 )}
                 {onSubmit != null && (
                     <Button sm primary onClick={onSubmit} disabled={disabled} icon={<Send size={14} className="shrink-0 text-slate-200" aria-hidden />}>
-                        {t("editor.submit")}
+                        {t("editor.optimize")}
                     </Button>
                 )}
             </Toolbar>

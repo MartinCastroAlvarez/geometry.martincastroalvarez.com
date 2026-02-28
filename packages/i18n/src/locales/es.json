@@ -11,8 +11,12 @@
   },
   "editor": {
     "clickToDrawPolygon": "Hacé click para dibujar tu polígono",
+    "atLeastThreePointsRequired": "Se necesitan al menos 3 puntos",
+    "closePolygonToContinue": "Cerrá el polígono para continuar",
+    "nextStepValidateSubmit": "Siguiente: validá el polígono y luego enviá",
     "validate": "Validar",
     "submit": "Enviar",
+    "optimize": "Optimizar",
     "untitledGallery": "Galería Sin Título",
     "tips": {
       "clickToAdd": "Hacé click en el canvas para agregar un punto; hacé click en otro lugar para conectar puntos y formar una figura.",
