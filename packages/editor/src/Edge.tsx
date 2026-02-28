@@ -1,5 +1,5 @@
 /**
- * Single edge line between two vertices; same color as Vertex (theme --color-editor-stroke), no border.
+ * Single edge line between two vertices; same color as Vertex (theme --color-polygon), no border.
  *
  * Context: Konva Line; stroke from useTheme().getColor (theme.css). When onClick is provided,
  * click/tap pass (x, y) so the parent can insert a new vertex on the edge.
@@ -33,7 +33,7 @@ const EdgeComponent = ({ start, end, edgeIndex, selected = false, onClick, scale
     return (
         <Line
             points={[start.x, start.y, end.x, end.y]}
-            stroke={getColor("--color-editor-stroke")}
+            stroke={getColor("--color-polygon")}
             strokeWidth={strokeWidth}
             hitStrokeWidth={20}
             lineCap="round"

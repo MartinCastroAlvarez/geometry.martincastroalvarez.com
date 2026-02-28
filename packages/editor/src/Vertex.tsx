@@ -1,5 +1,5 @@
 /**
- * Draggable vertex circle; same color as Edge (theme --color-editor-stroke), no border.
+ * Draggable vertex circle; same color as Edge (theme --color-polygon), no border.
  *
  * Context: Konva Circle; fill from useTheme().getColor (theme.css). No stroke.
  * dragBoundFunc clamps position to dragBounds [0,0]–[width,height] when provided.
@@ -72,7 +72,7 @@ const VertexComponent = ({
             x={vertex.x}
             y={vertex.y}
             radius={radius}
-            fill={getColor("--color-editor-stroke")}
+            fill={getColor("--color-polygon")}
             strokeWidth={0}
             draggable={draggable && !!onDragMove}
             cursor="pointer"

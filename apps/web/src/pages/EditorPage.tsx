@@ -174,7 +174,7 @@ export const EditorPage = () => {
                                 transparent
                             />
                         </Container>
-                        <Container ref={editorRef} name="geometry-editor-wrapper w-full h-[70vh] min-h-[400px] relative">
+                        <Container ref={editorRef} name="geometry-editor-wrapper" className="w-full h-[70vh] min-h-[400px] relative">
                             <Editor
                                 width={editorSize.width}
                                 height={editorSize.height}

@@ -72,7 +72,7 @@ export const EditorToolbar = ({
                     {onClean != null && (
                         <Button
                             sm
-                            confirm={t("editor.clearConfirm")}
+                            confirm={t("toolbar.clearConfirm")}
                             onClick={onClean}
                             icon={<Trash2 size={14} className="shrink-0" aria-hidden />}
                             aria-label="Clear"

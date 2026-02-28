@@ -10,8 +10,8 @@
     "create": "Create"
   },
   "theme": {
-    "dark": "Dark",
-    "light": "Light"
+    "dark": "Moon",
+    "light": "Sun"
   },
   "editor": {
     "mode": {
@@ -48,13 +48,16 @@
     "hole": "Hole",
     "close": "Close",
     "clear": "Clear",
-    "clearConfirm": "Delete everything?",
+    "clearConfirm": "This will remove all vertices and edges from the canvas. This action cannot be undone.",
     "addVertices": "Add {{count}} more vertex to close",
     "addVerticesPlural": "Add {{count}} more vertices to close",
     "clickToClose": "Click near the first point (green) to close"
   },
   "common": {
-    "defaultConfirmMessage": "Are you sure?"
+    "defaultConfirmMessage": "Are you sure?",
+    "confirmTitle": "Just to be sure",
+    "confirm": "Confirm",
+    "cancel": "Cancel"
   },
   "validation": {
     "resultsTitle": "Validation results",

@@ -6,16 +6,20 @@ import { forwardRef, type ReactNode } from "react";
 
 export interface SkeletonProps {
     opacity?: number;
+    /** When false, height is content-driven (e.g. for nav skeleton); default true for full-height shells */
+    fullHeight?: boolean;
+    className?: string;
     children?: ReactNode;
 }
 
-export const Skeleton = forwardRef<HTMLDivElement, SkeletonProps>(({ opacity = 60, children }, ref) => {
+export const Skeleton = forwardRef<HTMLDivElement, SkeletonProps>(({ opacity = 60, fullHeight = true, className = "", children }, ref) => {
     if (opacity < 0 || opacity > 100) {
         throw new Error(`Skeleton opacity must be between 0 and 100, received: ${opacity}`);
     }
 
+    const heightClass = fullHeight ? "h-full" : "";
     return (
-        <div ref={ref} className={`opacity-${opacity} w-full h-full animate-pulse`}>
+        <div ref={ref} className={`opacity-${opacity} w-full ${heightClass} animate-pulse ${className}`.trim()}>
             {children}
         </div>
     );

@@ -488,7 +488,7 @@ export const Editor = ({
                     </Container>
                 </div>
             </div>
-            {vertices.length >= 1 && (
+            {vertices.length > 0 && (
                 <div style={{ flexShrink: 0, padding: "0.75rem 0" }}>
                     <Container middle spaced right name="geometry-editor-toolbar">
                         <EditorToolbar

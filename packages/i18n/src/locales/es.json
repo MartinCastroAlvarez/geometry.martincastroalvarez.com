@@ -10,8 +10,8 @@
     "create": "Crear"
   },
   "theme": {
-    "dark": "Oscuro",
-    "light": "Claro"
+    "dark": "Luna",
+    "light": "Sol"
   },
   "editor": {
     "mode": {
@@ -48,13 +48,16 @@
     "hole": "Agujero",
     "close": "Cerrar",
     "clear": "Limpiar",
-    "clearConfirm": "¿Borrar todo?",
+    "clearConfirm": "Esto va a borrar todos los vértices y aristas del canvas. Esta acción no se puede deshacer.",
     "addVertices": "Agregá {{count}} vértice más para cerrar",
     "addVerticesPlural": "Agregá {{count}} vértices más para cerrar",
     "clickToClose": "Hacé click cerca del primer punto (verde) para cerrar"
   },
   "common": {
-    "defaultConfirmMessage": "¿Estás seguro?"
+    "defaultConfirmMessage": "¿Estás seguro?",
+    "confirmTitle": "Solo para estar seguros",
+    "confirm": "Confirmar",
+    "cancel": "Cancelar"
   },
   "validation": {
     "resultsTitle": "Resultados de validación",

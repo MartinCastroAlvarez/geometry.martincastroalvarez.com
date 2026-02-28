@@ -2,7 +2,8 @@
  * Top navigation bar: logo, title, and optional right-side children.
  *
  * Context: Two-column layout (logo+title left, children right); on mobile both columns full width.
- * Logo size is fixed (24px). Clicking the left block triggers optional onClick (e.g. go home).
+ * Children are wrapped in a Toolbar with right alignment. Logo size is fixed (24px). Clicking the
+ * left block triggers optional onClick (e.g. go home).
  *
  * Example:
  *   <Nav onClick={() => navigate('/')}>
@@ -13,6 +14,7 @@
 import { Container } from "./Container";
 import { Logo } from "./Logo";
 import { Title } from "./Title";
+import { Toolbar } from "./Button";
 import { useDevice } from "./useDevice";
 
 const LOGO_SIZE = 24;
@@ -34,7 +36,7 @@ export const Nav = ({ children, onClick }: NavProps) => {
                 </div>
             </Container>
             <Container middle spaced size={isMobile ? 12 : 10} right>
-                {children}
+                <Toolbar right>{children}</Toolbar>
             </Container>
         </Container>
     );
