@@ -97,3 +97,14 @@ body {
 [data-theme="light"] .geometry-container.overflow-y-auto::-webkit-scrollbar-thumb:hover {
   background: rgb(100 116 139);
 }
+
+/* Editor page inspector: scrollable but scrollbar hidden (outer and inner Container) */
+.geometry-inspector-scroll,
+.geometry-inspector-scroll .geometry-container.overflow-y-auto {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.geometry-inspector-scroll::-webkit-scrollbar,
+.geometry-inspector-scroll .geometry-container.overflow-y-auto::-webkit-scrollbar {
+  display: none;
+}

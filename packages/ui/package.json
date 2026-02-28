@@ -17,7 +17,6 @@
     "@geometry/domain": "workspace:*",
     "@geometry/i18n": "workspace:*",
     "@geometry/theme": "workspace:*",
-    "@uiw/react-json-view": "^2.0.0-alpha.41",
     "lucide-react": "^0.562.0",
     "sonner": "^2.0.7"
   },

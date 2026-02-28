@@ -63,8 +63,8 @@ export const Bullet: React.FC<BulletProps> = ({
         success ? <Check size={BULLET_ICON_SIZE} className="shrink-0 text-success" aria-hidden /> :
         defaultIcon;
     return (
-        <div className={`geometry-bullet flex gap-4 items-start w-full ${spaced ? "mt-2.5 mb-1.5" : "mt-1.5 mb-0.5"}`}>
-            <span className="shrink-0 w-4 min-w-4 flex items-start justify-center pt-[calc((1.25em-15px)/2)]" aria-hidden>
+        <div className={`geometry-bullet flex gap-1 items-start w-full ${spaced ? "mt-2.5 mb-1.5" : "mt-1.5 mb-0.5"}`}>
+            <span className="shrink-0 w-4 flex items-start justify-center pt-[calc((1.25em-15px)/2)]" aria-hidden>
                 {resolvedIcon}
             </span>
             <div className="flex-1 min-w-0">

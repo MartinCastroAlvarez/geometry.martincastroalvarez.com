@@ -3,6 +3,8 @@
  *
  * Context: size 1–12 maps to col-span; 0 renders null. With nested Containers becomes grid;
  * with middle/bottom becomes flex. Supports padded, spaced, rounded, solid and left/center/right.
+ * The height prop sets max-height only (not height), so content can shrink below that cap;
+ * overflow scrolls on the y-axis when content exceeds it.
  * Forwards ref and common DOM events (click, keyboard, drag, touch, etc.).
  *
  * Do not add a className prop. For custom layout/sizing, wrap Container in a plain div
@@ -11,6 +13,7 @@
  * Example:
  *   <Container size={6} padded rounded><Content /></Container>
  *   <Container middle spaced left><Buttons>...</Buttons></Container>
+ *   <Container height="50vh" padded><ScrollableContent /></Container>
  */
 
 import React, { forwardRef } from "react";
@@ -18,7 +21,7 @@ import React, { forwardRef } from "react";
 export interface ContainerProps {
     name?: string;
     size?: number;
-    /** When set, constrains height and max-height; overflow scrolls on the y-axis. Value in px number or CSS length (e.g. "200px", "50vh"). */
+    /** When set, sets max-height only (content can shrink below); overflow scrolls on the y-axis. Value in px number or CSS length (e.g. "200px", "50vh"). */
     height?: number | string;
     padded?: boolean;
     spaced?: boolean;
@@ -123,7 +126,7 @@ export const Container = forwardRef<HTMLDivElement, ContainerProps>(({
     const finalClassName = classes.join(" ");
 
     const style: React.CSSProperties | undefined = height != null
-        ? { height: typeof height === "number" ? `${height}px` : height, maxHeight: typeof height === "number" ? `${height}px` : height }
+        ? { maxHeight: typeof height === "number" ? `${height}px` : height }
         : undefined;
 
     return (

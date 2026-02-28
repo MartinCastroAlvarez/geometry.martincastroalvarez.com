@@ -1,17 +1,15 @@
 /**
- * Read-only JSON inspector: displays arbitrary JSON inside a Container using @uiw/react-json-view.
+ * Read-only JSON inspector: displays arbitrary JSON inside a Container as formatted plain text.
  *
  * Context: Used to inspect polygon data (boundary, obstacles) and other structured data. Styling
- * uses theme variables via useTheme().getColor/getVar so colors come from theme.css; no custom
- * colors or className are defined. Not editable; for inspection only.
+ * uses Tailwind theme colors (slate). Not editable; for inspection only. JSON is always fully
+ * visible (non-collapsible).
  *
  * Example:
  *   <Inspector data={polygon.toDict()} />
  */
 
 import React from "react";
-import JsonView from "@uiw/react-json-view";
-import { useTheme } from "@geometry/theme";
 import { Container } from "./Container";
 
 export interface InspectorProps {
@@ -22,23 +20,12 @@ export interface InspectorProps {
 }
 
 export const Inspector: React.FC<InspectorProps> = ({ data, size = 300 }) => {
-    const { getColor } = useTheme();
-    const themeStyle: React.CSSProperties = {
-        ["--w-rjv-color" as string]: getColor("--color-text"),
-        ["--w-rjv-background-color" as string]: getColor("--color-bg"),
-        ["--w-rjv-line-color" as string]: getColor("--color-slate-700"),
-        ["--w-rjv-arrow-color" as string]: getColor("--color-text"),
-        ["--w-rjv-edit-key" as string]: getColor("--color-text"),
-        ["--w-rjv-info-color" as string]: getColor("--color-text"),
-        ["--w-rjv-type-string-color" as string]: getColor("--color-success-400"),
-        ["--w-rjv-type-int-color" as string]: getColor("--color-primary-400"),
-        ["--w-rjv-type-float-color" as string]: getColor("--color-primary-400"),
-        ["--w-rjv-type-boolean-color" as string]: getColor("--color-primary-400"),
-        ["--w-rjv-type-null-color" as string]: getColor("--color-slate-400"),
-    };
+    const jsonString = JSON.stringify(data, null, 2).replace(/^\s+/gm, "");
     return (
-        <Container padded rounded height={size}>
-            <JsonView value={data} style={themeStyle} />
+        <Container height={size}>
+            <pre className="m-0 text-xs font-mono text-slate-200 bg-slate-900 overflow-auto whitespace-pre-wrap break-words">
+                {jsonString}
+            </pre>
         </Container>
     );
 };

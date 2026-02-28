@@ -18,6 +18,7 @@
  * A random tip is shown at the bottom. Session is required (skeleton while useSession loads). Analytics: EDITOR_OPEN on mount.
  */
 import { useCallback, useEffect, useRef, useState, startTransition } from "react";
+import { useNavigate } from "react-router-dom";
 import { ArtGallery, Polygon } from "@geometry/domain";
 import { Editor, EditorReview } from "@geometry/editor";
 import { Container, Input, useDevice } from "@geometry/ui";
@@ -36,6 +37,7 @@ const EDITOR_ASPECT_RATIO = 0.65;
 const emptyGallery = new ArtGallery(new Polygon([]));
 
 export const EditorPage = () => {
+    const navigate = useNavigate();
     const { isMobile } = useDevice();
     const editorRef = useRef<HTMLDivElement>(null);
     const [editorSize, setEditorSize] = useState({ width: EDITOR_INITIAL_WIDTH, height: EDITOR_INITIAL_HEIGHT });
@@ -108,7 +110,10 @@ export const EditorPage = () => {
                 if (isValidationSuccess(data)) {
                     const title = galleryTitle.trim() || t("editor.untitledGallery");
                     const { boundary, obstacles } = validateJob(gallery);
-                    createJob.mutate({ boundary, obstacles, title });
+                    createJob.mutate(
+                        { boundary, obstacles, title },
+                        { onSuccess: (job) => navigate(`/jobs/${job.id}`) }
+                    );
                 }
             },
         });
