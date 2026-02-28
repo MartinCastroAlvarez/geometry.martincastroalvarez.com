@@ -32,7 +32,7 @@ const Confirm: React.FC<{
         >
             <div className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
                 <Container name="geometry-confirm-dialog" padded rounded solid>
-                <div className="flex flex-col gap-4">
+                <div className="p-6 flex flex-col gap-4">
                     <Container>
                         <Title lg>{t("common.confirmTitle")}</Title>
                     </Container>

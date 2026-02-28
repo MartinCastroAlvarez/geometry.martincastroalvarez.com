@@ -1,59 +1,59 @@
 /**
- * ArtGallery and ArtGalleryDict: gallery geometry (perimeter, holes, guards).
+ * ArtGallery and ArtGalleryDict: gallery geometry (boundary, obstacles, guards).
  *
- * Context: Immutable perimeter Polygon, holes[], guards[]; fromDict/toDict for API. Mutations
- * (addHole, removeLastHole, setPerimeter, addGuard) return new instances.
+ * Context: Immutable boundary Polygon, obstacles[], guards[]; fromDict/toDict for API. Mutations
+ * (addObstacle, removeLastObstacle, setBoundary, addGuard) return new instances.
  *
  * Example:
- *   const g = ArtGallery.fromDict({ outer: {...}, holes: [], guards: [] });
- *   g.addHole(hole).addGuard(guard);  g.toDict();
+ *   const g = ArtGallery.fromDict({ boundary: {...}, obstacles: [], guards: [] });
+ *   g.addObstacle(obstacle).addGuard(guard);  g.toDict();
  */
 import { Point, PointDict } from './Point';
 import { Polygon, PolygonDict } from './Polygon';
 
 export interface ArtGalleryDict {
-    outer: PolygonDict;
-    holes: PolygonDict[];
+    boundary: PolygonDict;
+    obstacles: PolygonDict[];
     guards: PointDict[];
 }
 
 export class ArtGallery {
     constructor(
-        public readonly perimeter: Polygon,
-        public readonly holes: Polygon[] = [],
+        public readonly boundary: Polygon,
+        public readonly obstacles: Polygon[] = [],
         public readonly guards: Point[] = []
     ) { }
 
     static fromDict(dict: ArtGalleryDict): ArtGallery {
         return new ArtGallery(
-            Polygon.fromDict(dict.outer),
-            dict.holes.map(Polygon.fromDict),
+            Polygon.fromDict(dict.boundary),
+            dict.obstacles.map(Polygon.fromDict),
             dict.guards.map(Point.fromDict)
         );
     }
 
     toDict(): ArtGalleryDict {
         return {
-            outer: this.perimeter.toDict(),
-            holes: this.holes.map(h => h.toDict()),
+            boundary: this.boundary.toDict(),
+            obstacles: this.obstacles.map(o => o.toDict()),
             guards: this.guards.map(g => g.toDict())
         };
     }
 
-    addHole(hole: Polygon): ArtGallery {
-        return new ArtGallery(this.perimeter, [...this.holes, hole], this.guards);
+    addObstacle(obstacle: Polygon): ArtGallery {
+        return new ArtGallery(this.boundary, [...this.obstacles, obstacle], this.guards);
     }
 
-    removeLastHole(): ArtGallery {
-        if (this.holes.length === 0) return this;
-        return new ArtGallery(this.perimeter, this.holes.slice(0, -1), this.guards);
+    removeLastObstacle(): ArtGallery {
+        if (this.obstacles.length === 0) return this;
+        return new ArtGallery(this.boundary, this.obstacles.slice(0, -1), this.guards);
     }
 
-    setPerimeter(perimeter: Polygon): ArtGallery {
-        return new ArtGallery(perimeter, this.holes, this.guards);
+    setBoundary(boundary: Polygon): ArtGallery {
+        return new ArtGallery(boundary, this.obstacles, this.guards);
     }
 
     addGuard(guard: Point): ArtGallery {
-        return new ArtGallery(this.perimeter, this.holes, [...this.guards, guard]);
+        return new ArtGallery(this.boundary, this.obstacles, [...this.guards, guard]);
     }
 }

@@ -3,7 +3,7 @@
  *
  * Context: polygonToEditorVertices / editorVerticesToPolygon use @geometry/domain Polygon and Point.
  * apiPolygonToEditorVertices / editorVerticesToApiPolygon use ApiPolygon ({ points: { x, y }[] }) for API payloads.
- * artGalleryToEditorState converts ArtGallery (perimeter + holes) to flat vertices and edges for the editor.
+ * artGalleryToEditorState converts ArtGallery (boundary + obstacles) to flat vertices and edges for the editor.
  *
  * Example:
  *   const verts = polygonToEditorVertices(boundary);  const poly = editorVerticesToPolygon(verts);
@@ -41,7 +41,7 @@ export const editorVerticesToApiPolygon = (vertices: EditorVertex[]): ApiPolygon
     };
 };
 
-/** Build flat vertices and edges from an ArtGallery so the editor can display perimeter and holes. */
+/** Build flat vertices and edges from an ArtGallery so the editor can display boundary and obstacles. */
 export const artGalleryToEditorState = (gallery: ArtGallery): { vertices: EditorVertex[]; edges: [number, number][] } => {
     const vertices: EditorVertex[] = [];
     const edges: [number, number][] = [];
@@ -59,9 +59,9 @@ export const artGalleryToEditorState = (gallery: ArtGallery): { vertices: Editor
         offset += n;
     };
 
-    addPolygon(gallery.perimeter);
-    for (const hole of gallery.holes) {
-        addPolygon(hole);
+    addPolygon(gallery.boundary);
+    for (const obstacle of gallery.obstacles) {
+        addPolygon(obstacle);
     }
     return { vertices, edges };
 };

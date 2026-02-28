@@ -18,6 +18,8 @@ import React, { forwardRef } from "react";
 export interface ContainerProps {
     name?: string;
     size?: number;
+    /** When set, constrains height and max-height; overflow scrolls on the y-axis. Value in px number or CSS length (e.g. "200px", "50vh"). */
+    height?: number | string;
     padded?: boolean;
     spaced?: boolean;
     rounded?: boolean;
@@ -62,6 +64,7 @@ const colSpanClasses: Record<number, string> = {
 export const Container = forwardRef<HTMLDivElement, ContainerProps>(({
     name = "geometry-container",
     size = 12,
+    height,
     padded = false,
     spaced = false,
     rounded = false,
@@ -116,12 +119,18 @@ export const Container = forwardRef<HTMLDivElement, ContainerProps>(({
     else if (center) classes.push("text-center");
 
     if (onClick) classes.push("cursor-pointer");
+    if (height != null) classes.push("overflow-y-auto");
     const finalClassName = classes.join(" ");
+
+    const style: React.CSSProperties | undefined = height != null
+        ? { height: typeof height === "number" ? `${height}px` : height, maxHeight: typeof height === "number" ? `${height}px` : height }
+        : undefined;
 
     return (
         <div
             ref={ref}
             className={finalClassName}
+            style={style}
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
             onMouseMove={onMouseMove}

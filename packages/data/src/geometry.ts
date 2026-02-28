@@ -13,6 +13,7 @@
 
 import type { Summary } from "@geometry/domain";
 import { GEOMETRY_API_URL } from "./constants";
+import { toPolygonPayloadWire } from "./adapters";
 import type {
     ListResponse,
     DetailsResponse,
@@ -123,10 +124,7 @@ export class GeometryApiClient {
         title?: string,
     ): Promise<GeometryApiJob> {
         if (this.jwtToken == null || this.jwtToken === "") requireToken("createJob");
-        const body: { boundary: { points: typeof boundary }; obstacles: Array<{ points: typeof boundary }>; title?: string } = {
-            boundary: { points: boundary },
-            obstacles: obstacles.map((obs) => ({ points: obs })),
-        };
+        const body = toPolygonPayloadWire({ boundary, obstacles }) as Record<string, unknown>;
         if (title != null && title !== "") body.title = title;
         const response = await requestOrThrow(`${this.baseUrl}/v1/jobs`, this.jwtToken, {
             method: "POST",
@@ -144,12 +142,10 @@ export class GeometryApiClient {
         boundary: Array<{ x: number; y: number }>,
         obstacles: Array<Array<{ x: number; y: number }>>,
     ): Promise<Summary> {
+        const body = toPolygonPayloadWire({ boundary, obstacles });
         const response = await requestOrThrow(`${this.baseUrl}/v1/polygon`, this.jwtToken, {
             method: "POST",
-            body: JSON.stringify({
-                boundary: { points: boundary },
-                obstacles: obstacles.map((obs) => ({ points: obs })),
-            }),
+            body: JSON.stringify(body),
         });
         return response.json() as Promise<Summary>;
     }

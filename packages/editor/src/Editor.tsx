@@ -7,7 +7,7 @@
  * Zoom and clean are internal; only onChange (geometry), onValidate, onSubmit are exposed.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Stage, Layer } from "react-konva";
 import { ArtGallery, Polygon } from "@geometry/domain";
 import { useLocale } from "@geometry/i18n";
@@ -24,7 +24,7 @@ import { EditorMode } from "./EditorMode";
 export interface EditorProps {
     width: number;
     height: number;
-    /** Current gallery (perimeter + holes + guards). Editor initializes and syncs from this; onChange reports updates. */
+    /** Current gallery (boundary + obstacles + guards). Editor initializes and syncs from this; onChange reports updates. */
     gallery: ArtGallery;
     /** Called with the updated ArtGallery or null when the canvas is cleared. */
     onChange?: (gallery: ArtGallery | null) => void;
@@ -95,12 +95,12 @@ export const Editor = ({
     }, []);
 
     const handleClean = useCallback(() => {
+        console.log("[Editor] action: clean → vertices=0, edges=0 → onChange(null)");
         setVertices([]);
         setEdges([]);
         setActiveIndex(null);
         setSelectedEdgeIndex(null);
         setPan({ x: 0, y: 0 });
-        console.log("[Editor onChange] art gallery:", null);
         onChange?.(null);
     }, [onChange]);
 
@@ -132,34 +132,46 @@ export const Editor = ({
     }, [cycles, EMPTY_HOLES]);
 
     const lastNotifiedRef = useRef<{ boundary: Polygon | undefined; obstacles: Polygon[] } | null>(null);
-    useEffect(() => {
+    useLayoutEffect(() => {
         const b = boundary ?? undefined;
         const o = obstacles;
         const prev = lastNotifiedRef.current;
-        if (prev && polyEquals(b ?? undefined, prev.boundary ?? undefined) && polyArrayEquals(o, prev.obstacles)) return;
+        const skip = prev && polyEquals(b ?? undefined, prev.boundary ?? undefined) && polyArrayEquals(o, prev.obstacles);
+        const boundaryPts = b?.points?.length ?? 0;
+        const willCallOnChange = !skip;
+        const nextGallery = b == null || boundaryPts < 3 ? null : new ArtGallery(b, o, gallery.guards);
+        console.log("[Editor] notify effect", {
+            vertices: vertices.length,
+            edges: edges.length,
+            cycles: cycles.length,
+            boundaryPts,
+            skip: skip ? "yes (same as last)" : "no",
+            willCallOnChange,
+            nextGallery: willCallOnChange ? (nextGallery ? `ArtGallery(${boundaryPts} pts)` : "null") : "-",
+        });
+        if (skip) return;
         lastNotifiedRef.current = { boundary: b, obstacles: o };
-        const nextGallery = b == null || b.points.length < 3 ? null : new ArtGallery(b, o, gallery.guards);
-        console.log("[Editor onChange] art gallery:", nextGallery);
+        console.log("[Editor] onChange(", nextGallery ?? "null", ")");
         onChange?.(nextGallery);
-    }, [boundary, obstacles, gallery.guards, onChange]);
+    }, [boundary, obstacles, gallery.guards, onChange, vertices.length, edges.length, cycles.length]);
 
     const addVertexAt = useCallback(
         (pos: { x: number; y: number }, connectToNext: boolean) => {
+            const newIndex = vertices.length;
+            const newEdge = connectToNext && vertices.length >= 1 ? [vertices.length - 1, newIndex] as [number, number] : null;
+            console.log("[Editor] action: addVertexAt", { pos, connectToNext, newIndex, newEdge, nextVertices: vertices.length + 1, nextEdges: edges.length + (newEdge ? 1 : 0) });
             setSelectedEdgeIndex(null);
             const newVertex: EditorVertex = {
                 id: `v-${Date.now()}-${pos.x}-${pos.y}`,
                 x: pos.x,
                 y: pos.y,
             };
-            const newIndex = vertices.length;
             setVertices((prev) => [...prev, newVertex]);
-            if (connectToNext && vertices.length >= 1) {
-                setEdges((prev) => [...prev, [vertices.length - 1, newIndex]]);
-            }
+            if (newEdge) setEdges((prev) => [...prev, newEdge]);
             setActiveIndex(connectToNext ? newIndex : null);
             containerRef.current?.focus();
         },
-        [vertices.length]
+        [vertices.length, edges.length]
     );
 
     const handleStageMouseDown = useCallback(
@@ -217,6 +229,7 @@ export const Editor = ({
     );
 
     const removeVertexAt = useCallback((index: number) => {
+        console.log("[Editor] action: removeVertexAt", { index, nextVertices: vertices.length - 1 });
         setVertices((prev) => prev.filter((_, i) => i !== index));
         setEdges((prev) =>
             prev
@@ -229,14 +242,15 @@ export const Editor = ({
         setActiveIndex(null);
         setSelectedEdgeIndex(null);
         containerRef.current?.focus();
-    }, []);
+    }, [vertices.length]);
 
     const removeEdgeAt = useCallback((edgeIndex: number) => {
+        console.log("[Editor] action: removeEdgeAt", { edgeIndex, edge: edges[edgeIndex], nextEdges: edges.length - 1 });
         setEdges((prev) => prev.filter((_, i) => i !== edgeIndex));
         setSelectedEdgeIndex(null);
         setActiveIndex(null);
         containerRef.current?.focus();
-    }, []);
+    }, [edges]);
 
     const handleVertexClick = useCallback(
         (index: number) => {
@@ -247,14 +261,19 @@ export const Editor = ({
             if (mode === EditorMode.Move) return;
             setSelectedEdgeIndex(null);
             if (activeIndex === index) {
+                console.log("[Editor] action: vertexClick deselect", { index });
                 setActiveIndex(null);
                 return;
             }
             if (activeIndex !== null) {
                 const key = (a: number, b: number) => `${Math.min(a, b)}-${Math.max(a, b)}`;
                 const existing = new Set(edges.map(([a, b]) => key(a, b)));
-                if (!existing.has(key(activeIndex, index))) {
+                const edgeKey = key(activeIndex, index);
+                if (!existing.has(edgeKey)) {
+                    console.log("[Editor] action: vertexClick add edge", { from: activeIndex, to: index, edgeKey, nextEdges: edges.length + 1 });
                     setEdges((prev) => [...prev, [activeIndex, index]]);
+                } else {
+                    console.log("[Editor] action: vertexClick edge exists", { from: activeIndex, to: index, edgeKey });
                 }
             }
             setActiveIndex(index);
@@ -272,6 +291,8 @@ export const Editor = ({
             if (mode === EditorMode.Move) return;
             if (selectedEdgeIndex === edgeIndex) {
                 const [a, b] = edges[edgeIndex];
+                const newIndex = vertices.length;
+                console.log("[Editor] action: edgeClick split edge", { edgeIndex, edge: [a, b], newVertexIndex: newIndex, nextVertices: vertices.length + 1, nextEdges: edges.length + 1 });
                 const wx = x - pan.x;
                 const wy = y - pan.y;
                 const newVertex: EditorVertex = {
@@ -279,7 +300,6 @@ export const Editor = ({
                     x: wx,
                     y: wy,
                 };
-                const newIndex = vertices.length;
                 setVertices((v) => [...v, newVertex]);
                 setEdges((e) => {
                     const next = e.filter((_, i) => i !== edgeIndex);
@@ -289,6 +309,7 @@ export const Editor = ({
                 setSelectedEdgeIndex(null);
                 setActiveIndex(newIndex);
             } else {
+                console.log("[Editor] action: edgeClick select edge", { edgeIndex });
                 setSelectedEdgeIndex(edgeIndex);
                 setActiveIndex(null);
             }
@@ -306,6 +327,7 @@ export const Editor = ({
     }, []);
 
     const handleVertexDragEnd = useCallback((index: number) => {
+        console.log("[Editor] action: vertexDragEnd", { index, note: "vertices updated → notify effect will run" });
         setActiveIndex(index);
         containerRef.current?.focus();
     }, []);
@@ -313,6 +335,7 @@ export const Editor = ({
     const removeActiveVertex = useCallback(() => {
         if (activeIndex === null) return;
         const idx = activeIndex;
+        console.log("[Editor] action: removeActiveVertex", { index: idx, nextVertices: vertices.length - 1 });
         setVertices((prev) => prev.filter((_, i) => i !== idx));
         setEdges((prev) =>
             prev
@@ -323,7 +346,7 @@ export const Editor = ({
                 ] as [number, number])
         );
         setActiveIndex(null);
-    }, [activeIndex]);
+    }, [activeIndex, vertices.length]);
 
     const handleKeyDown = useCallback(
         (e: React.KeyboardEvent) => {

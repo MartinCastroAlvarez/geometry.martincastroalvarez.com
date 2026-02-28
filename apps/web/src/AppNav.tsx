@@ -5,7 +5,7 @@
  * useLogout, useLocale, useTheme; tracks nav and login/logout via @geometry/analytics.
  */
 import { useNavigate } from "react-router-dom";
-import { Clock, Globe, Palette, Plus } from "lucide-react";
+import { Clock } from "lucide-react";
 import { Theme, useTheme } from "@geometry/theme";
 import { Nav, Button, Toggle, Card } from "@geometry/ui";
 import { NavSkeleton } from "./skeletons";
@@ -46,7 +46,7 @@ export const AppNav = () => {
 
     return (
         <Nav onClick={goHome}>
-            <Button onClick={goEditor} icon={<Plus size={14} />} sm primary>
+            <Button onClick={goEditor} sm primary>
                 {t("nav.create")}
             </Button>
             {user && (jobs?.data?.length ?? 0) > 0 && (
@@ -54,8 +54,8 @@ export const AppNav = () => {
                     {t("nav.history")}
                 </Button>
             )}
-            <Toggle value={language} options={Object.values(Language)} onChange={(v) => setLanguage(v as Language)} icon={<Globe size={14} />} sm />
-            <Toggle value={theme} options={Object.values(Theme)} onChange={(v) => setTheme(v as Theme)} icon={<Palette size={14} />} formatLabel={(v) => t(`theme.${v}`)} sm />
+            <Toggle value={language} options={Object.values(Language)} onChange={(v) => setLanguage(v as Language)} sm />
+            <Toggle value={theme} options={Object.values(Theme)} onChange={(v) => setTheme(v as Theme)} formatLabel={(v) => t(`theme.${v}`)} sm />
             {user && <Card user={user} sm right rounded />}
             {user ? (
                 <Button onClick={handleLogout} sm aria-label={t("nav.logout")}>

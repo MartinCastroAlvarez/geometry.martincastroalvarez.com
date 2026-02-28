@@ -1,11 +1,12 @@
 /**
- * Skeleton for EditorReview: matches real layout — form row (Validate/Submit) on top,
- * then a Container with bullet rows (validation list or requirements).
+ * Skeleton for EditorReview: mirrors real layout — form row (Validate/Submit) then
+ * requirement/result list. Same Container hierarchy as EditorReview (form + table).
  */
 import { Skeleton, Container, BulletSkeleton, ButtonSkeleton } from "@geometry/ui";
 
 const ROW_COUNT = 7;
-const ROW_WIDTHS: (string | number)[] = ["92%", "88%", "95%", "85%", "90%", "87%", "93%"];
+/** Approximate relative lengths for requirement bullets (Boundary/Obstacle text). */
+const ROW_WIDTHS: (string | number)[] = ["85%", "90%", "88%", "82%", "90%", "88%", "78%"];
 
 export type EditorReviewSkeletonVariant = "requirements" | "results";
 
@@ -14,8 +15,8 @@ export interface EditorReviewSkeletonProps {
 }
 
 export const EditorReviewSkeleton = ({ variant: _variant = "results" }: EditorReviewSkeletonProps) => (
-    <Skeleton className="min-h-[280px] w-full">
-        {/* Form row: same structure as EditorReview → EditorForm (Validate/Submit buttons) */}
+    <Skeleton className="w-full">
+        {/* Form: same as EditorReview — Container (padded spaced left) > form container > buttons */}
         <Container padded spaced left>
             <Container name="geometry-editor-form" middle left spaced>
                 <div className="flex flex-row flex-wrap items-center gap-2 w-full justify-start">
@@ -24,7 +25,7 @@ export const EditorReviewSkeleton = ({ variant: _variant = "results" }: EditorRe
                 </div>
             </Container>
         </Container>
-        {/* Table: bullet rows like EditorSummaryTable / EditorInfoTable */}
+        {/* Table: same as EditorInfoTable / EditorSummaryTable — single rounded container, one row per bullet */}
         <Container padded spaced left>
             <Container padded spaced rounded left>
                 {Array.from({ length: ROW_COUNT }, (_, i) => (

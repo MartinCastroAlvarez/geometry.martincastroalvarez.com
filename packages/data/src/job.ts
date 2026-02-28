@@ -13,7 +13,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { GeometryApiClient } from "./geometry";
-import { fromApiJob, toDomainJob } from "./adapters";
+import { fromApiJob, toDomainJob, artGalleryToValidationPayload } from "./adapters";
 import {
     GEOMETRY_API_URL,
     GALLERIES_QUERY_KEY,
@@ -23,8 +23,17 @@ import {
     STALE_TIME_JOB_MS,
 } from "./constants";
 import { useAuthentication } from "./useAuthToken";
+import type { ArtGallery } from "@geometry/domain";
 
 export { JOBS_QUERY_KEY, JOB_QUERY_KEY } from "./constants";
+
+/** Extract boundary and obstacles from an ArtGallery for validation/create API calls. */
+export function validateJob(artGallery: ArtGallery): {
+    boundary: Array<{ x: number; y: number }>;
+    obstacles: Array<Array<{ x: number; y: number }>>;
+} {
+    return artGalleryToValidationPayload(artGallery);
+}
 
 export const useJobs = (params?: { nextToken?: string; limit?: number }) => {
     const token = useAuthentication();
@@ -121,16 +130,13 @@ export const useCreateJob = () => {
     return { ...mutation, isLoading: mutation.isPending };
 };
 
-export const useValidatePolygon = () => {
+export const useValidateJob = () => {
     const token = useAuthentication();
     const mutation = useMutation({
-        mutationFn: ({
-            boundary,
-            obstacles,
-        }: {
-            boundary: Array<{ x: number; y: number }>;
-            obstacles: Array<Array<{ x: number; y: number }>>;
-        }) => new GeometryApiClient(GEOMETRY_API_URL, token).validatePolygon(boundary, obstacles),
+        mutationFn: (artGallery: ArtGallery) => {
+            const { boundary, obstacles } = validateJob(artGallery);
+            return new GeometryApiClient(GEOMETRY_API_URL, token).validatePolygon(boundary, obstacles);
+        },
     });
     return { ...mutation, isLoading: mutation.isPending };
 };

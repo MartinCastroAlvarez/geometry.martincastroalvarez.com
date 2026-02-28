@@ -14,6 +14,9 @@
     "light": "Sol"
   },
   "editor": {
+    "errorValidation": "Error en la validación. Revisa el polígono e inténtalo de nuevo.",
+    "errorSubmit": "No se pudo crear el trabajo. Inténtalo de nuevo.",
+    "errorGeneric": "Algo ha fallado. Inténtalo de nuevo.",
     "mode": {
       "add": "Vértices",
       "connect": "Aristas",
@@ -80,7 +83,7 @@
     "OBSTACLE_OVERLAPS": "El obstáculo se superpone con otro.",
     "OBSTACLE_NO_OVERLAP": "El obstáculo no se superpone con otros.",
     "CHECK_SKIPPED": "Comprobación omitida (inválido o error previo).",
-    "ALL_VALIDATIONS_PASSED": "Todas las validaciones pasaron.",
+    "ALL_VALIDATIONS_PASSED": "Todas las validaciones pasaron. El polígono está listo para optimizar.",
     "VALIDATIONS_FAILED_OR_PENDING": "Una o más validaciones fallaron o están pendientes.",
     "requirementsTitle": "Requisitos para polígonos y obstáculos",
     "requirementBoundaryConvex": "El borde debe ser convexo",

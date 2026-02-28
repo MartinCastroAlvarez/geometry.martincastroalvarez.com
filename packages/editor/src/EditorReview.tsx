@@ -4,7 +4,7 @@
  * When artGallery is passed, shows the form in a Container above the table.
  */
 import { useLocale } from "@geometry/i18n";
-import { Container, Bullet, Toolbar, Button } from "@geometry/ui";
+import { Container, Bullet, Toolbar, Button, Problem } from "@geometry/ui";
 import type { ArtGallery, Summary } from "@geometry/domain";
 import { EditorReviewSkeleton } from "./EditorReview.skeleton";
 
@@ -124,7 +124,7 @@ type EditorFormProps = {
 
 const EditorForm = ({ artGallery, onValidate, onSubmit, disabled = false }: EditorFormProps) => {
     const { t } = useLocale();
-    if (artGallery == null || artGallery.perimeter.points.length < 1) return null;
+    if (artGallery == null || artGallery.boundary.points.length < 1) return null;
     return (
         <Container name="geometry-editor-form" middle left spaced>
             <Toolbar left>
@@ -147,6 +147,8 @@ export interface EditorReviewProps {
     summary?: Summary | null;
     /** When passed, EditorForm (Validate/Submit) is shown in a Container above the table. */
     artGallery?: ArtGallery | null;
+    /** Optional error message shown below the form buttons, above the table. */
+    errorMessage?: string | null;
     isLoading?: boolean;
     onValidate?: () => void;
     onSubmit?: () => void;
@@ -156,6 +158,7 @@ export interface EditorReviewProps {
 export const EditorReview = ({
     summary,
     artGallery,
+    errorMessage = null,
     isLoading = false,
     onValidate,
     onSubmit,
@@ -167,7 +170,7 @@ export const EditorReview = ({
     const hasSummaryRows = summary != null && summaryRows(summary).length > 0;
     return (
         <>
-            {artGallery != null && artGallery.perimeter.points.length >= 1 && (
+            {artGallery != null && artGallery.boundary.points.length >= 1 && (
                 <Container padded spaced left>
                     <EditorForm
                         artGallery={artGallery}
@@ -175,6 +178,11 @@ export const EditorReview = ({
                         onSubmit={onSubmit}
                         disabled={disabled}
                     />
+                </Container>
+            )}
+            {errorMessage != null && errorMessage.trim() !== "" && (
+                <Container padded spaced left>
+                    <Problem align="left">{errorMessage}</Problem>
                 </Container>
             )}
             <Container padded spaced left>

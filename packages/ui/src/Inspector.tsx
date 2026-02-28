@@ -17,9 +17,11 @@ import { Container } from "./Container";
 export interface InspectorProps {
     /** JSON-serializable data to display (object or array). */
     data: object;
+    /** Height of the JSON view container in pixels; overflow scrolls on the y-axis. Default 300. */
+    size?: number;
 }
 
-export const Inspector: React.FC<InspectorProps> = ({ data }) => {
+export const Inspector: React.FC<InspectorProps> = ({ data, size = 300 }) => {
     const { getColor } = useTheme();
     const themeStyle: React.CSSProperties = {
         ["--w-rjv-color" as string]: getColor("--color-text"),
@@ -35,7 +37,7 @@ export const Inspector: React.FC<InspectorProps> = ({ data }) => {
         ["--w-rjv-type-null-color" as string]: getColor("--color-slate-400"),
     };
     return (
-        <Container padded rounded>
+        <Container padded rounded height={size}>
             <JsonView value={data} style={themeStyle} />
         </Container>
     );

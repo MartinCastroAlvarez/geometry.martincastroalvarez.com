@@ -14,6 +14,9 @@
     "light": "Sun"
   },
   "editor": {
+    "errorValidation": "Validation failed. Please check the polygon and try again.",
+    "errorSubmit": "Could not create the job. Please try again.",
+    "errorGeneric": "Something went wrong. Please try again.",
     "mode": {
       "add": "Vertices",
       "connect": "Edges",
@@ -80,7 +83,7 @@
     "OBSTACLE_OVERLAPS": "Obstacle overlaps another obstacle.",
     "OBSTACLE_NO_OVERLAP": "Obstacle does not overlap others.",
     "CHECK_SKIPPED": "Check skipped (invalid or earlier error).",
-    "ALL_VALIDATIONS_PASSED": "All validations passed.",
+    "ALL_VALIDATIONS_PASSED": "All validations passed. The polygon is ready to be optimized.",
     "VALIDATIONS_FAILED_OR_PENDING": "One or more validations failed or are pending.",
     "requirementsTitle": "Requirements for polygons and obstacles",
     "requirementBoundaryConvex": "Boundary must be convex",

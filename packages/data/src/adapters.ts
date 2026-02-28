@@ -35,12 +35,12 @@ export const toDomainJob = (api: ApiJob): Job => {
 };
 
 export const toDomainArtGallery = (api: ApiArtGallery): Gallery => {
-    const perimeter = new Polygon(api.boundary.points.map((p) => new Point(p.x, p.y)));
-    const holes = Object.values(api.obstacles).map(
+    const boundary = new Polygon(api.boundary.points.map((p) => new Point(p.x, p.y)));
+    const obstacles = Object.values(api.obstacles).map(
         (obs) => new Polygon((obs?.points ?? []).map((p) => new Point(p.x, p.y)))
     );
     const guards = Object.values(api.guards ?? {}).map((p) => new Point(p.x, p.y));
-    const artGallery = new ArtGallery(perimeter, holes, guards);
+    const artGallery = new ArtGallery(boundary, obstacles, guards);
     return {
         id: api.id,
         title: api.title,
@@ -65,9 +65,41 @@ export const fromApiJob = (raw: unknown): ApiJob => {
     };
 };
 
-/** Convert domain Polygon to API wire format (array of { x, y }) for validatePolygon and createJob. */
+/** Convert domain Polygon to API wire format (array of { x, y }) for internal use. */
 export const polygonToApiFormat = (poly: Polygon): Array<{ x: number; y: number }> => {
     return poly.points.map((p) => p.toDict());
+};
+
+/** Convert a point to API wire format: list of decimals [x, y] (backend Point.unserialize expects this). */
+export const pointToWireFormat = (p: { x: number; y: number }): [number, number] => [p.x, p.y];
+
+/** Convert points array to API wire format for boundary/obstacle points. */
+export const pointsToWireFormat = (points: Array<{ x: number; y: number }>): Array<[number, number]> =>
+    points.map(pointToWireFormat);
+
+/** Build the exact JSON body for validatePolygon and createJob (points as [x, y] lists). */
+export function toPolygonPayloadWire(payload: {
+    boundary: Array<{ x: number; y: number }>;
+    obstacles: Array<Array<{ x: number; y: number }>>;
+}): {
+    boundary: { points: Array<[number, number]> };
+    obstacles: Array<{ points: Array<[number, number]> }>;
+} {
+    return {
+        boundary: { points: pointsToWireFormat(payload.boundary) },
+        obstacles: payload.obstacles.map((obs) => ({ points: pointsToWireFormat(obs) })),
+    };
+}
+
+/** Extract boundary and obstacles from ArtGallery for validation and createJob API calls. */
+export const artGalleryToValidationPayload = (artGallery: ArtGallery): {
+    boundary: Array<{ x: number; y: number }>;
+    obstacles: Array<Array<{ x: number; y: number }>>;
+} => {
+    return {
+        boundary: polygonToApiFormat(artGallery.boundary),
+        obstacles: artGallery.obstacles.map(polygonToApiFormat),
+    };
 };
 
 export const fromApiArtGallery = (raw: unknown): ApiArtGallery => {

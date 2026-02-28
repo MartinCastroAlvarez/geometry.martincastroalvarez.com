@@ -27,7 +27,9 @@ export const EditorPageSkeleton = () => {
                         <EditorSkeleton size={EDITOR_SKELETON_HEIGHT} />
                     </Container>
                     <Container padded spaced left size={isMobile ? 12 : SUMMARY_COL_DESKTOP} name="editor-summary-skeleton-col min-h-[280px]">
-                        <EditorReviewSkeleton variant="requirements" />
+                        <div className="col-span-12 w-full min-w-0">
+                            <EditorReviewSkeleton variant="requirements" />
+                        </div>
                     </Container>
                 </Container>
             </Container>
