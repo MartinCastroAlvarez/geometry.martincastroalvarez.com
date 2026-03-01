@@ -195,14 +195,15 @@ export function toJobPayloadWire(payload: {
     };
 }
 
-/** Extract boundary and obstacles from ArtGallery for validation and createJob API calls. */
+/** Extract boundary and obstacles from ArtGallery for validation and createJob API calls.
+ * Boundary is normalized to CCW and each obstacle to CW so backend convexity/ordering checks pass. */
 export const artGalleryToValidationPayload = (artGallery: ArtGallery): {
     boundary: Array<{ x: number; y: number }>;
     obstacles: Array<Array<{ x: number; y: number }>>;
 } => {
     return {
-        boundary: polygonToApiFormat(artGallery.boundary),
-        obstacles: artGallery.obstacles.map(polygonToApiFormat),
+        boundary: polygonToApiFormat(artGallery.boundary.toCCW()),
+        obstacles: artGallery.obstacles.map((poly) => polygonToApiFormat(poly.toCW())),
     };
 };
 

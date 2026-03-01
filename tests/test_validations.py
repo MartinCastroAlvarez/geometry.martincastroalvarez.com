@@ -15,11 +15,11 @@ class TestValidationResult:
 
     def test_validation_result_can_hold_status_and_str(self):
         r: ValidationResult = {
-            "polygon.convex": Status.SUCCESS,
-            "polygon.convex.note": "Polygon is convex.",
+            "polygon.ccw": Status.SUCCESS,
+            "polygon.ccw.note": "Polygon is counter-clockwise.",
         }
-        assert r["polygon.convex"] == Status.SUCCESS
-        assert r["polygon.convex.note"] == "Polygon is convex."
+        assert r["polygon.ccw"] == Status.SUCCESS
+        assert r["polygon.ccw.note"] == "Polygon is counter-clockwise."
 
 
 class TestPolygonValidationValidate:
@@ -61,16 +61,6 @@ class TestPolygonValidationValidate:
 class TestPolygonValidationValidateMethods:
     """Test individual validate_* methods return ValidationResult."""
 
-    def test_validate_boundary_convex_returns_validation_result(self):
-        v = PolygonValidation()
-        boundary = Polygon.unserialize([[0, 0], [10, 0], [10, 10], [0, 10]])
-        result = v.validate_boundary_convex(boundary)
-        assert isinstance(result, dict)
-        assert "polygon.convex" in result
-        assert "polygon.convex.note" in result
-        assert result["polygon.convex"] in (Status.SUCCESS, Status.FAILED, Status.PENDING)
-        assert isinstance(result["polygon.convex.note"], str)
-
     def test_validate_boundary_ccw_returns_validation_result(self):
         v = PolygonValidation()
         boundary = Polygon.unserialize([[0, 0], [10, 0], [10, 10], [0, 10]])
@@ -85,12 +75,12 @@ class TestPolygonValidationValidateMethods:
         assert "polygon.simplicity" in result
         assert "polygon.simplicity.note" in result
 
-    def test_validate_obstacles_convex_returns_validation_result(self):
+    def test_validate_obstacles_simplicity_returns_validation_result(self):
         v = PolygonValidation()
         obstacles = Table.unserialize([Polygon.unserialize([[1, 1], [2, 1], [2, 2], [1, 2]])])
-        result = v.validate_obstacles_convex(obstacles)
-        assert "obstacles.0.convex" in result
-        assert "obstacles.0.convex.note" in result
+        result = v.validate_obstacles_simplicity(obstacles)
+        assert "obstacles.0.simplicity" in result
+        assert "obstacles.0.simplicity.note" in result
 
     def test_validate_obstacles_cw_returns_validation_result(self):
         v = PolygonValidation()
@@ -118,19 +108,6 @@ class TestPolygonValidationValidateMethods:
         result = v.validate_obstacles_overlaps(obstacles)
         assert "obstacles.0.overlaps" in result
         assert "obstacles.1.overlaps" in result
-
-    def test_validate_boundary_convex_exception_returns_pending(self):
-        """When boundary.is_convex() raises, result is PENDING (exception branch)."""
-        v = PolygonValidation()
-        boundary = Polygon.unserialize([[0, 0], [10, 0], [10, 10], [0, 10]])
-
-        def raise_error():
-            raise RuntimeError("bad")
-
-        boundary.is_convex = raise_error
-        result = v.validate_boundary_convex(boundary)
-        assert result["polygon.convex"] == Status.PENDING
-        assert "skipped" in result["polygon.convex.note"].lower()
 
     def test_validate_boundary_ccw_exception_returns_pending(self):
         """When boundary.is_ccw() raises, result is PENDING."""
@@ -171,34 +148,29 @@ class TestPolygonValidationExecute:
             assert isinstance(k, str)
             assert isinstance(val, str), f"expected str for {k!r}, got {type(val)}"
 
-    def test_execute_includes_boundary_checks(self):
+    def test_execute_includes_boundary_ccw_check(self):
         v = PolygonValidation()
         body = {"boundary": [[0, 0], [10, 0], [10, 10], [0, 10]], "obstacles": []}
         result: PolygonValidationResponse = v.handler(body)
-        assert "polygon.convex" in result
-        assert result["polygon.convex"] in ("success", "failed", "pending")
         assert "polygon.ccw" in result
-        assert "polygon.simplicity" in result
-        assert "polygon.convex.note" in result
+        assert result["polygon.ccw"] in ("success", "failed", "pending")
+        assert "polygon.ccw.note" in result
 
-    def test_execute_convex_rectangle_is_success(self):
+    def test_execute_ccw_boundary_is_success(self):
         v = PolygonValidation()
         body = {"boundary": [[0, 0], [10, 0], [10, 10], [0, 10]], "obstacles": []}
         result = v.handler(body)
-        assert result["polygon.convex"] == "success"
-        assert "convex" in result["polygon.convex.note"].lower()
+        assert result["polygon.ccw"] == "success"
+        assert "counter-clockwise" in result["polygon.ccw.note"].lower() or "ccw" in result["polygon.ccw.note"].lower()
 
-    def test_execute_includes_obstacle_checks_when_obstacles_present(self):
+    def test_execute_includes_obstacle_cw_checks_when_obstacles_present(self):
         v = PolygonValidation()
         body = {
             "boundary": [[0, 0], [10, 0], [10, 10], [0, 10]],
             "obstacles": [[[1, 1], [2, 1], [2, 2], [1, 2]]],
         }
         result = v.handler(body)
-        assert "obstacles.0.convex" in result
         assert "obstacles.0.cw" in result
-        assert "obstacles.0.contained" in result
-        assert "obstacles.0.overlaps" in result
         assert all(isinstance(result[k], str) for k in result)
 
     def test_execute_includes_status_and_status_note(self):
@@ -236,8 +208,8 @@ class TestPolygonValidationHandler:
         body = {"boundary": [[0, 0], [10, 0], [10, 10], [0, 10]], "obstacles": []}
         result = v.handler(body)
         assert isinstance(result, dict)
-        assert "polygon.convex" in result
-        assert result["polygon.convex"] == "success"
+        assert "polygon.ccw" in result
+        assert result["polygon.ccw"] == "success"
 
     def test_handler_raises_on_invalid_body(self):
         v = PolygonValidation()

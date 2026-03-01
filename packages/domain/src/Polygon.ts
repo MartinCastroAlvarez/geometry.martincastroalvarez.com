@@ -34,6 +34,37 @@ export class Polygon {
         return first.equals(last);
     }
 
+    /** Signed area (shoelace). Positive = counter-clockwise (CCW), negative = clockwise (CW). */
+    signedArea(): number {
+        let area = 0;
+        const n = this.points.length;
+        for (let i = 0; i < n; i++) {
+            const j = (i + 1) % n;
+            area += this.points[i].x * this.points[j].y - this.points[j].x * this.points[i].y;
+        }
+        return area / 2;
+    }
+
+    /** True if polygon winding is counter-clockwise (boundary convention). */
+    get isCCW(): boolean {
+        return this.signedArea() >= 0;
+    }
+
+    /** True if polygon winding is clockwise (obstacle/hole convention). */
+    get isCW(): boolean {
+        return this.signedArea() <= 0;
+    }
+
+    /** New polygon with same vertices in CCW order (for boundary). */
+    toCCW(): Polygon {
+        return this.isCCW ? this : new Polygon([...this.points].reverse());
+    }
+
+    /** New polygon with same vertices in CW order (for obstacles). */
+    toCW(): Polygon {
+        return this.isCW ? this : new Polygon([...this.points].reverse());
+    }
+
     /**
      * Checks if a point is strictly inside the polygon.
      * Returns true if inside, false if outside or on boundary.

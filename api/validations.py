@@ -8,8 +8,7 @@ Validations Module
 Context
 -------
 Validations extend Controller for read-only validation operations.
-PolygonValidation validates boundary and obstacles (convex, CCW/CW,
-simplicity, contained, overlaps) and returns a status/note dict. Used by
+PolygonValidation validates that the boundary is CCW and obstacles are CW; returns a status/note dict. Used by
 POST v1/polygon and by JobMutation for fail-fast validation.
 
 Examples:
@@ -59,7 +58,7 @@ class ValidationResponse(ControllerResponse):
     pass
 
 
-# PolygonValidation returns a dict: keys like "polygon.convex", "obstacles.0.contained";
+# PolygonValidation returns a dict: keys like "polygon.ccw", "obstacles.0.cw";
 # values are str (status.value for status keys, message for *.note keys) for JSON serialization.
 PolygonValidationResponse = dict[str, str]
 
@@ -140,7 +139,7 @@ class Validation(Controller):
     For example, to run polygon validation:
     >>> v = PolygonValidation()
     >>> result = v.handler({"boundary": [...], "obstacles": []})
-    >>> "polygon.convex" in result
+    >>> "polygon.ccw" in result
     True
     """
 
@@ -157,13 +156,13 @@ class Validation(Controller):
 
 class PolygonValidation(Validation):
     """
-    Validates boundary polygon and obstacles: convexity, orientation, simplicity,
-    containment, and obstacle-overlap. Returns dict of status and note keys.
+    Validates boundary polygon and obstacles: boundary must be CCW, each obstacle must be CW.
+    Returns dict of status and note keys.
 
     For example, to validate boundary and obstacles before creating a job:
     >>> v = PolygonValidation()
     >>> result = v.handler({"boundary": [[0,0],[10,0],[10,10],[0,10]], "obstacles": []})
-    >>> result["polygon.convex"]
+    >>> result["polygon.ccw"]
     'success'
     """
 
@@ -246,22 +245,6 @@ class PolygonValidation(Validation):
         )
         return cast(ValidationResponse, _normalize_result(exec_result))
 
-    def validate_boundary_convex(self, boundary: Polygon) -> ValidationResult:
-        """Check boundary convexity. Returns status and note keys."""
-        result: ValidationResult = {}
-        try:
-            convex: bool = boundary.is_convex()
-            status: Status = Status.SUCCESS if convex else Status.FAILED
-            result["polygon.convex"] = status
-            result["polygon.convex.note"] = (
-                PolygonValidationCode.POLYGON_CONVEX_OK.value if convex else PolygonValidationCode.POLYGON_NOT_CONVEX.value
-            )
-        except Exception as e:
-            logger.debug("PolygonValidation.execute() | polygon.convex error: %s", e)
-            result["polygon.convex"] = Status.PENDING
-            result["polygon.convex.note"] = PolygonValidationCode.CHECK_SKIPPED.value
-        return result
-
     def validate_boundary_ccw(self, boundary: Polygon) -> ValidationResult:
         """Check boundary is counter-clockwise. Returns status and note keys."""
         result: ValidationResult = {}
@@ -292,23 +275,23 @@ class PolygonValidation(Validation):
             result["polygon.simplicity.note"] = PolygonValidationCode.CHECK_SKIPPED.value
         return result
 
-    def validate_obstacles_convex(self, obstacles: Table[Polygon]) -> ValidationResult:
-        """Check each obstacle is convex. Returns status and note keys per obstacle."""
+    def validate_obstacles_simplicity(self, obstacles: Table[Polygon]) -> ValidationResult:
+        """Check each obstacle is simple (no self-intersection). Returns status and note keys per obstacle."""
         result: ValidationResult = {}
         obstacles_list: list[Polygon] = list(obstacles)
         for idx, obs in enumerate(obstacles_list):
             prefix: str = f"obstacles.{idx}"
             try:
-                convex: bool = obs.is_convex()
-                status: Status = Status.SUCCESS if convex else Status.FAILED
-                result[f"{prefix}.convex"] = status
-                result[f"{prefix}.convex.note"] = (
-                    PolygonValidationCode.OBSTACLE_CONVEX_OK.value if convex else PolygonValidationCode.OBSTACLE_NOT_CONVEX.value
+                simple: bool = obs.is_simple()
+                status: Status = Status.SUCCESS if simple else Status.FAILED
+                result[f"{prefix}.simplicity"] = status
+                result[f"{prefix}.simplicity.note"] = (
+                    PolygonValidationCode.OBSTACLE_SIMPLE_OK.value if simple else PolygonValidationCode.OBSTACLE_NOT_SIMPLE.value
                 )
             except Exception as e:
-                logger.debug("PolygonValidation.execute() | %s.convex error: %s", prefix, e)
-                result[f"{prefix}.convex"] = Status.PENDING
-                result[f"{prefix}.convex.note"] = PolygonValidationCode.CHECK_SKIPPED.value
+                logger.debug("PolygonValidation.execute() | %s.simplicity error: %s", prefix, e)
+                result[f"{prefix}.simplicity"] = Status.PENDING
+                result[f"{prefix}.simplicity.note"] = PolygonValidationCode.CHECK_SKIPPED.value
         return result
 
     def validate_obstacles_cw(self, obstacles: Table[Polygon]) -> ValidationResult:
@@ -367,19 +350,14 @@ class PolygonValidation(Validation):
         return result
 
     def execute(self, validated_input: ValidationRequest) -> ValidationResponse:
-        """Run deep validations by merging all validate_* results; add status and status.note."""
+        """Run deep validations: boundary must be CCW, obstacles must be CW. Merge results; add status and status.note."""
         req: PolygonValidationRequest = cast(PolygonValidationRequest, validated_input)
         boundary: Polygon = req["boundary"]
         obstacles: Table[Polygon] = req["obstacles"]
 
         results: list[ValidationResult] = [
-            self.validate_boundary_convex(boundary),
             self.validate_boundary_ccw(boundary),
-            self.validate_boundary_simplicity(boundary),
-            self.validate_obstacles_convex(obstacles),
             self.validate_obstacles_cw(obstacles),
-            self.validate_obstacles_contained(boundary, obstacles),
-            self.validate_obstacles_overlaps(obstacles),
         ]
         merged: ValidationResult = {}
         for r in results:

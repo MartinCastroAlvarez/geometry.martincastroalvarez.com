@@ -12,13 +12,12 @@ import { EditorReviewSkeleton } from "./EditorReview.skeleton";
 const REVIEW_TABLE_CONTAINER_HEIGHT_PX = 500;
 
 /** Max height of the Inspector (JSON view) in pixels. */
-const INSPECTOR_SIZE_PX = 300;
+const INSPECTOR_SIZE_PX = 500;
 
 const REQUIREMENT_KEYS = [
-    "validation.requirementBoundaryConvex",
     "validation.requirementBoundaryCcw",
     "validation.requirementBoundarySimple",
-    "validation.requirementObstacleConvex",
+    "validation.requirementObstacleSimple",
     "validation.requirementObstacleCw",
     "validation.requirementObstacleContained",
     "validation.requirementObstacleNoOverlap",
@@ -54,6 +53,8 @@ const VALIDATION_NOTE_EN_TO_CODE: Record<string, string> = {
     "Polygon is not simple (self-intersects).": "POLYGON_NOT_SIMPLE",
     "Obstacle is convex.": "OBSTACLE_CONVEX_OK",
     "Obstacle is not convex.": "OBSTACLE_NOT_CONVEX",
+    "Obstacle is simple (no self-intersection).": "OBSTACLE_SIMPLE_OK",
+    "Obstacle is not simple (self-intersects).": "OBSTACLE_NOT_SIMPLE",
     "Obstacle is clockwise.": "OBSTACLE_CW_OK",
     "Obstacle is not clockwise.": "OBSTACLE_NOT_CW",
     "Obstacle is fully inside the boundary.": "OBSTACLE_CONTAINED_OK",
@@ -94,6 +95,14 @@ const EditorSummaryTable = ({ summary }: EditorSummaryTableProps) => {
     }
     const order = (a: string, b: string) => (a === "ERROR" ? -1 : a === "SUCCESS" ? 0 : 1) - (b === "ERROR" ? -1 : b === "SUCCESS" ? 0 : 1);
     const sorted = [...rows].sort((a, b) => order(a.status, b.status));
+    // Deduplicate by (status, note) so the same failure reason is shown once (e.g. 2 obstacles failing for same reason).
+    const seen = new Set<string>();
+    const deduped = sorted.filter((row) => {
+        const id = `${row.status}:${row.note}`;
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
+    });
     const getLocalizedNote = (note: string): string => {
         if (!note) return "";
         const translationKey = `validation.${note}`;
@@ -106,8 +115,8 @@ const EditorSummaryTable = ({ summary }: EditorSummaryTableProps) => {
 
     return (
         <Scrollable padded spaced rounded left height={REVIEW_TABLE_CONTAINER_HEIGHT_PX}>
-            {sorted.map(({ key, status, note }) => (
-                <Container key={key}>
+            {deduped.map(({ status, note }) => (
+                <Container key={`${status}:${note}`}>
                     <Bullet
                         danger={status === "ERROR"}
                         success={status === "SUCCESS"}
