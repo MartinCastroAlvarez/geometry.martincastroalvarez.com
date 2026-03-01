@@ -4,14 +4,9 @@ import json
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
-import pytest
-
-# Load api package first to avoid circular import (api.api -> data -> api.logger -> api)
-import api  # noqa: F401
-
-from attributes import Offset
-
 import data
+import pytest
+from attributes import Offset
 from data import Bucket
 from data import Page
 from data import Secret
@@ -20,6 +15,9 @@ from exceptions import NotFoundError
 from exceptions import ServiceUnavailableError
 from exceptions import StorageError
 from exceptions import ValidationError
+
+# Load api package first to avoid circular import (api.api -> data -> api.logger -> api)
+import api  # noqa: F401
 
 
 class TestPage:
@@ -103,9 +101,7 @@ class TestBucket:
 
     def test_exists_404_false(self):
         mock_client = MagicMock()
-        mock_client.head_object.side_effect = data.ClientError(
-            {"Error": {"Code": "404", "Message": "Not Found"}}, "HeadObject"
-        )
+        mock_client.head_object.side_effect = data.ClientError({"Error": {"Code": "404", "Message": "Not Found"}}, "HeadObject")
         with patch("data.boto3") as mock_boto:
             mock_boto.client.return_value = mock_client
             b = Bucket()
@@ -113,9 +109,7 @@ class TestBucket:
 
     def test_exists_other_client_error_raises(self):
         mock_client = MagicMock()
-        mock_client.head_object.side_effect = data.ClientError(
-            {"Error": {"Code": "500", "Message": "Server Error"}}, "HeadObject"
-        )
+        mock_client.head_object.side_effect = data.ClientError({"Error": {"Code": "500", "Message": "Server Error"}}, "HeadObject")
         with patch("data.boto3") as mock_boto:
             mock_boto.client.return_value = mock_client
             b = Bucket()
@@ -162,9 +156,7 @@ class TestBucket:
 
     def test_load_no_such_key_returns_default(self):
         mock_client = MagicMock()
-        mock_client.get_object.side_effect = data.ClientError(
-            {"Error": {"Code": "NoSuchKey", "Message": "Not Found"}}, "GetObject"
-        )
+        mock_client.get_object.side_effect = data.ClientError({"Error": {"Code": "NoSuchKey", "Message": "Not Found"}}, "GetObject")
         with patch("data.boto3") as mock_boto:
             mock_boto.client.return_value = mock_client
             b = Bucket()
@@ -173,9 +165,7 @@ class TestBucket:
 
     def test_load_other_client_error_raises(self):
         mock_client = MagicMock()
-        mock_client.get_object.side_effect = data.ClientError(
-            {"Error": {"Code": "500", "Message": "Error"}}, "GetObject"
-        )
+        mock_client.get_object.side_effect = data.ClientError({"Error": {"Code": "500", "Message": "Error"}}, "GetObject")
         with patch("data.boto3") as mock_boto:
             mock_boto.client.return_value = mock_client
             b = Bucket()
@@ -232,9 +222,7 @@ class TestBucket:
 
     def test_save_client_error_raises(self):
         mock_client = MagicMock()
-        mock_client.put_object.side_effect = data.ClientError(
-            {"Error": {"Code": "500", "Message": "Error"}}, "PutObject"
-        )
+        mock_client.put_object.side_effect = data.ClientError({"Error": {"Code": "500", "Message": "Error"}}, "PutObject")
         with patch("data.boto3") as mock_boto:
             mock_boto.client.return_value = mock_client
             b = Bucket()
@@ -257,9 +245,7 @@ class TestBucket:
 
     def test_delete_no_such_key_returns_false(self):
         mock_client = MagicMock()
-        mock_client.delete_object.side_effect = data.ClientError(
-            {"Error": {"Code": "NoSuchKey", "Message": "Not Found"}}, "DeleteObject"
-        )
+        mock_client.delete_object.side_effect = data.ClientError({"Error": {"Code": "NoSuchKey", "Message": "Not Found"}}, "DeleteObject")
         with patch("data.boto3") as mock_boto:
             mock_boto.client.return_value = mock_client
             b = Bucket()
@@ -267,9 +253,7 @@ class TestBucket:
 
     def test_delete_other_client_error_raises(self):
         mock_client = MagicMock()
-        mock_client.delete_object.side_effect = data.ClientError(
-            {"Error": {"Code": "500", "Message": "Error"}}, "DeleteObject"
-        )
+        mock_client.delete_object.side_effect = data.ClientError({"Error": {"Code": "500", "Message": "Error"}}, "DeleteObject")
         with patch("data.boto3") as mock_boto:
             mock_boto.client.return_value = mock_client
             b = Bucket()
@@ -310,9 +294,7 @@ class TestBucket:
 
     def test_search_client_error_raises(self):
         mock_client = MagicMock()
-        mock_client.list_objects_v2.side_effect = data.ClientError(
-            {"Error": {"Code": "500", "Message": "Error"}}, "ListObjectsV2"
-        )
+        mock_client.list_objects_v2.side_effect = data.ClientError({"Error": {"Code": "500", "Message": "Error"}}, "ListObjectsV2")
         with patch("data.boto3") as mock_boto:
             mock_boto.client.return_value = mock_client
             b = Bucket()
@@ -391,12 +373,8 @@ class TestSecret:
     def test_get_no_such_key_raises(self):
         with patch("data.Secret._get_bucket_name", return_value="secrets-bucket"):
             mock_client = MagicMock()
-            mock_client.get_object.side_effect = data.ClientError(
-                {"Error": {"Code": "NoSuchKey", "Message": "Not Found"}}, "GetObject"
-            )
-            with patch(
-                "data.Secret._get_client", return_value=mock_client
-            ):
+            mock_client.get_object.side_effect = data.ClientError({"Error": {"Code": "NoSuchKey", "Message": "Not Found"}}, "GetObject")
+            with patch("data.Secret._get_client", return_value=mock_client):
                 Secret._cache.clear()
                 with pytest.raises(NotFoundError, match="not found"):
                     Secret.get("MISSING")
@@ -405,12 +383,8 @@ class TestSecret:
     def test_get_other_client_error_raises(self):
         with patch("data.Secret._get_bucket_name", return_value="secrets-bucket"):
             mock_client = MagicMock()
-            mock_client.get_object.side_effect = data.ClientError(
-                {"Error": {"Code": "500", "Message": "Error"}}, "GetObject"
-            )
-            with patch(
-                "data.Secret._get_client", return_value=mock_client
-            ):
+            mock_client.get_object.side_effect = data.ClientError({"Error": {"Code": "500", "Message": "Error"}}, "GetObject")
+            with patch("data.Secret._get_client", return_value=mock_client):
                 Secret._cache.clear()
                 with pytest.raises(ServiceUnavailableError, match="S3"):
                     Secret.get("FAIL")

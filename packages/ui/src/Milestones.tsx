@@ -38,7 +38,7 @@ const MilestoneComponent: React.FC<MilestoneProps> = ({
               : "bg-none border-slate-400 dark:border-slate-600 text-slate-500";
 
     const labelClasses =
-        "text-xs font-medium mt-1 " +
+        "text-xs font-medium mt-2 text-center " +
         (isFuture ? "text-slate-500" : "text-slate-700 dark:text-slate-300");
 
     return (
@@ -107,7 +107,7 @@ export const Milestones: React.FC<MilestonesProps> = ({ children }) => {
 
     return (
         <div
-            className="geometry-milestones flex flex-row items-start w-full gap-0"
+            className="geometry-milestones flex flex-row items-start w-full p-4 gap-0"
             role="list"
             aria-label="Progress"
         >

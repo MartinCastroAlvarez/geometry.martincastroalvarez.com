@@ -5,21 +5,21 @@ import json
 from unittest.mock import patch
 
 import pytest
-
-from api.api import ApiRequest
-from api.api import ApiResponse
-from api.api import handler
-from api.api import ROUTES
 from attributes import Identifier
 from attributes import Origin
 from attributes import Path
 from data import Page
-from enums import StepName
 from enums import Status
+from enums import StepName
 from exceptions import PathMissingResourceIdError
 from exceptions import ValidationError
 from models import Job
 from models import User
+
+from api.api import ROUTES
+from api.api import ApiRequest
+from api.api import ApiResponse
+from api.api import handler
 
 
 class TestApiRequest:
@@ -102,12 +102,12 @@ class TestApiResponse:
         assert "Access-Control-Allow-Origin" in d["headers"]
 
     def test_to_dict_localhost_origin(self):
-        r = ApiResponse(http.HTTPStatus.OK, '{}', Origin("http://localhost:5173"))
+        r = ApiResponse(http.HTTPStatus.OK, "{}", Origin("http://localhost:5173"))
         d = r.serialize()
         assert d["headers"]["Access-Control-Allow-Origin"] == "http://localhost:5173"
 
     def test_to_dict_subdomain_origin(self):
-        r = ApiResponse(http.HTTPStatus.OK, '{}', Origin("https://geometry.martincastroalvarez.com"))
+        r = ApiResponse(http.HTTPStatus.OK, "{}", Origin("https://geometry.martincastroalvarez.com"))
         d = r.serialize()
         assert d["headers"]["Access-Control-Allow-Origin"] == "https://geometry.martincastroalvarez.com"
 
@@ -128,17 +128,17 @@ class TestApiResponse:
         assert body["error"]["message"] == "Something went wrong"
 
     def test_to_dict_invalid_origin_uses_default(self):
-        r = ApiResponse(http.HTTPStatus.OK, '{}', Origin("https://other.com"))
+        r = ApiResponse(http.HTTPStatus.OK, "{}", Origin("https://other.com"))
         d = r.serialize()
         assert d["headers"]["Access-Control-Allow-Origin"] == "https://geometry.martincastroalvarez.com"
 
     def test_to_dict_star_when_none(self):
-        r = ApiResponse(http.HTTPStatus.OK, '{}', Origin(None))
+        r = ApiResponse(http.HTTPStatus.OK, "{}", Origin(None))
         d = r.serialize()
         assert d["headers"]["Access-Control-Allow-Origin"] == "*"
 
     def test_serialize_returns_to_dict(self):
-        r = ApiResponse(http.HTTPStatus.OK, '{}', Origin(""))
+        r = ApiResponse(http.HTTPStatus.OK, "{}", Origin(""))
         d = r.serialize()
         assert d["statusCode"] == 200
 

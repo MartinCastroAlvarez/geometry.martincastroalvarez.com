@@ -4,13 +4,9 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-
-import api  # noqa: F401
-
 from attributes import Identifier
 from attributes import Limit
 from attributes import Offset
-
 from data import Page
 from exceptions import RecordNotFoundError
 from exceptions import ValidationError
@@ -18,6 +14,8 @@ from indexes import ArtGalleryPublicIndex
 from indexes import Indexed
 from indexes import JobsPrivateIndex
 from models import User
+
+import api  # noqa: F401
 
 
 class TestIndexed:

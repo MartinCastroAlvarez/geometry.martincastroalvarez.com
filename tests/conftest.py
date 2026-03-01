@@ -16,6 +16,7 @@ if "boto3" not in sys.modules:
     sys.modules["boto3"] = MagicMock()
 if "botocore" not in sys.modules:
     sys.modules["botocore"] = MagicMock()
+
     # data.py expects ClientError to be catchable and have .response["Error"]["Code"]
     class _FakeClientError(Exception):
         def __init__(self, response, operation_name="Op"):

@@ -5,16 +5,19 @@ from decimal import Decimal
 from functools import cached_property
 from typing import Any
 
+from box import Bounded
+from box import Box
 from colorama import Fore
-
-from box import Bounded, Box
-from element import Element, Element1D, ElementSequence
-from exceptions import (SegmentInvalidPointsError,
-                        SegmentSequenceInvalidItemsError,
-                        SequencePointNotFoundError)
+from element import Element
+from element import Element1D
+from element import ElementSequence
+from exceptions import SegmentInvalidPointsError
+from exceptions import SegmentSequenceInvalidItemsError
+from exceptions import SequencePointNotFoundError
 from model import Hash
 from path import Path
-from point import Point, PointSequence
+from point import Point
+from point import PointSequence
 from serializable import Serializable
 
 
@@ -25,9 +28,7 @@ class Segment(Bounded, Element1D, Serializable):
     @classmethod
     def unserialize(cls, data: dict[str, Any]) -> Segment:
         if "start" not in data or "end" not in data:
-            raise SegmentInvalidPointsError(
-                "Segment.unserialize requires 'start' and 'end'"
-            )
+            raise SegmentInvalidPointsError("Segment.unserialize requires 'start' and 'end'")
         return cls(
             start=Point.unserialize(data["start"]),
             end=Point.unserialize(data["end"]),
@@ -40,13 +41,9 @@ class Segment(Bounded, Element1D, Serializable):
 
     def validate(self) -> None:
         if not isinstance(self.start, Point):
-            raise SegmentInvalidPointsError(
-                f"start must be a Point, got {type(self.start).__name__}"
-            )
+            raise SegmentInvalidPointsError(f"start must be a Point, got {type(self.start).__name__}")
         if not isinstance(self.end, Point):
-            raise SegmentInvalidPointsError(
-                f"end must be a Point, got {type(self.end).__name__}"
-            )
+            raise SegmentInvalidPointsError(f"end must be a Point, got {type(self.end).__name__}")
 
     def __hash__(self) -> Hash:
         low: Point = min(self[0], self[1])
@@ -56,9 +53,7 @@ class Segment(Bounded, Element1D, Serializable):
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Segment):
             return False
-        return (self[0] == other[0] and self[1] == other[1]) or (
-            self[0] == other[1] and self[1] == other[0]
-        )
+        return (self[0] == other[0] and self[1] == other[1]) or (self[0] == other[1] and self[1] == other[0])
 
     def __invert__(self) -> Segment:
         return Segment(start=self[1], end=self[0])
@@ -71,10 +66,7 @@ class Segment(Bounded, Element1D, Serializable):
         raise IndexError("Segment index out of range")
 
     def __repr__(self) -> str:
-        return (
-            f"{Fore.GREEN}({Fore.RESET}{self.start!r}{Fore.MAGENTA}--{Fore.RESET}"
-            f"{self.end!r}{Fore.GREEN}){Fore.RESET}"
-        )
+        return f"{Fore.GREEN}({Fore.RESET}{self.start!r}{Fore.MAGENTA}--{Fore.RESET}" f"{self.end!r}{Fore.GREEN}){Fore.RESET}"
 
     @property
     def size(self) -> Decimal:
@@ -104,9 +96,7 @@ class Segment(Bounded, Element1D, Serializable):
                 )
             )
         if isinstance(obj, Segment):
-            return self.contains(obj[0], inclusive=inclusive) and self.contains(
-                obj[1], inclusive=inclusive
-            )
+            return self.contains(obj[0], inclusive=inclusive) and self.contains(obj[1], inclusive=inclusive)
         raise NotImplementedError(f"Segment.contains not implemented for {type(obj)}")
 
     @cached_property
@@ -181,20 +171,14 @@ class SegmentSequence(ElementSequence[Segment], Serializable):
     def unserialize(cls, data: dict[str, Any] | list[Any]) -> SegmentSequence:
         if isinstance(data, dict):
             if "segments" not in data:
-                raise SegmentSequenceInvalidItemsError(
-                    "SegmentSequence.unserialize requires 'segments' key when data is dict"
-                )
+                raise SegmentSequenceInvalidItemsError("SegmentSequence.unserialize requires 'segments' key when data is dict")
             raw = data["segments"]
         elif isinstance(data, list):
             raw = data
         else:
-            raise SegmentSequenceInvalidItemsError(
-                f"SegmentSequence.unserialize expects a dict or list, got {type(data).__name__}"
-            )
+            raise SegmentSequenceInvalidItemsError(f"SegmentSequence.unserialize expects a dict or list, got {type(data).__name__}")
         if not isinstance(raw, list):
-            raise SegmentSequenceInvalidItemsError(
-                f"SegmentSequence.unserialize 'segments' must be a list, got {type(raw).__name__}"
-            )
+            raise SegmentSequenceInvalidItemsError(f"SegmentSequence.unserialize 'segments' must be a list, got {type(raw).__name__}")
         return cls(items=[Segment.unserialize(segment) for segment in raw])
 
     def __init__(self, items: list[Segment]) -> None:
@@ -204,20 +188,14 @@ class SegmentSequence(ElementSequence[Segment], Serializable):
 
     def validate(self) -> None:
         if not isinstance(self.items, list):
-            raise SegmentSequenceInvalidItemsError(
-                f"items must be a list, got {type(self.items).__name__}"
-            )
+            raise SegmentSequenceInvalidItemsError(f"items must be a list, got {type(self.items).__name__}")
         for i, segment in enumerate(self.items):
             if not isinstance(segment, Segment):
-                raise SegmentSequenceInvalidItemsError(
-                    f"items[{i}] must be a Segment, got {type(segment).__name__}"
-                )
+                raise SegmentSequenceInvalidItemsError(f"items[{i}] must be a Segment, got {type(segment).__name__}")
 
     def __repr__(self) -> str:
         return (
-            f"{Fore.BLUE}[{Fore.RESET}"
-            f"{f'{Fore.BLUE} -> {Fore.RESET}'.join(repr(segment) for segment in self.items)}"
-            f"{Fore.BLUE}]{Fore.RESET}"
+            f"{Fore.BLUE}[{Fore.RESET}" f"{f'{Fore.BLUE} -> {Fore.RESET}'.join(repr(segment) for segment in self.items)}" f"{Fore.BLUE}]{Fore.RESET}"
         )
 
     @cached_property
@@ -248,9 +226,7 @@ class SegmentSequence(ElementSequence[Segment], Serializable):
         try:
             shifted = self.points << other
         except SequencePointNotFoundError as error:
-            raise SequencePointNotFoundError(
-                f"Point {other!r} not in segment sequence"
-            ) from error
+            raise SequencePointNotFoundError(f"Point {other!r} not in segment sequence") from error
         return shifted.edges
 
     def __rshift__(self, other: int | Segment | Point) -> SegmentSequence:
@@ -263,16 +239,12 @@ class SegmentSequence(ElementSequence[Segment], Serializable):
         if isinstance(other, Segment):
             for i, segment in enumerate(self.items):
                 if segment == other:
-                    return SegmentSequence(
-                        items=self.items[i + 1 :] + self.items[: i + 1]
-                    )
+                    return SegmentSequence(items=self.items[i + 1 :] + self.items[: i + 1])
             raise ValueError(f"Segment {other!r} not in sequence")
         try:
             shifted = self.points >> other
         except SequencePointNotFoundError as error:
-            raise SequencePointNotFoundError(
-                f"Point {other!r} not in segment sequence"
-            ) from error
+            raise SequencePointNotFoundError(f"Point {other!r} not in segment sequence") from error
         return shifted.edges
 
     def __hash__(self) -> Hash:

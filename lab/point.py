@@ -2,26 +2,29 @@ from __future__ import annotations
 
 from decimal import Decimal
 from functools import cached_property
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
+from typing import Any
 
 from colorama import Fore
-
-from element import Element, ElementSequence
-from exceptions import (PointInvalidCoordinatesError,
-                        SerializedInvalidDictError,
-                        SerializedInvalidValueError, SerializedMissingKeyError)
+from element import Element
+from element import ElementSequence
+from exceptions import PointInvalidCoordinatesError
+from exceptions import SerializedInvalidDictError
+from exceptions import SerializedInvalidValueError
+from exceptions import SerializedMissingKeyError
 from model import Hash
 from serializable import Serializable
 
 if TYPE_CHECKING:
     from segment import Segment, SegmentSequence
 
-from exceptions import (CentroidEmptySequenceError,
-                        ComponentsNoSharedEdgeError,
-                        ConvexComponentSequenceSubtractionEmptyError,
-                        ConvexComponentSequenceSubtractionError,
-                        SequenceInvalidPointsError, SequencePointNotFoundError,
-                        SequenceShiftValidationError)
+from exceptions import CentroidEmptySequenceError
+from exceptions import ComponentsNoSharedEdgeError
+from exceptions import ConvexComponentSequenceSubtractionEmptyError
+from exceptions import ConvexComponentSequenceSubtractionError
+from exceptions import SequenceInvalidPointsError
+from exceptions import SequencePointNotFoundError
+from exceptions import SequenceShiftValidationError
 
 
 def _coerce_to_points(raw: list[Any]) -> list[Point]:
@@ -33,9 +36,7 @@ def _coerce_to_points(raw: list[Any]) -> list[Point]:
             try:
                 out.append(Point(item) if not isinstance(item, dict) else Point(**item))
             except Exception as error:
-                raise SequenceInvalidPointsError(
-                    f"PointSequence item at index {index} could not be coerced to Point: {item!r}"
-                ) from error
+                raise SequenceInvalidPointsError(f"PointSequence item at index {index} could not be coerced to Point: {item!r}") from error
     return out
 
 
@@ -49,28 +50,16 @@ class Point(Element, Serializable):
     @classmethod
     def unserialize(cls, data: dict[str, Any]) -> Point:
         if not isinstance(data, dict):
-            raise SerializedInvalidDictError(
-                f"Point.unserialize expects a dict, got {type(data).__name__}"
-            )
+            raise SerializedInvalidDictError(f"Point.unserialize expects a dict, got {type(data).__name__}")
         if "x" not in data:
             raise SerializedMissingKeyError("Point.unserialize missing key 'x'")
         if "y" not in data:
             raise SerializedMissingKeyError("Point.unserialize missing key 'y'")
         try:
-            x = (
-                data["x"]
-                if isinstance(data["x"], Decimal)
-                else Decimal(str(float(data["x"])))
-            )
-            y = (
-                data["y"]
-                if isinstance(data["y"], Decimal)
-                else Decimal(str(float(data["y"])))
-            )
+            x = data["x"] if isinstance(data["x"], Decimal) else Decimal(str(float(data["x"])))
+            y = data["y"] if isinstance(data["y"], Decimal) else Decimal(str(float(data["y"])))
         except (TypeError, ValueError) as error:
-            raise PointInvalidCoordinatesError(
-                f"Point.unserialize invalid x/y: {error}"
-            ) from error
+            raise PointInvalidCoordinatesError(f"Point.unserialize invalid x/y: {error}") from error
         return cls(x=x, y=y)
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -83,20 +72,10 @@ class Point(Element, Serializable):
             self.x, self.y = parsed.x, parsed.y
             return
         if "x" in kwargs and "y" in kwargs:
-            self.x = (
-                kwargs["x"]
-                if isinstance(kwargs["x"], Decimal)
-                else Decimal(str(float(kwargs["x"])))
-            )
-            self.y = (
-                kwargs["y"]
-                if isinstance(kwargs["y"], Decimal)
-                else Decimal(str(float(kwargs["y"])))
-            )
+            self.x = kwargs["x"] if isinstance(kwargs["x"], Decimal) else Decimal(str(float(kwargs["x"])))
+            self.y = kwargs["y"] if isinstance(kwargs["y"], Decimal) else Decimal(str(float(kwargs["y"])))
             return
-        raise PointInvalidCoordinatesError(
-            "Point expects (x=..., y=...) or a single Point/dict"
-        )
+        raise PointInvalidCoordinatesError("Point expects (x=..., y=...) or a single Point/dict")
 
     def to(self, other: Point) -> Segment:
         from segment import Segment
@@ -144,20 +123,14 @@ class PointSequence(ElementSequence[Point], Serializable):
     def unserialize(cls, data: dict[str, Any] | list[Any]) -> PointSequence:
         if isinstance(data, dict):
             if "points" not in data:
-                raise SerializedMissingKeyError(
-                    "PointSequence.unserialize missing key 'points'"
-                )
+                raise SerializedMissingKeyError("PointSequence.unserialize missing key 'points'")
             raw = data["points"]
         elif isinstance(data, list):
             raw = data
         else:
-            raise SerializedInvalidDictError(
-                f"PointSequence.unserialize expects a dict or list, got {type(data).__name__}"
-            )
+            raise SerializedInvalidDictError(f"PointSequence.unserialize expects a dict or list, got {type(data).__name__}")
         if not isinstance(raw, list):
-            raise SerializedInvalidValueError(
-                f"PointSequence.unserialize 'points' must be a list, got {type(raw).__name__}"
-            )
+            raise SerializedInvalidValueError(f"PointSequence.unserialize 'points' must be a list, got {type(raw).__name__}")
         points: list[Point] = []
         for item in raw:
             if isinstance(item, Point):
@@ -167,9 +140,7 @@ class PointSequence(ElementSequence[Point], Serializable):
             elif isinstance(item, (list, tuple)) and len(item) >= 2:
                 points.append(Point.unserialize({"x": item[0], "y": item[1]}))
             else:
-                raise SerializedInvalidValueError(
-                    f"PointSequence.unserialize point must be dict or [x,y], got {type(item).__name__}"
-                )
+                raise SerializedInvalidValueError(f"PointSequence.unserialize point must be dict or [x,y], got {type(item).__name__}")
         return cls(points=points)
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -188,9 +159,7 @@ class PointSequence(ElementSequence[Point], Serializable):
             if isinstance(one, (list, tuple)):
                 self.items = PointSequence.clean(_coerce_to_points(list(one)))
                 return
-            raise SequenceInvalidPointsError(
-                f"PointSequence expects a PointSequence, a dict, or a list; got {type(one).__name__}"
-            )
+            raise SequenceInvalidPointsError(f"PointSequence expects a PointSequence, a dict, or a list; got {type(one).__name__}")
         raw = kwargs.get("points", kwargs.get("items"))
         if raw is not None:
             sequence = list(raw.items) if isinstance(raw, PointSequence) else list(raw)
@@ -199,11 +168,7 @@ class PointSequence(ElementSequence[Point], Serializable):
         self.items = PointSequence.clean([])
 
     def __repr__(self) -> str:
-        return (
-            f"{Fore.BLUE}[{Fore.RESET}"
-            f"{f'{Fore.BLUE} -> {Fore.RESET}'.join(repr(point) for point in self.items)}"
-            f"{Fore.BLUE}]{Fore.RESET}"
-        )
+        return f"{Fore.BLUE}[{Fore.RESET}" f"{f'{Fore.BLUE} -> {Fore.RESET}'.join(repr(point) for point in self.items)}" f"{Fore.BLUE}]{Fore.RESET}"
 
     @cached_property
     def signed_area(self) -> Decimal:
@@ -225,7 +190,8 @@ class PointSequence(ElementSequence[Point], Serializable):
         return len(self.items) >= 3 and self.signed_area < Decimal("0")
 
     def is_convex(self) -> bool:
-        from path import Orientation, Path
+        from path import Orientation
+        from path import Path
 
         n: int = len(self.items)
         if n < 3:
@@ -260,9 +226,7 @@ class PointSequence(ElementSequence[Point], Serializable):
     @cached_property
     def centroid(self) -> Point:
         if not self.items:
-            raise CentroidEmptySequenceError(
-                "Cannot compute centroid of an empty PointSequence."
-            )
+            raise CentroidEmptySequenceError("Cannot compute centroid of an empty PointSequence.")
         sx: Decimal = Decimal("0")
         sy: Decimal = Decimal("0")
         for point in self.items:
@@ -273,12 +237,11 @@ class PointSequence(ElementSequence[Point], Serializable):
 
     @cached_property
     def edges(self) -> SegmentSequence:
-        from segment import Segment, SegmentSequence
+        from segment import Segment
+        from segment import SegmentSequence
 
         n: int = len(self.items)
-        return SegmentSequence(
-            items=[Segment(start=self[i], end=self[i + 1]) for i in range(n)]
-        )
+        return SegmentSequence(items=[Segment(start=self[i], end=self[i + 1]) for i in range(n)])
 
     def __lshift__(self, other: int | Point) -> PointSequence:
         n = len(self.items)
@@ -290,14 +253,10 @@ class PointSequence(ElementSequence[Point], Serializable):
             try:
                 i = self.index(other)
             except ValueError as error:
-                raise SequencePointNotFoundError(
-                    f"Point {other!r} not in sequence"
-                ) from error
+                raise SequencePointNotFoundError(f"Point {other!r} not in sequence") from error
         shifted = PointSequence(self.items[i:] + self.items[:i])
         if self != shifted:
-            raise SequenceShiftValidationError(
-                "Shift result is not equal to original sequence (circular)"
-            )
+            raise SequenceShiftValidationError("Shift result is not equal to original sequence (circular)")
         return shifted
 
     def __rshift__(self, other: int | Point) -> PointSequence:
@@ -310,14 +269,10 @@ class PointSequence(ElementSequence[Point], Serializable):
             try:
                 i = self.index(other)
             except ValueError as error:
-                raise SequencePointNotFoundError(
-                    f"Point {other!r} not in sequence"
-                ) from error
+                raise SequencePointNotFoundError(f"Point {other!r} not in sequence") from error
         shifted = PointSequence(self.items[i + 1 :] + self.items[: i + 1])
         if self != shifted:
-            raise SequenceShiftValidationError(
-                "Shift result is not equal to original sequence (circular)"
-            )
+            raise SequenceShiftValidationError("Shift result is not equal to original sequence (circular)")
         return shifted
 
     def __add__(self, other: PointSequence) -> PointSequence:
@@ -335,19 +290,13 @@ class PointSequence(ElementSequence[Point], Serializable):
         n: int = len(self.items)
         k: int = len(other.items)
         if n == 0 or k == 0:
-            raise ConvexComponentSequenceSubtractionEmptyError(
-                "Cannot subtract: sequence is empty"
-            )
+            raise ConvexComponentSequenceSubtractionEmptyError("Cannot subtract: sequence is empty")
         for i in range(n):
-            matches: bool = all(
-                self.items[(i + j) % n] == other.items[j] for j in range(k)
-            )
+            matches: bool = all(self.items[(i + j) % n] == other.items[j] for j in range(k))
             if matches:
                 if k == n:
                     return PointSequence()
-                return PointSequence(
-                    [self.items[((i + k) % n + j) % n] for j in range(n - k)]
-                )
+                return PointSequence([self.items[((i + k) % n + j) % n] for j in range(n - k)])
         raise ConvexComponentSequenceSubtractionError("Sequence not found in polygon")
 
     def __and__(self, other: PointSequence) -> PointSequence:
@@ -355,9 +304,7 @@ class PointSequence(ElementSequence[Point], Serializable):
         right_edges: set = set(other.edges)
         shared_edges: set = left_edges & right_edges
         if not shared_edges:
-            raise ComponentsNoSharedEdgeError(
-                "Components do not share an edge or merge failed"
-            )
+            raise ComponentsNoSharedEdgeError("Components do not share an edge or merge failed")
         edge = shared_edges.pop()
         return PointSequence([edge[0], edge[1]])
 

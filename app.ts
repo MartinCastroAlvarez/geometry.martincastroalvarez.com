@@ -246,6 +246,7 @@ class GeometryStack extends Stack {
     jobIdResource.addMethod('GET', lambdaIntegration)
     jobIdResource.addMethod('POST', lambdaIntegration)
     jobIdResource.addMethod('PATCH', lambdaIntegration)
+    jobIdResource.addMethod('DELETE', lambdaIntegration)
     jobIdResource.addMethod('OPTIONS', lambdaIntegration)
 
     const distribution = new cloudfront.Distribution(this, 'GeometryDistribution', {

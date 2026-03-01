@@ -3,7 +3,6 @@
 import http
 
 import pytest
-
 from exceptions import ConflictError
 from exceptions import GeometryException
 from exceptions import InvalidActionError

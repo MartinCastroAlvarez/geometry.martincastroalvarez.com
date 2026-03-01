@@ -52,6 +52,7 @@ from logger import get_logger
 from logger import log_extra
 from models import User
 from mutations import ArtGalleryPublishMutation
+from mutations import JobDeleteMutation
 from mutations import JobMutation
 from mutations import JobUpdateMutation
 from queries import ArtGalleryDetailsQuery
@@ -165,6 +166,7 @@ ROUTES: dict[Path, dict[Method, Type[Controller]]] = {
         Method.GET: JobDetailsQuery,
         Method.POST: ArtGalleryPublishMutation,
         Method.PATCH: JobUpdateMutation,
+        Method.DELETE: JobDeleteMutation,
     },
     Path("v1/jobs"): {Method.GET: JobListQuery, Method.POST: JobMutation},
 }

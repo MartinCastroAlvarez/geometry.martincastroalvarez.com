@@ -140,6 +140,24 @@ export const useUpdateJob = () => {
     return { ...mutation, isLoading: mutation.isPending };
 };
 
+export const useDeleteJob = () => {
+    const queryClient = useQueryClient();
+    const token = useAuthentication();
+    const mutation = useMutation({
+        mutationFn: async (jobId: string) => {
+            console.log("[data] useDeleteJob request", { jobId, token: token ?? null });
+            await new GeometryApiClient(GEOMETRY_API_URL, token).deleteJob(jobId);
+            console.log("[data] useDeleteJob response", "ok");
+        },
+        onSuccess: (_, jobId) => {
+            queryClient.invalidateQueries({ queryKey: JOB_QUERY_KEY(jobId) });
+            queryClient.invalidateQueries({ queryKey: JOBS_QUERY_KEY });
+            queryClient.invalidateQueries({ queryKey: GALLERIES_QUERY_KEY });
+        },
+    });
+    return { ...mutation, isLoading: mutation.isPending };
+};
+
 export const useCreateJob = () => {
     const queryClient = useQueryClient();
     const token = useAuthentication();

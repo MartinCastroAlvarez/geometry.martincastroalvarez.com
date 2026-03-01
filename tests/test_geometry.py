@@ -4,7 +4,6 @@ import json
 from decimal import Decimal
 
 import pytest
-
 from exceptions import ValidationError
 from geometry import Box
 from geometry import ConvexComponent
@@ -31,9 +30,7 @@ class TestConvexComponent:
 
     def test_init_non_convex_raises(self):
         with pytest.raises(ValidationError, match="ConvexComponent must be convex"):
-            ConvexComponent([
-                Point([0, 0]), Point([1, 0]), Point([1, 1]), Point([0.5, 0.5]), Point([0, 1])
-            ])
+            ConvexComponent([Point([0, 0]), Point([1, 0]), Point([1, 1]), Point([0.5, 0.5]), Point([0, 1])])
 
     def test_and_returns_convex_component(self):
         p = Polygon([Point([0, 0]), Point([1, 0]), Point([0.5, 1])])
@@ -348,6 +345,7 @@ class TestBox:
 
     def test_init_invalid_left_edge_raises(self):
         from exceptions import BoxInvalidEdgeError
+
         with pytest.raises(BoxInvalidEdgeError, match="vertical left"):
             Box(
                 bottom_left=Point([0, 0]),
@@ -358,6 +356,7 @@ class TestBox:
 
     def test_init_invalid_bottom_edge_raises(self):
         from exceptions import BoxInvalidEdgeError
+
         with pytest.raises(BoxInvalidEdgeError, match="horizontal bottom"):
             Box(
                 bottom_left=Point([0, 0]),
@@ -375,11 +374,13 @@ class TestBox:
 
     def test_unserialize_not_dict_raises(self):
         from exceptions import SerializedInvalidDictError
+
         with pytest.raises(SerializedInvalidDictError, match="expects a dict"):
             Box.unserialize([])
 
     def test_unserialize_missing_key_raises(self):
         from exceptions import BoxInvalidEdgeError
+
         with pytest.raises(BoxInvalidEdgeError, match="missing key"):
             Box.unserialize({"bottom_left": [0, 0]})
 
@@ -753,9 +754,7 @@ class TestPolygon:
         assert tri.is_convex() is True
         square = Polygon([Point([0, 0]), Point([1, 0]), Point([1, 1]), Point([0, 1])])
         assert square.is_convex() is True
-        concave = Polygon([
-            Point([0, 0]), Point([2, 0]), Point([2, 2]), Point([1, 1]), Point([0, 2])
-        ])
+        concave = Polygon([Point([0, 0]), Point([2, 0]), Point([2, 2]), Point([1, 1]), Point([0, 2])])
         assert concave.is_convex() is False
         assert Polygon([]).is_convex() is False
         assert Polygon([Point([0, 0]), Point([1, 0])]).is_convex() is False
@@ -854,9 +853,7 @@ class TestPolygon:
         assert square.is_simple() is True
 
     def test_is_simple_false_self_intersecting(self):
-        bowtie = Polygon([
-            Point([0, 0]), Point([2, 2]), Point([2, 0]), Point([0, 2])
-        ])
+        bowtie = Polygon([Point([0, 0]), Point([2, 2]), Point([2, 0]), Point([0, 2])])
         assert bowtie.is_simple() is False
 
     def test_is_simple_less_than_three_vertices(self):

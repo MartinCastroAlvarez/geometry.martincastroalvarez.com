@@ -4,9 +4,6 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-
-import api  # noqa: F401
-
 from data import Page
 from models import ArtGallery
 from models import Job
@@ -18,12 +15,15 @@ from queries import JobListQuery
 from queries import ListQuery
 from queries import Query
 
+import api  # noqa: F401
+
 
 class TestQueryBase:
     """Test base Query class."""
 
     def test_query_raises_not_implemented(self):
         """Base Query.query() raises NotImplementedError when subclass does not override query()."""
+
         class MinimalQuery(Query):
             def validate(self, body):
                 return {}
@@ -34,9 +34,11 @@ class TestQueryBase:
 
     def test_execute_delegates_to_query(self):
         """Execute calls query(); subclasses override query()."""
+
         class ConcreteQuery(Query):
             def validate(self, body):
                 return {}
+
             def query(self, validated_input):
                 return {"data": "ok"}
 
@@ -83,12 +85,14 @@ class TestArtGalleryDetailsQuery:
 
     @patch("queries.ArtGalleryRepository")
     def test_handler_returns_data_wrapper(self, mock_repo_cls):
-        gallery = ArtGallery.unserialize({
-            "id": "g1",
-            "boundary": [[0, 0], [1, 0], [1, 1], [0, 1]],
-            "owner_job_id": "j1",
-            "title": "Test",
-        })
+        gallery = ArtGallery.unserialize(
+            {
+                "id": "g1",
+                "boundary": [[0, 0], [1, 0], [1, 1], [0, 1]],
+                "owner_job_id": "j1",
+                "title": "Test",
+            }
+        )
         mock_repo_cls.return_value.get.return_value = gallery
         query = ArtGalleryDetailsQuery()
         result = query.handler(body={"id": "g1"})
@@ -120,8 +124,8 @@ class TestJobDetailsQuery:
     @patch("queries.JobsRepository")
     def test_handler_returns_data_wrapper(self, mock_repo_cls):
         from attributes import Identifier
-        from enums import StepName
         from enums import Status
+        from enums import StepName
 
         job = Job(
             id=Identifier("j1"),

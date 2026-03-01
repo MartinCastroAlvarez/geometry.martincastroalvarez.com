@@ -4,7 +4,6 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-
 from enums import Action
 from exceptions import ConfigurationError
 from exceptions import InternalServerError
@@ -17,11 +16,13 @@ class TestMessage:
     """Test Message (SQS message shape)."""
 
     def test_message_unserialize_minimal(self):
-        m = Message.unserialize({
-            "job_id": "job-123",
-            "user_email": "user@example.com",
-            "receipt_handle": "rh1",
-        })
+        m = Message.unserialize(
+            {
+                "job_id": "job-123",
+                "user_email": "user@example.com",
+                "receipt_handle": "rh1",
+            }
+        )
         assert m.receipt_handle is not None
         assert str(m.receipt_handle) == "rh1"
         assert str(m.job_id) == "job-123"
@@ -32,12 +33,14 @@ class TestMessage:
             Message.unserialize([])
 
     def test_message_unserialize_with_meta(self):
-        m = Message.unserialize({
-            "action": "start",
-            "job_id": "j1",
-            "user_email": "u@e.com",
-            "meta": {"key": "value"},
-        })
+        m = Message.unserialize(
+            {
+                "action": "start",
+                "job_id": "j1",
+                "user_email": "u@e.com",
+                "meta": {"key": "value"},
+            }
+        )
         assert m.meta == {"key": "value"}
         assert m.action == Action.START
 
@@ -88,6 +91,7 @@ class TestQueue:
     @patch("messages.boto3")
     def test_queue_url_client_error_raises_internal_server_error(self, mock_boto3):
         from botocore.exceptions import ClientError
+
         mock_client = MagicMock()
         mock_client.get_queue_url.side_effect = ClientError({"Error": {"Code": "500"}}, "get_queue_url")
         mock_boto3.client.return_value = mock_client
@@ -136,6 +140,7 @@ class TestQueue:
     @patch("messages.boto3")
     def test_queue_put_client_error_raises_internal_server_error(self, mock_boto3):
         from botocore.exceptions import ClientError
+
         mock_client = MagicMock()
         mock_client.get_queue_url.return_value = {"QueueUrl": "https://q"}
         mock_client.send_message.side_effect = ClientError({"Error": {"Code": "500"}}, "send_message")
@@ -169,6 +174,7 @@ class TestQueue:
     @patch("messages.boto3")
     def test_queue_receive_client_error_raises(self, mock_boto3):
         from botocore.exceptions import ClientError
+
         mock_client = MagicMock()
         mock_client.get_queue_url.return_value = {"QueueUrl": "https://q"}
         mock_client.receive_message.side_effect = ClientError({"Error": {}}, "receive_message")

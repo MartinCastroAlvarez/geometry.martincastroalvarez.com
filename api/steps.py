@@ -25,27 +25,18 @@ from __future__ import annotations
 from abc import ABC
 from abc import abstractmethod
 from typing import Any
-from typing import Type
 
 from attributes import Email
 from attributes import Identifier
 from attributes import Signature
+from enums import Action
 from enums import Status
 from enums import StepName
+from messages import Message
+from messages import Queue
 from models import Job
-
-# Step name -> Step subclass for StartTask dispatch
-STEP_CLASS_BY_NAME: dict[StepName, Type[Step]] = {}
-
-
-def _register_step(step_name: StepName) -> Type[Step]:
-    """Decorator: register a Step subclass for a StepName."""
-
-    def decorator(cls: Type[Step]) -> Type[Step]:
-        STEP_CLASS_BY_NAME[step_name] = cls
-        return cls
-
-    return decorator
+from models import User
+from repositories import JobsRepository
 
 
 class Step(ABC):
@@ -67,7 +58,6 @@ class Step(ABC):
         raise NotImplementedError
 
 
-@_register_step(StepName.ART_GALLERY)
 class ArtGalleryStep(Step):
     """
     Art gallery step: enqueues REPORT for the current job and creates child jobs
@@ -77,22 +67,11 @@ class ArtGalleryStep(Step):
     """
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
-        from attributes import Countdown
-        from enums import Action
-        from indexes import Indexed
-        from indexes import JobsPrivateIndex
-        from messages import Message
-        from messages import Queue
-        from models import User
-        from repositories import JobsRepository
+        queue: Queue = Queue()
+        user: User = User(email=self.user_email)
+        repo: JobsRepository = JobsRepository(user=user)
 
-        queue = Queue()
-        user = User(email=self.user_email)
-        repo = JobsRepository(user=user)
-        index = JobsPrivateIndex(user_email=self.user_email)
-
-        # Child step names in pipeline order
-        child_step_names = [
+        child_step_names: list[StepName] = [
             StepName.VISIBILITY_MATRIX,
             StepName.STITCHING,
             StepName.EAR_CLIPPING,
@@ -102,11 +81,11 @@ class ArtGalleryStep(Step):
         child_ids: list[Identifier] = []
 
         for step_name in child_step_names:
-            child_id = Identifier(Signature(f"{self.job.id}_{step_name.value}"))
+            child_id: Identifier = Identifier(Signature(f"{self.job.id}_{step_name.value}"))
             if repo.exists(child_id):
                 child_ids.append(child_id)
                 continue
-            child = Job(
+            child: Job = Job(
                 id=child_id,
                 parent_id=self.job.id,
                 status=Status.SUCCESS,
@@ -114,17 +93,11 @@ class ArtGalleryStep(Step):
                 stdin=dict(self.job.stdin),
             )
             repo.save(child)
-            index.save(
-                Indexed(
-                    index_id=Identifier(Countdown.from_timestamp(child.created_at)),
-                    real_id=child.id,
-                )
-            )
             child_ids.append(child_id)
 
         self.job.children_ids = child_ids
 
-        message = Message(
+        message: Message = Message(
             action=Action.REPORT,
             job_id=self.job.id,
             user_email=self.user_email,
@@ -135,7 +108,6 @@ class ArtGalleryStep(Step):
         return {"step:art_gallery": "success"}
 
 
-@_register_step(StepName.VISIBILITY_MATRIX)
 class VisibilityMatrixStep(Step):
     """Visibility matrix step. Idempotent: same job => same output."""
 
@@ -143,7 +115,6 @@ class VisibilityMatrixStep(Step):
         return {"step:visibility_matrix": "success"}
 
 
-@_register_step(StepName.STITCHING)
 class StitchingStep(Step):
     """Stitching step. Idempotent: same job => same output."""
 
@@ -151,7 +122,6 @@ class StitchingStep(Step):
         return {"step:stitching": "success"}
 
 
-@_register_step(StepName.EAR_CLIPPING)
 class EarClippingStep(Step):
     """Ear clipping step. Idempotent: same job => same output."""
 
@@ -159,7 +129,6 @@ class EarClippingStep(Step):
         return {"step:ear_clipping": "success"}
 
 
-@_register_step(StepName.CONVEX_COMPONENT_OPTIMIZATION)
 class ConvexComponentOptimizationStep(Step):
     """Convex component optimization step. Idempotent: same job => same output."""
 
@@ -167,7 +136,6 @@ class ConvexComponentOptimizationStep(Step):
         return {"step:convex_component_optimization": "success"}
 
 
-@_register_step(StepName.GUARD_PLACEMENT)
 class GuardPlacementStep(Step):
     """Guard placement step. Idempotent: same job => same output."""
 

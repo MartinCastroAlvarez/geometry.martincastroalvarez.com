@@ -7,26 +7,25 @@ from attributes import Email
 from attributes import Identifier
 from enums import StepName
 from models import Job
-
 from steps import ArtGalleryStep
+from tasks import StartTask
 from steps import ConvexComponentOptimizationStep
 from steps import EarClippingStep
 from steps import GuardPlacementStep
-from steps import STEP_CLASS_BY_NAME
 from steps import StitchingStep
 from steps import VisibilityMatrixStep
 
 
 class TestStepRegistration:
-    """Test step registration in STEP_CLASS_BY_NAME."""
+    """Test step registration in StartTask.STEP_CLASS_BY_NAME."""
 
     def test_step_class_by_name_has_art_gallery(self):
-        assert StepName.ART_GALLERY in STEP_CLASS_BY_NAME
-        assert STEP_CLASS_BY_NAME[StepName.ART_GALLERY] is ArtGalleryStep
+        assert StepName.ART_GALLERY in StartTask.STEP_CLASS_BY_NAME
+        assert StartTask.STEP_CLASS_BY_NAME[StepName.ART_GALLERY] is ArtGalleryStep
 
     def test_step_class_by_name_has_visibility_matrix(self):
-        assert StepName.VISIBILITY_MATRIX in STEP_CLASS_BY_NAME
-        assert STEP_CLASS_BY_NAME[StepName.VISIBILITY_MATRIX] is VisibilityMatrixStep
+        assert StepName.VISIBILITY_MATRIX in StartTask.STEP_CLASS_BY_NAME
+        assert StartTask.STEP_CLASS_BY_NAME[StepName.VISIBILITY_MATRIX] is VisibilityMatrixStep
 
 
 class TestSimpleSteps:
@@ -62,19 +61,12 @@ class TestSimpleSteps:
 class TestArtGalleryStep:
     """Test ArtGalleryStep with mocks."""
 
-    @patch("messages.Queue")
-    @patch("repositories.JobsRepository")
-    @patch("indexes.JobsPrivateIndex")
-    @patch("attributes.Countdown")
-    def test_art_gallery_step_run_creates_children_and_puts_report(
-        self, mock_countdown_cls, mock_index_cls, mock_repo_cls, mock_queue_cls
-    ):
+    @patch("steps.Queue")
+    @patch("steps.JobsRepository")
+    def test_art_gallery_step_run_creates_children_and_puts_report(self, mock_repo_cls, mock_queue_cls):
         mock_repo = MagicMock()
         mock_repo_cls.return_value = mock_repo
         mock_repo.exists.return_value = False
-        mock_index = MagicMock()
-        mock_index_cls.return_value = mock_index
-        mock_countdown_cls.from_timestamp.return_value = "countdown-1"
         mock_queue = MagicMock()
         mock_queue_cls.return_value = mock_queue
 
@@ -86,16 +78,11 @@ class TestArtGalleryStep:
         assert out == {"step:art_gallery": "success"}
         assert len(job.children_ids) == 5
         mock_repo.save.assert_called()
-        mock_index.save.assert_called()
         mock_queue.put.assert_called_once()
 
-    @patch("messages.Queue")
-    @patch("repositories.JobsRepository")
-    @patch("indexes.JobsPrivateIndex")
-    @patch("attributes.Countdown")
-    def test_art_gallery_step_run_existing_children_skips_create(
-        self, mock_countdown_cls, mock_index_cls, mock_repo_cls, mock_queue_cls
-    ):
+    @patch("steps.Queue")
+    @patch("steps.JobsRepository")
+    def test_art_gallery_step_run_existing_children_skips_create(self, mock_repo_cls, mock_queue_cls):
         mock_repo = MagicMock()
         mock_repo_cls.return_value = mock_repo
         mock_repo.exists.return_value = True

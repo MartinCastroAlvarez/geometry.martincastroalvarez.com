@@ -14,6 +14,37 @@ import { useLocale } from "@geometry/i18n";
 import { Container, Tooltip } from "@geometry/ui";
 import type { EditorVertex } from "./types";
 import { artGalleryToEditorState, editorVerticesToPolygon } from "./adapters";
+
+const FIT_PADDING = 16;
+
+function computeInitialFit(
+    vertices: EditorVertex[],
+    stageWidth: number,
+    stageHeight: number
+): { pan: { x: number; y: number }; scale: number } {
+    if (vertices.length === 0 || stageWidth <= 0 || stageHeight <= 0) {
+        return { pan: { x: 0, y: 0 }, scale: 1 };
+    }
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const v of vertices) {
+        minX = Math.min(minX, v.x);
+        minY = Math.min(minY, v.y);
+        maxX = Math.max(maxX, v.x);
+        maxY = Math.max(maxY, v.y);
+    }
+    const contentW = maxX - minX || 1;
+    const contentH = maxY - minY || 1;
+    const cx = (minX + maxX) / 2;
+    const cy = (minY + maxY) / 2;
+    const usableW = Math.max(stageWidth - 2 * FIT_PADDING, 1);
+    const usableH = Math.max(stageHeight - 2 * FIT_PADDING, 1);
+    const fitScale = Math.min(usableW / contentW, usableH / contentH, 4);
+    const scale = Math.max(0.25, Math.min(fitScale, 4));
+    const stageW = stageWidth / scale;
+    const stageH = stageHeight / scale;
+    const pan = { x: stageW / 2 - cx, y: stageH / 2 - cy };
+    return { pan, scale };
+}
 import { findCycles, signedArea, isInside, polyEquals, polyArrayEquals } from "./utils";
 import { Edge } from "./Edge";
 import { Grid } from "./Grid";
@@ -46,6 +77,9 @@ export const Editor = ({
     const [selectedEdgeIndex, setSelectedEdgeIndex] = useState<number | null>(null);
     const [mode, setMode] = useState<EditorMode>(EditorMode.Connect);
     const [pan, setPan] = useState({ x: 0, y: 0 });
+    const initialFitAppliedRef = useRef(false);
+    const hadInitialContentRef = useRef(false);
+    const containerMeasuredRef = useRef(false);
     const [isPanning, setIsPanning] = useState(false);
     const panStartRef = useRef<{ clientX: number; clientY: number; panX: number; panY: number } | null>(null);
     const scaleRef = useRef(1);
@@ -60,12 +94,36 @@ export const Editor = ({
         const ro = new ResizeObserver((entries) => {
             const { width: w, height: h } = entries[0]?.contentRect ?? {};
             if (w != null && h != null && w > 0 && h > 0) {
+                containerMeasuredRef.current = true;
                 setContainerSize({ width: w, height: h });
             }
         });
         ro.observe(el);
         return () => ro.disconnect();
     }, []);
+
+    // Remember if we mounted with content (e.g. Edit from job) so we only fit in that case.
+    useEffect(() => {
+        if (vertices.length > 0) hadInitialContentRef.current = true;
+    }, []);
+
+    // When opening with an existing gallery (e.g. Edit from job), fit and center once using actual container size.
+    useEffect(() => {
+        if (
+            !hadInitialContentRef.current ||
+            initialFitAppliedRef.current ||
+            !containerMeasuredRef.current ||
+            vertices.length === 0
+        )
+            return;
+        const w = containerSize.width;
+        const h = containerSize.height;
+        if (w <= 0 || h <= 0) return;
+        const { pan: fitPan, scale: fitScale } = computeInitialFit(vertices, w, h);
+        initialFitAppliedRef.current = true;
+        setPan(fitPan);
+        setScale(fitScale);
+    }, [vertices.length, containerSize.width, containerSize.height]);
 
     const stageCursor =
         mode === EditorMode.Move ? (isPanning ? "grabbing" : "grab") : mode === EditorMode.Erase ? "cell" : "crosshair";

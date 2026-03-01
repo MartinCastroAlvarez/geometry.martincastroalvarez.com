@@ -12,7 +12,7 @@
 import React from "react";
 
 const baseClasses =
-    "appearance-none outline-none text-slate-800 dark:text-slate-100 text-center rounded-lg px-3 py-2 w-full placeholder:text-slate-500 dark:placeholder:text-slate-400 border-0 shadow-none disabled:opacity-40 disabled:cursor-not-allowed";
+    "appearance-none outline-none text-slate-800 dark:text-slate-100 text-center rounded-lg py-2 w-full placeholder:text-slate-500 dark:placeholder:text-slate-400 border-0 shadow-none disabled:opacity-40 disabled:cursor-not-allowed";
 
 const sizeClass = (lg?: boolean, xl?: boolean): string => {
     if (xl) return "text-xl";

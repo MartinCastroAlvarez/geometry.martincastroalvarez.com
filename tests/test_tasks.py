@@ -8,7 +8,6 @@ from attributes import Identifier
 from enums import Status
 from enums import StepName
 from models import Job
-
 from tasks import ReportTask
 from tasks import StartTask
 from tasks import Task

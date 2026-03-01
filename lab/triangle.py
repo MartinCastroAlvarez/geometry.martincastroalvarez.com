@@ -2,14 +2,19 @@ from __future__ import annotations
 
 from decimal import Decimal
 from functools import cached_property
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
+from typing import Any
 
-from box import Bounded, Box
-from element import Element, Element2D
+from box import Bounded
+from box import Box
+from element import Element
+from element import Element2D
 from matrix import Matrix
 from path import Path
-from point import Point, PointSequence
-from segment import Segment, SegmentSequence
+from point import Point
+from point import PointSequence
+from segment import Segment
+from segment import SegmentSequence
 
 if TYPE_CHECKING:
     from polygon import Polygon

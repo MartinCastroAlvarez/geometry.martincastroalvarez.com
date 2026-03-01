@@ -4,13 +4,9 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-
-import api  # noqa: F401
-
 from attributes import Identifier
 from attributes import Limit
 from attributes import Offset
-
 from data import Page
 from exceptions import CorruptionError
 from exceptions import RecordNotFoundError
@@ -22,6 +18,8 @@ from models import User
 from repositories import ArtGalleryRepository
 from repositories import JobsRepository
 from repositories import Results
+
+import api  # noqa: F401
 
 
 class TestRepositories:

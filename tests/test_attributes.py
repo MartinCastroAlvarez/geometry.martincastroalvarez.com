@@ -1,7 +1,6 @@
 """Tests for attributes package."""
 
 import pytest
-
 from attributes import Email
 from attributes import Identifier
 from attributes import Path

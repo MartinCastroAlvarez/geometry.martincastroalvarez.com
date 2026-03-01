@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from exceptions import (ComponentMergeError, ComponentsNoSharedEdgeError,
-                        ConvexComponentInvalidPolygonError,
-                        ConvexComponentMergeTooManyPointsError,
-                        ConvexComponentNotConvexError)
-from model import Hash, Model
+from exceptions import ComponentMergeError
+from exceptions import ComponentsNoSharedEdgeError
+from exceptions import ConvexComponentInvalidPolygonError
+from exceptions import ConvexComponentMergeTooManyPointsError
+from exceptions import ConvexComponentNotConvexError
+from model import Hash
+from model import Model
 from point import PointSequence
 from polygon import Polygon
 from segment import SegmentSequence
@@ -20,9 +22,7 @@ class ConvexComponent(Model, Serializable):
     @classmethod
     def unserialize(cls, data: dict[str, Any]) -> ConvexComponent:
         if "polygon" not in data:
-            raise ConvexComponentInvalidPolygonError(
-                "ConvexComponent.unserialize missing key 'polygon'"
-            )
+            raise ConvexComponentInvalidPolygonError("ConvexComponent.unserialize missing key 'polygon'")
         return cls(polygon=Polygon.unserialize(data["polygon"]))
 
     def __init__(self, *, polygon: Polygon) -> None:
@@ -33,9 +33,7 @@ class ConvexComponent(Model, Serializable):
 
     def validate(self) -> None:
         if not isinstance(self.polygon, Polygon):
-            raise ConvexComponentInvalidPolygonError(
-                f"polygon must be a Polygon, got {type(self.polygon).__name__}"
-            )
+            raise ConvexComponentInvalidPolygonError(f"polygon must be a Polygon, got {type(self.polygon).__name__}")
         if not self.polygon.points.is_convex():
             raise ConvexComponentNotConvexError("Convex component must be convex.")
 

@@ -2,14 +2,20 @@ from __future__ import annotations
 
 from decimal import Decimal
 from functools import cached_property
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
+from typing import Any
 
-from box import Bounded, Box
-from element import Element, Element2D
-from exceptions import PolygonDegenerateError, PolygonTooFewPointsError
+from box import Bounded
+from box import Box
+from element import Element
+from element import Element2D
+from exceptions import PolygonDegenerateError
+from exceptions import PolygonTooFewPointsError
 from model import Hash
-from point import Point, PointSequence
-from segment import Segment, SegmentSequence
+from point import Point
+from point import PointSequence
+from segment import Segment
+from segment import SegmentSequence
 from serializable import Serializable
 
 if TYPE_CHECKING:
@@ -42,11 +48,7 @@ class Polygon(Bounded, Element2D, Serializable):
         elif len(args) == 1 and isinstance(args[0], Polygon):
             points: PointSequence = args[0].points
         elif len(args) == 1:
-            points = (
-                args[0]
-                if isinstance(args[0], PointSequence)
-                else PointSequence(args[0])
-            )
+            points = args[0] if isinstance(args[0], PointSequence) else PointSequence(args[0])
         else:
             raise PolygonTooFewPointsError("Polygon requires points")
         items: list[Point] = points.items
@@ -55,13 +57,9 @@ class Polygon(Bounded, Element2D, Serializable):
 
     def validate(self) -> None:
         if len(self.points) < 3:
-            raise PolygonTooFewPointsError(
-                f"Polygon must have at least 3 points: {self.points}"
-            )
+            raise PolygonTooFewPointsError(f"Polygon must have at least 3 points: {self.points}")
         if not (abs(self)):
-            raise PolygonDegenerateError(
-                f"Polygon is degenerate: area is zero: {self.points}"
-            )
+            raise PolygonDegenerateError(f"Polygon is degenerate: area is zero: {self.points}")
 
     def __hash__(self) -> Hash:
         return self.points.__hash__()
@@ -120,13 +118,7 @@ class Polygon(Bounded, Element2D, Serializable):
                 if not (edge[0][1] <= obj[1] < edge[1][1]):
                     continue
 
-                if (
-                    edge[0][0]
-                    + (obj[1] - edge[0][1])
-                    * (edge[1][0] - edge[0][0])
-                    / (edge[1][1] - edge[0][1])
-                    > obj[0]
-                ):
+                if edge[0][0] + (obj[1] - edge[0][1]) * (edge[1][0] - edge[0][0]) / (edge[1][1] - edge[0][1]) > obj[0]:
                     inside = not inside
 
             return inside
@@ -186,11 +178,7 @@ class Polygon(Bounded, Element2D, Serializable):
                 )
             ):
                 return True
-            if any(
-                edge.intersects(obj, inclusive=inclusive)
-                for edge in self.edges
-                if not edge.connects(obj)
-            ):
+            if any(edge.intersects(obj, inclusive=inclusive) for edge in self.edges if not edge.connects(obj)):
                 return True
             return any(
                 (

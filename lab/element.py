@@ -1,8 +1,12 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from abc import ABC
+from abc import abstractmethod
 from decimal import Decimal
-from typing import Generic, Iterator, TypeVar, overload
+from typing import Generic
+from typing import Iterator
+from typing import TypeVar
+from typing import overload
 
 T = TypeVar("T")
 
@@ -75,11 +79,7 @@ class ElementSequence(ABC, Generic[T]):
         return obj in self.items
 
     def __eq__(self, other: object) -> bool:
-        other_items: list[T] | None = (
-            getattr(other, "items", None)
-            or getattr(other, "points", None)
-            or getattr(other, "segments", None)
-        )
+        other_items: list[T] | None = getattr(other, "items", None) or getattr(other, "points", None) or getattr(other, "segments", None)
         if other_items is None:
             return False
         n: int = len(self.items)

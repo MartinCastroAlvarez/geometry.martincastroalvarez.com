@@ -4,22 +4,20 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-
-import api  # noqa: F401
-
 from attributes import Email
 from attributes import Identifier
-
 from exceptions import JobStdoutMissingGeometryError
 from exceptions import UnauthorizedError
 from exceptions import ValidationError
 from models import User
 from mutations import ArtGalleryPublishMutation
-from mutations import gallery_id_from_job_and_user
 from mutations import JobMutation
 from mutations import JobUpdateMutation
 from mutations import Mutation
 from mutations import MutationResponse
+from mutations import gallery_id_from_job_and_user
+
+import api  # noqa: F401
 
 
 class TestMutationBase:
@@ -81,6 +79,7 @@ class TestJobMutation:
         handler = JobMutation(user=user)
         from geometry import Polygon
         from structs import Table
+
         boundary = Polygon.unserialize([[0, 0], [2, 0], [1, 2]])
         obstacles = Table.unserialize([])
         req = {"boundary": boundary, "obstacles": obstacles}
@@ -236,5 +235,3 @@ class TestArtGalleryPublishMutation:
         handler = ArtGalleryPublishMutation(user=user)
         with pytest.raises(JobStdoutMissingGeometryError, match="no boundary or obstacles"):
             handler.execute({"job_id": Identifier("j1")})
-
-

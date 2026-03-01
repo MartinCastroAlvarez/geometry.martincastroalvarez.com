@@ -1,7 +1,6 @@
 """Tests for structs package."""
 
 import pytest
-
 from exceptions import SequenceMultipleOverlapsError
 from exceptions import ValidationError
 from structs import Sequence
@@ -247,6 +246,7 @@ class TestTable:
         class SerializableItem:
             def __init__(self, val):
                 self.val = val
+
             def serialize(self):
                 return {"v": self.val}
 

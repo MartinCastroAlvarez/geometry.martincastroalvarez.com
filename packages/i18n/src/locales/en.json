@@ -5,6 +5,14 @@
       "success": "Success",
       "failed": "Failed"
     },
+    "steps": {
+      "visibility_matrix": "Visibility Matrix",
+      "stitching": "Stitching",
+      "ear_clipping": "Ear Clipping",
+      "convex_component_optimization": "Convex Components",
+      "guard_placement": "Guard Placement",
+      "art_gallery": "Art Gallery"
+    },
     "job": {
       "input": "Input",
       "output": "Output",
@@ -13,7 +21,10 @@
       "created": "Created",
       "updated": "Updated",
       "publish": "Publish",
-      "publishConfirm": "This will publish the art gallery to the public gallery. Continue?"
+      "publishConfirm": "This will publish the art gallery to the public gallery. Continue?",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleteConfirm": "Are you sure you want to delete this job? This cannot be undone."
     }
   },
   "errors": {

@@ -18,8 +18,8 @@
  * A random tip is shown at the bottom. Session is required (skeleton while useSession loads). Analytics: EDITOR_OPEN on mount.
  */
 import { useCallback, useEffect, useRef, useState, startTransition } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArtGallery, Polygon } from "@geometry/domain";
+import { useNavigate, useLocation } from "react-router-dom";
+import { ArtGallery, type ArtGalleryDict, Polygon } from "@geometry/domain";
 import { Editor, EditorReview } from "@geometry/editor";
 import { Page, Container, Input, useDevice } from "@geometry/ui";
 import { EditorPageSkeleton } from "../skeletons";
@@ -36,16 +36,32 @@ const EDITOR_ASPECT_RATIO = 0.65;
 
 const emptyGallery = new ArtGallery(new Polygon([]));
 
+type EditorLocationState = { artGallery?: ArtGallery | ArtGalleryDict; title?: string } | null;
+
+/** Normalize value from navigation state to an ArtGallery instance (handles serialized plain objects). */
+function toArtGallery(value: unknown): ArtGallery {
+    if (value instanceof ArtGallery) return value;
+    if (value != null && typeof value === "object" && "boundary" in value) {
+        return ArtGallery.fromDict(value as ArtGalleryDict);
+    }
+    return emptyGallery;
+}
+
 export const EditorPage = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { isMobile } = useDevice();
     const editorRef = useRef<HTMLDivElement>(null);
     const [editorSize, setEditorSize] = useState({ width: EDITOR_INITIAL_WIDTH, height: EDITOR_INITIAL_HEIGHT });
-    const [gallery, setGallery] = useState<ArtGallery>(() => emptyGallery);
+    const state = location.state as EditorLocationState;
+    const [gallery, setGallery] = useState<ArtGallery>(() => toArtGallery(state?.artGallery));
     /** When the editor reports invalid geometry (e.g. not all vertices have 2 edges), this is null so we hide Validate/Submit. */
-    const [validGallery, setValidGallery] = useState<ArtGallery | null>(null);
+    const [validGallery, setValidGallery] = useState<ArtGallery | null>(() => {
+        const raw = state?.artGallery;
+        return raw != null ? toArtGallery(raw) : null;
+    });
     const [validationResult, setValidationResult] = useState<Summary | null>(null);
-    const [galleryTitle, setGalleryTitle] = useState("");
+    const [galleryTitle, setGalleryTitle] = useState(() => state?.title ?? "");
     const { isLoading: sessionLoading } = useSession();
     const { t } = useLocale();
     const { track } = useAnalytics();

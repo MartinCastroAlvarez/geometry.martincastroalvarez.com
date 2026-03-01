@@ -28,6 +28,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import Any
 from typing import NotRequired
+from typing import Type
 
 from attributes import Email
 from attributes import Identifier
@@ -43,9 +44,13 @@ from messages import Queue
 from models import Job
 from models import User
 from repositories import JobsRepository
-from steps import STEP_CLASS_BY_NAME
 from steps import ArtGalleryStep
+from steps import ConvexComponentOptimizationStep
+from steps import EarClippingStep
+from steps import GuardPlacementStep
 from steps import Step
+from steps import StitchingStep
+from steps import VisibilityMatrixStep
 
 logger = get_logger(__name__)
 
@@ -120,6 +125,15 @@ class StartTask(Task):
     True
     """
 
+    STEP_CLASS_BY_NAME: dict[StepName, Type[Step]] = {
+        StepName.ART_GALLERY: ArtGalleryStep,
+        StepName.VISIBILITY_MATRIX: VisibilityMatrixStep,
+        StepName.STITCHING: StitchingStep,
+        StepName.EAR_CLIPPING: EarClippingStep,
+        StepName.CONVEX_COMPONENT_OPTIMIZATION: ConvexComponentOptimizationStep,
+        StepName.GUARD_PLACEMENT: GuardPlacementStep,
+    }
+
     def validate(self, body: dict[str, Any]) -> TaskRequest:
         req: TaskRequest = {
             "job_id": Identifier(body.get("job_id")),
@@ -144,7 +158,7 @@ class StartTask(Task):
                 "reason": "job_failed",
             }
         step_name: StepName = job.step_name
-        step_class = STEP_CLASS_BY_NAME.get(step_name)
+        step_class = StartTask.STEP_CLASS_BY_NAME.get(step_name)
         if step_class is None:
             logger.warning("StartTask.execute() | unknown step_name=%s job_id=%s", step_name, job_id)
             return {"status": Status.FAILED, "job_id": job_id, "reason": "unknown_step"}

@@ -4,11 +4,9 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-
 from attributes import Identifier
 from enums import Action
 from enums import Status
-
 from workers import WorkerRequest
 from workers import WorkerResponse
 from workers import handler
@@ -18,18 +16,18 @@ class TestWorkerRequest:
     """Test WorkerRequest parsing."""
 
     def test_request_has_action_and_body(self):
-        req = WorkerRequest.unserialize(
-            {"action": "start", "job_id": "j1", "user_email": "u@e.com", "receipt_handle": "rh1"}
-        )
+        req = WorkerRequest.unserialize({"action": "start", "job_id": "j1", "user_email": "u@e.com", "receipt_handle": "rh1"})
         assert req.action.value == "start"
         assert str(req.job_id) == "j1"
         assert str(req.user_email) == "u@e.com"
 
     def test_unserialize_with_body_key_sqs_record(self):
-        req = WorkerRequest.unserialize({
-            "body": '{"action": "report", "job_id": "j2", "user_email": "u@e.com"}',
-            "receiptHandle": "rh-sqs",
-        })
+        req = WorkerRequest.unserialize(
+            {
+                "body": '{"action": "report", "job_id": "j2", "user_email": "u@e.com"}',
+                "receiptHandle": "rh-sqs",
+            }
+        )
         assert req.action == Action.REPORT
         assert str(req.job_id) == "j2"
 
@@ -38,22 +36,26 @@ class TestWorkerRequest:
         assert req.data == {}
 
     def test_unserialize_with_receipt_handle_key(self):
-        req = WorkerRequest.unserialize({
-            "action": "start",
-            "job_id": "j1",
-            "user_email": "u@e.com",
-            "receipt_handle": "rh-alt",
-        })
+        req = WorkerRequest.unserialize(
+            {
+                "action": "start",
+                "job_id": "j1",
+                "user_email": "u@e.com",
+                "receipt_handle": "rh-alt",
+            }
+        )
         assert str(req.receipt_handle) == "rh-alt"
 
     def test_body_includes_meta_when_present(self):
-        req = WorkerRequest.unserialize({
-            "action": "start",
-            "job_id": "j1",
-            "user_email": "u@e.com",
-            "receipt_handle": "rh1",
-            "meta": {"k": "v"},
-        })
+        req = WorkerRequest.unserialize(
+            {
+                "action": "start",
+                "job_id": "j1",
+                "user_email": "u@e.com",
+                "receipt_handle": "rh1",
+                "meta": {"k": "v"},
+            }
+        )
         assert req.body.get("meta") == {"k": "v"}
 
     def test_from_event_with_records_yields_per_record(self):
@@ -103,10 +105,12 @@ class TestHandler:
     @patch("workers.Queue")
     def test_handler_invalid_request_appends_failed_result(self, mock_queue_cls):
         event = {
-            "Records": [{
-                "body": '{"action": "start", "job_id": "", "user_email": "u@e.com"}',
-                "receiptHandle": "rh1",
-            }]
+            "Records": [
+                {
+                    "body": '{"action": "start", "job_id": "", "user_email": "u@e.com"}',
+                    "receiptHandle": "rh1",
+                }
+            ]
         }
         resp = handler(event, None)
         assert len(resp.results) == 1
@@ -117,10 +121,12 @@ class TestHandler:
     def test_handler_unknown_action_appends_failed_result(self, mock_queue_cls):
         # ROUTES.get returns None for a made-up key so task_class is None -> "Unknown action"
         event = {
-            "Records": [{
-                "body": '{"action": "start", "job_id": "j1", "user_email": "u@e.com"}',
-                "receiptHandle": "rh1",
-            }]
+            "Records": [
+                {
+                    "body": '{"action": "start", "job_id": "j1", "user_email": "u@e.com"}',
+                    "receiptHandle": "rh1",
+                }
+            ]
         }
         with patch("workers.ROUTES", {Action.REPORT: type("ReportTask", (), {})()}):
             # Only REPORT in ROUTES, so START returns None
@@ -137,10 +143,12 @@ class TestHandler:
         mock_task.handler.return_value = {"status": Status.SUCCESS, "job_id": Identifier("j1")}
         with patch.dict("workers.ROUTES", {Action.START: lambda: mock_task}):
             event = {
-                "Records": [{
-                    "body": '{"action": "start", "job_id": "j1", "user_email": "u@e.com"}',
-                    "receiptHandle": "rh1",
-                }]
+                "Records": [
+                    {
+                        "body": '{"action": "start", "job_id": "j1", "user_email": "u@e.com"}',
+                        "receiptHandle": "rh1",
+                    }
+                ]
             }
             resp = handler(event, None)
         assert len(resp.results) == 1

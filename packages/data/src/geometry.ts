@@ -110,6 +110,13 @@ export class GeometryApiClient {
         return response.json();
     }
 
+    async deleteJob(jobId: string): Promise<void> {
+        if (this.jwtToken == null || this.jwtToken === "") requireToken("deleteJob");
+        await requestOrThrow(`${this.baseUrl}/v1/jobs/${jobId}`, this.jwtToken, {
+            method: "DELETE",
+        });
+    }
+
     async createJob(
         boundary: Array<{ x: number; y: number }>,
         obstacles: Array<Array<{ x: number; y: number }>>,

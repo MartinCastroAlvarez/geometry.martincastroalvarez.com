@@ -4,7 +4,8 @@ from decimal import Decimal
 from typing import Any
 
 from element import Element
-from model import Hash, Model
+from model import Hash
+from model import Model
 from point import PointSequence
 from polygon import Polygon
 from segment import SegmentSequence
@@ -17,9 +18,7 @@ class Obstacle(Model, Serializable):
 
     @classmethod
     def unserialize(cls, data: dict[str, Any] | list[Any]) -> Obstacle:
-        polygon_data = (
-            data["polygon"] if isinstance(data, dict) and "polygon" in data else data
-        )
+        polygon_data = data["polygon"] if isinstance(data, dict) and "polygon" in data else data
         return cls(polygon=Polygon.unserialize(polygon_data))
 
     def __init__(self, *, polygon: Polygon) -> None:
@@ -30,9 +29,7 @@ class Obstacle(Model, Serializable):
 
     def validate(self) -> None:
         if not isinstance(self.polygon, Polygon):
-            raise TypeError(
-                f"polygon must be a Polygon, got {type(self.polygon).__name__}"
-            )
+            raise TypeError(f"polygon must be a Polygon, got {type(self.polygon).__name__}")
 
     @property
     def points(self) -> PointSequence:

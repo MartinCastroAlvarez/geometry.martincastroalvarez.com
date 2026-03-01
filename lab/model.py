@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import hashlib
 from abc import ABC
-from typing import Any, Generic, Iterator, TypeVar
+from typing import Any
+from typing import Generic
+from typing import Iterator
+from typing import TypeVar
 from uuid import uuid4
 
-from exceptions import (HashInvalidValueError, ModelMapInvalidDataError,
-                        ModelMapKeyError)
+from exceptions import HashInvalidValueError
+from exceptions import ModelMapInvalidDataError
+from exceptions import ModelMapKeyError
 from serializable import Serializable
 
 
@@ -57,9 +61,7 @@ class ModelMap(Generic[T], Serializable):
             if "items" in data:
                 raw_list = data["items"]
                 if not isinstance(raw_list, list):
-                    raise ModelMapInvalidDataError(
-                        "ModelMap.unserialize 'items' must be a list"
-                    )
+                    raise ModelMapInvalidDataError("ModelMap.unserialize 'items' must be a list")
                 items_list: list[T] = []
                 for item in raw_list:
                     if isinstance(item, Model):
@@ -73,9 +75,7 @@ class ModelMap(Generic[T], Serializable):
                 instance = item_class.unserialize(val)
                 key_int = int(key) if not isinstance(key, Hash) else int(key)
                 if int(instance.id) != key_int:
-                    raise ModelMapInvalidDataError(
-                        f"ModelMap key {key!r} does not match item id {instance.id!r}"
-                    )
+                    raise ModelMapInvalidDataError(f"ModelMap key {key!r} does not match item id {instance.id!r}")
                 result[instance.id] = instance
             return cls(items=result)
         if isinstance(data, list):
@@ -86,9 +86,7 @@ class ModelMap(Generic[T], Serializable):
                 else:
                     items_list.append(item_class.unserialize(item))
             return cls(items=items_list)
-        raise ModelMapInvalidDataError(
-            f"ModelMap.unserialize expects a dict or list, got {type(data).__name__}"
-        )
+        raise ModelMapInvalidDataError(f"ModelMap.unserialize expects a dict or list, got {type(data).__name__}")
 
     def __init__(
         self,
@@ -102,14 +100,10 @@ class ModelMap(Generic[T], Serializable):
         elif isinstance(items, list):
             for item in items:
                 if not isinstance(item, Model):
-                    raise ModelMapInvalidDataError(
-                        f"items list must contain Model instances, got {type(item).__name__}"
-                    )
+                    raise ModelMapInvalidDataError(f"items list must contain Model instances, got {type(item).__name__}")
             self.items = {item.id: item for item in items}
         else:
-            raise ModelMapInvalidDataError(
-                f"items must be a dict, list, or None, got {type(items).__name__}"
-            )
+            raise ModelMapInvalidDataError(f"items must be a dict, list, or None, got {type(items).__name__}")
 
     def __getitem__(self, key: Hash) -> T:
         if key not in self.items:

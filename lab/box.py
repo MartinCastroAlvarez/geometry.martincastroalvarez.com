@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from abc import ABC
+from abc import abstractmethod
 from typing import Any
 
-from element import ComplexElement, Element
-from exceptions import BoxInvalidEdgeError, SerializedInvalidDictError
+from element import ComplexElement
+from element import Element
+from exceptions import BoxInvalidEdgeError
+from exceptions import SerializedInvalidDictError
 from interval import Interval
 from point import Point
 from serializable import Serializable
@@ -31,9 +34,7 @@ class Box(ComplexElement, Serializable):
     @classmethod
     def unserialize(cls, data: dict[str, Any]) -> Box:
         if not isinstance(data, dict):
-            raise SerializedInvalidDictError(
-                f"Box.unserialize expects a dict, got {type(data).__name__}"
-            )
+            raise SerializedInvalidDictError(f"Box.unserialize expects a dict, got {type(data).__name__}")
         for key in ("bottom_left", "top_left", "bottom_right", "top_right"):
             if key not in data:
                 raise BoxInvalidEdgeError(f"Box.unserialize missing key {key!r}")
@@ -52,45 +53,29 @@ class Box(ComplexElement, Serializable):
         bottom_right: Any,
         top_right: Any,
     ) -> None:
-        self.bottom_left = (
-            bottom_left if isinstance(bottom_left, Point) else Point(bottom_left)
-        )
+        self.bottom_left = bottom_left if isinstance(bottom_left, Point) else Point(bottom_left)
         self.top_left = top_left if isinstance(top_left, Point) else Point(top_left)
-        self.bottom_right = (
-            bottom_right if isinstance(bottom_right, Point) else Point(bottom_right)
-        )
+        self.bottom_right = bottom_right if isinstance(bottom_right, Point) else Point(bottom_right)
         self.top_right = top_right if isinstance(top_right, Point) else Point(top_right)
         self.validate()
 
     def validate(self) -> None:
         if self.bottom_left[0] != self.top_left[0]:
-            raise BoxInvalidEdgeError(
-                f"Box must have vertical left edge: {self.bottom_left[0]} != {self.top_left[0]}"
-            )
+            raise BoxInvalidEdgeError(f"Box must have vertical left edge: {self.bottom_left[0]} != {self.top_left[0]}")
         if self.bottom_right[0] != self.top_right[0]:
-            raise BoxInvalidEdgeError(
-                f"Box must have vertical right edge: {self.bottom_right[0]} != {self.top_right[0]}"
-            )
+            raise BoxInvalidEdgeError(f"Box must have vertical right edge: {self.bottom_right[0]} != {self.top_right[0]}")
         if self.bottom_left[1] != self.bottom_right[1]:
-            raise BoxInvalidEdgeError(
-                f"Box must have horizontal bottom edge: {self.bottom_left[1]} != {self.bottom_right[1]}"
-            )
+            raise BoxInvalidEdgeError(f"Box must have horizontal bottom edge: {self.bottom_left[1]} != {self.bottom_right[1]}")
         if self.top_left[1] != self.top_right[1]:
-            raise BoxInvalidEdgeError(
-                f"Box must have horizontal top edge: {self.top_left[1]} != {self.top_right[1]}"
-            )
+            raise BoxInvalidEdgeError(f"Box must have horizontal top edge: {self.top_left[1]} != {self.top_right[1]}")
 
     @property
     def x(self) -> Interval:
-        return Interval(
-            start=min(self[0][0], self[2][0]), end=max(self[0][0], self[2][0])
-        )
+        return Interval(start=min(self[0][0], self[2][0]), end=max(self[0][0], self[2][0]))
 
     @property
     def y(self) -> Interval:
-        return Interval(
-            start=min(self[0][1], self[1][1]), end=max(self[0][1], self[1][1])
-        )
+        return Interval(start=min(self[0][1], self[1][1]), end=max(self[0][1], self[1][1]))
 
     def intersects(self, obj: Element, inclusive: bool = True) -> bool:
         if isinstance(obj, Box):

@@ -5,7 +5,7 @@
  */
 import { useLocale } from "@geometry/i18n";
 import { Container, Scrollable, Bullet, Toolbar, Button, Problem, Inspector } from "@geometry/ui";
-import type { ArtGallery, Summary } from "@geometry/domain";
+import type { ArtGallery, ArtGalleryDict, Summary } from "@geometry/domain";
 import { EditorReviewSkeleton } from "./EditorReview.skeleton";
 
 /** Shared height for the three review tables (info, summary); content scrolls when larger. */
@@ -133,13 +133,17 @@ const EditorSummaryTable = ({ summary }: EditorSummaryTableProps) => {
     );
 };
 
-type EditorInspectorTableProps = { artGallery: ArtGallery | null };
+type EditorInspectorTableProps = { artGallery: ArtGallery | ArtGalleryDict | null };
 
 const EditorInspectorTable = ({ artGallery }: EditorInspectorTableProps) => {
     if (artGallery == null) return null;
+    const data =
+        typeof (artGallery as ArtGallery).toDict === "function"
+            ? (artGallery as ArtGallery).toDict()
+            : (artGallery as ArtGalleryDict);
     return (
         <Scrollable name="geometry-inspector-scroll" height={INSPECTOR_SIZE_PX}>
-            <Inspector data={artGallery.toDict()} size={INSPECTOR_SIZE_PX} />
+            <Inspector data={data} size={INSPECTOR_SIZE_PX} />
         </Scrollable>
     );
 };

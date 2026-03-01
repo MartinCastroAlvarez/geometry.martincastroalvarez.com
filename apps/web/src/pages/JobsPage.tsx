@@ -7,9 +7,9 @@
  * is shown when jobs are null or isLoading.
  *
  * If jobs is an empty list and not loading, the user is redirected to home. Each job is rendered
- * as a Cell (title only, localized "Untitled Gallery" when missing) inside a Container with
- * responsive grid size (6 on mobile, 4 on tablet, 3 on desktop); clicking the Cell navigates to
- * the job page.
+ * as a Cell: viewer on top, then title (localized "Untitled Gallery" when missing) and status
+ * badge below; responsive grid size (12 on mobile, 6 on tablet, 4 on desktop). Clicking the Cell
+ * navigates to the job page.
  */
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -37,6 +37,9 @@ const Cell = ({ job }: CellProps) => {
 
     return (
         <Container padded spaced rounded left onClick={() => navigate(`/jobs/${job.id}`)}>
+            <Container size={12}>
+                <Viewer artGallery={job.artGallery ?? undefined} height={VIEWER_HEIGHT} readonly fitToView />
+            </Container>
             <Container size={8} left>
                 <Title left truncate>{title}</Title>
             </Container>
@@ -44,9 +47,6 @@ const Cell = ({ job }: CellProps) => {
                 <Badge danger={job.status === Status.FAILED} success={job.status === Status.SUCCESS}>
                     {t(`jobs.status.${job.status}`)}
                 </Badge>
-            </Container>
-            <Container size={12}>
-                <Viewer artGallery={job.artGallery ?? undefined} height={VIEWER_HEIGHT} readonly fitToView />
             </Container>
         </Container>
     );

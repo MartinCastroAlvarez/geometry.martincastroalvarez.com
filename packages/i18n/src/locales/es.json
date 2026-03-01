@@ -5,6 +5,14 @@
       "success": "Éxito",
       "failed": "Fallido"
     },
+    "steps": {
+      "visibility_matrix": "Matriz de visibilidad",
+      "stitching": "Unión",
+      "ear_clipping": "Recorte de orejas",
+      "convex_component_optimization": "Componentes convexos",
+      "guard_placement": "Colocación de guardias",
+      "art_gallery": "Galería de arte"
+    },
     "job": {
       "input": "Entrada",
       "output": "Salida",
@@ -13,7 +21,10 @@
       "created": "Creado",
       "updated": "Actualizado",
       "publish": "Publicar",
-      "publishConfirm": "Esto publicará la galería de arte en la galería pública. ¿Continuar?"
+      "publishConfirm": "Esto publicará la galería de arte en la galería pública. ¿Continuar?",
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "deleteConfirm": "¿Estás seguro de que quieres eliminar este trabajo? Esta acción no se puede deshacer."
     }
   },
   "errors": {

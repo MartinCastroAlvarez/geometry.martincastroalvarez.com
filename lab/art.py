@@ -7,22 +7,30 @@ from typing import Any
 
 from convex import ConvexComponent
 from drawable import Drawable
-from element import Element, Element2D
-from exceptions import (BridgeFailureError,
-                        ComponentsEmptyOutsideBoundaryError,
-                        ComponentsNoSharedEdgeError,
-                        ConvexComponentNotCCWError,
-                        ConvexComponentNotConvexError, EarClippingFailureError,
-                        GuardCoverageFailureError, PolygonDegenerateError,
-                        PolygonNotSimpleError, PolygonTooFewPointsError,
-                        StitchWinnerSubsequenceError)
+from element import Element
+from element import Element2D
+from exceptions import BridgeFailureError
+from exceptions import ComponentsEmptyOutsideBoundaryError
+from exceptions import ComponentsNoSharedEdgeError
+from exceptions import ConvexComponentNotCCWError
+from exceptions import ConvexComponentNotConvexError
+from exceptions import EarClippingFailureError
+from exceptions import GuardCoverageFailureError
+from exceptions import PolygonDegenerateError
+from exceptions import PolygonNotSimpleError
+from exceptions import PolygonTooFewPointsError
+from exceptions import StitchWinnerSubsequenceError
 from guard import VertexGuard
-from model import Hash, Model, ModelMap
+from model import Hash
+from model import Model
+from model import ModelMap
 from obstacle import Obstacle
 from path import Path
-from point import Point, PointSequence
+from point import Point
+from point import PointSequence
 from polygon import Polygon
-from segment import Segment, SegmentSequence
+from segment import Segment
+from segment import SegmentSequence
 from serializable import Serializable
 from triangle import Triangle
 from visibility import Visibility
@@ -44,9 +52,7 @@ class ArtGallery(Element2D, Drawable, Model, Serializable):
         boundary_data = data.get("boundary") or data.get("polygon")
         obstacles_data = data.get("obstacles", data.get("holes", []))
         if boundary_data is None:
-            raise PolygonTooFewPointsError(
-                "ArtGallery.unserialize missing key 'boundary' or 'polygon'"
-            )
+            raise PolygonTooFewPointsError("ArtGallery.unserialize missing key 'boundary' or 'polygon'")
         boundary = Polygon.unserialize(boundary_data)
         obstacles = ModelMap.unserialize(obstacles_data, Obstacle)
         return cls(boundary=boundary, obstacles=obstacles)
@@ -55,13 +61,8 @@ class ArtGallery(Element2D, Drawable, Model, Serializable):
         if self.polygon is None:
             raise PolygonTooFewPointsError("ArtGallery requires polygon")
         for obstacle in self.obstacles:
-            if not all(
-                self.boundary.contains(point, inclusive=False)
-                for point in obstacle.points
-            ):
-                raise PolygonNotSimpleError(
-                    f"Obstacle {obstacle} is not strictly inside the boundary ({self.boundary})."
-                )
+            if not all(self.boundary.contains(point, inclusive=False) for point in obstacle.points):
+                raise PolygonNotSimpleError(f"Obstacle {obstacle} is not strictly inside the boundary ({self.boundary}).")
             if any(
                 all(
                     [
@@ -72,23 +73,10 @@ class ArtGallery(Element2D, Drawable, Model, Serializable):
                 for edge in obstacle.edges
                 for boundary_edge in self.boundary.edges
             ):
-                raise PolygonNotSimpleError(
-                    f"Obstacle {obstacle.id} intersects/touches boundary."
-                )
-            if any(
-                boundary_edge.contains(point, inclusive=True)
-                for point in obstacle.points
-                for boundary_edge in self.boundary.edges
-            ):
-                raise PolygonNotSimpleError(
-                    f"Obstacle {obstacle.id} has a vertex on the boundary."
-                )
-        if any(
-            obstacle.intersects(other, inclusive=True)
-            for obstacle in self.obstacles
-            for other in self.obstacles
-            if obstacle != other
-        ):
+                raise PolygonNotSimpleError(f"Obstacle {obstacle.id} intersects/touches boundary.")
+            if any(boundary_edge.contains(point, inclusive=True) for point in obstacle.points for boundary_edge in self.boundary.edges):
+                raise PolygonNotSimpleError(f"Obstacle {obstacle.id} has a vertex on the boundary.")
+        if any(obstacle.intersects(other, inclusive=True) for obstacle in self.obstacles for other in self.obstacles if obstacle != other):
             raise PolygonNotSimpleError("Obstacles intersect or touch.")
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -108,25 +96,16 @@ class ArtGallery(Element2D, Drawable, Model, Serializable):
                 self._visibility_cache = {}
                 self.id = parsed.id
                 return
-            raise TypeError(
-                f"ArtGallery single arg must be ArtGallery or dict, got {type(one).__name__}"
-            )
+            raise TypeError(f"ArtGallery single arg must be ArtGallery or dict, got {type(one).__name__}")
         boundary = kwargs.get("boundary") or kwargs.get("polygon")
         obstacles = kwargs.get("obstacles") or kwargs.get("holes")
         if boundary is None:
-            raise PolygonTooFewPointsError(
-                "ArtGallery requires boundary or polygon in kwargs"
-            )
+            raise PolygonTooFewPointsError("ArtGallery requires boundary or polygon in kwargs")
         self.polygon = boundary
         if isinstance(obstacles, ModelMap):
             self.holes = obstacles
         elif isinstance(obstacles, list):
-            self.holes = ModelMap(
-                items=[
-                    item if isinstance(item, Obstacle) else Obstacle(polygon=item)
-                    for item in obstacles
-                ]
-            )
+            self.holes = ModelMap(items=[item if isinstance(item, Obstacle) else Obstacle(polygon=item) for item in obstacles])
         else:
             self.holes = ModelMap(items=[])
         self._visibility_cache = {}
@@ -153,9 +132,7 @@ class ArtGallery(Element2D, Drawable, Model, Serializable):
 
     @cached_property
     def signed_area(self) -> Decimal:
-        return self.boundary.signed_area - sum(
-            abs(obstacle.signed_area) for obstacle in self.holes
-        )
+        return self.boundary.signed_area - sum(abs(obstacle.signed_area) for obstacle in self.holes)
 
     @cached_property
     def points(self) -> PointSequence:
@@ -173,9 +150,7 @@ class ArtGallery(Element2D, Drawable, Model, Serializable):
         )
         edges: SegmentSequence = points.edges
         for obstacle in obstacles_sorted:
-            obstacle_points = (
-                obstacle.points if obstacle.points.is_cw() else ~obstacle.points
-            )
+            obstacle_points = obstacle.points if obstacle.points.is_cw() else ~obstacle.points
             anchor: Point = obstacle_points.rightmost
             print(f"  Obstacle {obstacle.id}: Bridging {obstacle.points} to {points}")
             bridge: Segment | None = None
@@ -191,35 +166,21 @@ class ArtGallery(Element2D, Drawable, Model, Serializable):
                     continue
                 if any(
                     Path(start=edge[0], center=edge[1], end=segment[0]).is_collinear()
-                    and Path(
-                        start=edge[0], center=edge[1], end=segment[1]
-                    ).is_collinear()
+                    and Path(start=edge[0], center=edge[1], end=segment[1]).is_collinear()
                     for edge in self.boundary.edges
                     if not edge.connects(segment)
                 ):
                     continue
-                if any(
-                    other_obstacle.intersects(segment, inclusive=False)
-                    for other_obstacle in self.obstacles
-                    if other_obstacle.id != obstacle.id
-                ):
+                if any(other_obstacle.intersects(segment, inclusive=False) for other_obstacle in self.obstacles if other_obstacle.id != obstacle.id):
                     continue
-                if any(
-                    edge.intersects(segment)
-                    for edge in edges
-                    if not edge.connects(segment)
-                ):
+                if any(edge.intersects(segment) for edge in edges if not edge.connects(segment)):
                     continue
                 if bridge is None or segment.size < bridge.size:
                     bridge = segment
 
             if bridge is None:
-                print(
-                    f"  Obstacle {obstacle.id}: no valid bridge found for anchor {anchor}."
-                )
-                raise BridgeFailureError(
-                    f"No valid bridge found for obstacle: {obstacle.points}"
-                )
+                print(f"  Obstacle {obstacle.id}: no valid bridge found for anchor {anchor}.")
+                raise BridgeFailureError(f"No valid bridge found for obstacle: {obstacle.points}")
 
             winner: Segment = bridge
             vertex: Point = winner[0]
@@ -231,14 +192,10 @@ class ArtGallery(Element2D, Drawable, Model, Serializable):
             print(f"    Points {points}")
 
             if winner in points:
-                raise StitchWinnerSubsequenceError(
-                    f"Winner {winner} is a subsequence of boundary points; cannot stitch"
-                )
+                raise StitchWinnerSubsequenceError(f"Winner {winner} is a subsequence of boundary points; cannot stitch")
 
             if winner in obstacle_points:
-                raise StitchWinnerSubsequenceError(
-                    f"Winner {winner} is a subsequence of obstacle {obstacle.id}; cannot stitch"
-                )
+                raise StitchWinnerSubsequenceError(f"Winner {winner} is a subsequence of obstacle {obstacle.id}; cannot stitch")
 
             left = points >> vertex
             right = obstacle_points << anchor
@@ -288,11 +245,7 @@ class ArtGallery(Element2D, Drawable, Model, Serializable):
                 if not titanic.contains(ear.diagonal, inclusive=True):
                     print(f"  Ear {ear} is not inside the art gallery; skipping.")
                     continue
-                if any(
-                    ear.contains(points[k], inclusive=False)
-                    for k in range(n)
-                    if k not in ((j - 1) % n, j, (j + 1) % n)
-                ):
+                if any(ear.contains(points[k], inclusive=False) for k in range(n) if k not in ((j - 1) % n, j, (j + 1) % n)):
                     print(f"  Ear {ear} contains a point; skipping.")
                     continue
                 i = j
@@ -317,9 +270,7 @@ class ArtGallery(Element2D, Drawable, Model, Serializable):
 
     @cached_property
     def convex_components(self) -> ModelMap[ConvexComponent]:
-        components: ModelMap[ConvexComponent] = ModelMap(
-            items=[ConvexComponent(polygon=ear.polygon) for ear in self.ears]
-        )
+        components: ModelMap[ConvexComponent] = ModelMap(items=[ConvexComponent(polygon=ear.polygon) for ear in self.ears])
         while True:
             components_by_edge: defaultdict[Segment, list[Hash]] = defaultdict(list)
             for component in components.values():
@@ -329,12 +280,7 @@ class ArtGallery(Element2D, Drawable, Model, Serializable):
             best_component: ConvexComponent | None = None
             best_pair: tuple[ConvexComponent, ConvexComponent] | None = None
             for component in components.values():
-                adjacent = {
-                    other_id
-                    for edge in component.edges
-                    for other_id in components_by_edge[edge]
-                    if other_id != component.id
-                }
+                adjacent = {other_id for edge in component.edges for other_id in components_by_edge[edge] if other_id != component.id}
                 for other_id in adjacent:
                     try:
                         merged = component + components[other_id]
@@ -347,9 +293,7 @@ class ArtGallery(Element2D, Drawable, Model, Serializable):
                         PolygonNotSimpleError,
                         PolygonDegenerateError,
                     ) as error:
-                        print(
-                            f"  Merging {component} and {components[other_id]} failed: {type(error)}: {error}"
-                        )
+                        print(f"  Merging {component} and {components[other_id]} failed: {type(error)}: {error}")
                         continue
                     if best_area is None or abs(merged.polygon) > best_area:
                         best_area = abs(merged.polygon)
@@ -376,17 +320,11 @@ class ArtGallery(Element2D, Drawable, Model, Serializable):
         for edge in self.points.edges:
             remaining.add(edge.midpoint)
 
-        candidates: ModelMap[VertexGuard] = ModelMap(
-            items=[VertexGuard(position=point) for point in self.points]
-        )
+        candidates: ModelMap[VertexGuard] = ModelMap(items=[VertexGuard(position=point) for point in self.points])
         while components:
             visibility_by_guard: Visibility[Hash] = Visibility(
                 {
-                    guard.id: {
-                        component.id
-                        for component in components.values()
-                        if self.sees(guard.position, component)
-                    }
+                    guard.id: {component.id for component in components.values() if self.sees(guard.position, component)}
                     for guard in candidates.values()
                 }
             )
@@ -396,25 +334,16 @@ class ArtGallery(Element2D, Drawable, Model, Serializable):
                 visibility: set[Hash] = visibility_by_guard[guard_id]
                 print(f"    {candidates[guard_id]} can see:")
                 for component_id in visibility:
-                    print(
-                        f"      {components[component_id].id}: {components[component_id].points}"
-                    )
+                    print(f"      {components[component_id].id}: {components[component_id].points}")
 
             print(f"  Components remaining: {len(components)}:")
             for component in components.values():
                 print(f"    {component.id}: {component.points}")
 
             best_guard_ids: list[Hash] = visibility_by_guard.best
-            best_guards: list[VertexGuard] = [
-                candidates[guard_id] for guard_id in best_guard_ids
-            ]
+            best_guards: list[VertexGuard] = [candidates[guard_id] for guard_id in best_guard_ids]
             visibility_by_best_guards: Visibility[Point] = Visibility(
-                {
-                    guard.id: {
-                        point for point in remaining if self.sees(guard.position, point)
-                    }
-                    for guard in best_guards
-                }
+                {guard.id: {point for point in remaining if self.sees(guard.position, point)} for guard in best_guards}
             )
 
             best_guard_id: Hash = visibility_by_best_guards.best[0]
@@ -440,31 +369,15 @@ class ArtGallery(Element2D, Drawable, Model, Serializable):
             removed = False
 
             visibility_by_guard: Visibility[Hash] = Visibility(
-                {
-                    guard.id: {
-                        point
-                        for point in self.points
-                        if self.sees(guard.position, point)
-                    }
-                    for guard in guards.values()
-                }
+                {guard.id: {point for point in self.points if self.sees(guard.position, point)} for guard in guards.values()}
             )
-            uncovereed: set[Point] = {
-                point for point in self.points if not visibility_by_guard.sees(point)
-            }
+            uncovereed: set[Point] = {point for point in self.points if not visibility_by_guard.sees(point)}
             if uncovereed:
-                raise GuardCoverageFailureError(
-                    f"Failed to cover points: {uncovereed}."
-                )
+                raise GuardCoverageFailureError(f"Failed to cover points: {uncovereed}.")
 
             for guard in guards.values():
                 guard_visibility: set[Point] = visibility_by_guard[guard.id]
-                other_visibility: set[Point] = {
-                    point
-                    for other in guards.values()
-                    if other.id != guard.id
-                    for point in visibility_by_guard[other.id]
-                }
+                other_visibility: set[Point] = {point for other in guards.values() if other.id != guard.id for point in visibility_by_guard[other.id]}
                 if guard_visibility.issubset(other_visibility):
                     guards -= guard.id
                     removed = True
@@ -474,14 +387,7 @@ class ArtGallery(Element2D, Drawable, Model, Serializable):
 
     @cached_property
     def visibility(self) -> Visibility[Point]:
-        return Visibility(
-            {
-                guard.id: {
-                    point for point in self.points if self.sees(guard.position, point)
-                }
-                for guard in self.guards.values()
-            }
-        )
+        return Visibility({guard.id: {point for point in self.points if self.sees(guard.position, point)} for guard in self.guards.values()})
 
     def sees(self, source: Point, target: Point | ConvexComponent) -> bool:
         if isinstance(target, ConvexComponent):
@@ -509,14 +415,8 @@ class ArtGallery(Element2D, Drawable, Model, Serializable):
         return all(
             (
                 self.boundary.contains(obj, inclusive=inclusive),
-                not any(
-                    obstacle.contains(obj, inclusive=False)
-                    for obstacle in self.obstacles
-                ),
-                not any(
-                    obstacle.intersects(obj, inclusive=False)
-                    for obstacle in self.obstacles
-                ),
+                not any(obstacle.contains(obj, inclusive=False) for obstacle in self.obstacles),
+                not any(obstacle.intersects(obj, inclusive=False) for obstacle in self.obstacles),
             )
         )
 

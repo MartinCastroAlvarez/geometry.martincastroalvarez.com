@@ -1,12 +1,11 @@
 """Tests for enums package."""
 
 import pytest
-
 from enums import Action
 from enums import LogLevel
 from enums import Method
-from enums import StepName
 from enums import Status
+from enums import StepName
 from exceptions import InvalidActionError
 from exceptions import MethodNotAllowedError
 from exceptions import ValidationError

@@ -35,6 +35,7 @@ from controllers import ControllerRequest
 from controllers import ControllerResponse
 from controllers import PrivateControllerMixin
 from enums import Action
+from enums import StepName
 from exceptions import BoundaryRequiredError
 from exceptions import JobNotFinishedToPublishError
 from exceptions import JobStdoutMissingGeometryError
@@ -44,6 +45,7 @@ from exceptions import MetaRequiredError
 from exceptions import MetaValuesMustBeStringsError
 from exceptions import ObstaclesMustBeListError
 from exceptions import PolygonValidationError
+from exceptions import RecordNotFoundError
 from exceptions import TitleMustBeStringError
 from exceptions import UserNotAuthenticatedError
 from geometry import Polygon
@@ -89,6 +91,12 @@ class JobUpdateMutationRequest(MutationRequest):
 
     job_id: Identifier
     meta: dict[str, str]
+
+
+class JobDeleteMutationRequest(MutationRequest):
+    """Delete job: job_id from path. Recursively deletes children then the job."""
+
+    job_id: Identifier
 
 
 class MutationResponse(ControllerResponse):
@@ -213,13 +221,6 @@ class JobMutation(PrivateControllerMixin, Mutation):
         if email is None:
             raise UserNotAuthenticatedError("User must be authenticated")
         queue.put(Message(action=Action.START, job_id=job.id, user_email=email))
-        index = JobsPrivateIndex(user_email=email)
-        index.save(
-            Indexed(
-                index_id=Identifier(Countdown.from_timestamp(job.created_at)),
-                real_id=job.id,
-            )
-        )
         logger.info("JobMutation.mutate() | created job_id=%s user=%s", job.id, email)
         return job.serialize()
 
@@ -318,3 +319,40 @@ class ArtGalleryPublishMutation(PrivateControllerMixin, Mutation):
             )
         )
         return gallery.serialize()
+
+
+class JobDeleteMutation(PrivateControllerMixin, Mutation):
+    """
+    Delete a job by id. Recursively deletes children then the job and its index entry.
+
+    For example, to delete a job:
+    >>> handler = JobDeleteMutation(user=request.user)
+    >>> result = handler.handler({"id": "job-123"})
+    """
+
+    def validate(self, body: dict[str, Any]) -> JobDeleteMutationRequest:
+        super().validate(body)
+        return JobDeleteMutationRequest(job_id=Identifier(body.get("id")))
+
+    def execute(self, validated_input: JobDeleteMutationRequest) -> dict[str, Any]:
+        email = self.user.email
+        if email is None:
+            raise UserNotAuthenticatedError("User must be authenticated")
+        self._delete(validated_input["job_id"], email)
+        return {}
+
+    def _delete(self, job_id: Identifier, user_email: Email) -> None:
+        from models import User
+
+        repo = JobsRepository(user=User(email=user_email))
+        try:
+            job = repo.get(job_id)
+        except RecordNotFoundError:
+            return
+        for child_id in job.children_ids:
+            self._delete(child_id, user_email)
+        if job.step_name == StepName.ART_GALLERY:
+            index = JobsPrivateIndex(user_email=user_email)
+            index.delete(Identifier(Countdown.from_timestamp(job.created_at)))
+        repo.delete(job.id)
+        logger.info("JobDeleteMutation._delete() | deleted job_id=%s user=%s", job_id, user_email)

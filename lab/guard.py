@@ -3,7 +3,8 @@ from __future__ import annotations
 from typing import Any
 
 from exceptions import GuardInvalidPositionError
-from model import Hash, Model
+from model import Hash
+from model import Model
 from point import Point
 from serializable import Serializable
 
@@ -20,9 +21,7 @@ class Guard(Model, Serializable):
 
     def validate(self) -> None:
         if not isinstance(self.position, Point):
-            raise GuardInvalidPositionError(
-                f"position must be a Point, got {type(self.position).__name__}"
-            )
+            raise GuardInvalidPositionError(f"position must be a Point, got {type(self.position).__name__}")
 
     def __repr__(self) -> str:
         return f"Guard {self.id} {self.position}"
@@ -32,9 +31,7 @@ class VertexGuard(Guard):
     @classmethod
     def unserialize(cls, data: dict[str, Any]) -> VertexGuard:
         if "position" not in data:
-            raise GuardInvalidPositionError(
-                "VertexGuard.unserialize missing key 'position'"
-            )
+            raise GuardInvalidPositionError("VertexGuard.unserialize missing key 'position'")
         return cls(position=Point.unserialize(data["position"]))
 
     @property

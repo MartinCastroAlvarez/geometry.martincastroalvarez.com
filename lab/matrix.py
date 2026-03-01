@@ -2,22 +2,21 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from exceptions import (MatrixDimensionError, MatrixEmptyError,
-                        MatrixInvalidPointsError, MatrixNotSquareError)
-from point import Point, PointSequence
+from exceptions import MatrixDimensionError
+from exceptions import MatrixEmptyError
+from exceptions import MatrixInvalidPointsError
+from exceptions import MatrixNotSquareError
+from point import Point
+from point import PointSequence
 
 
 class Matrix:
     def __init__(self, points: list[Point]) -> None:
         if not isinstance(points, list):
-            raise MatrixInvalidPointsError(
-                f"points must be a list, got {type(points).__name__}"
-            )
+            raise MatrixInvalidPointsError(f"points must be a list, got {type(points).__name__}")
         for i, p in enumerate(points):
             if not isinstance(p, Point):
-                raise MatrixInvalidPointsError(
-                    f"points[{i}] must be a Point, got {type(p).__name__}"
-                )
+                raise MatrixInvalidPointsError(f"points[{i}] must be a Point, got {type(p).__name__}")
         self.points = PointSequence(points)
         if len(self.points) == 0:
             raise MatrixEmptyError("Matrix cannot be empty")
@@ -34,14 +33,9 @@ class Matrix:
     @property
     def determinant(self) -> Decimal:
         if not self.is_squared():
-            raise MatrixNotSquareError(
-                f"Matrix must be squared to calculate determinant: {self.points}"
-            )
+            raise MatrixNotSquareError(f"Matrix must be squared to calculate determinant: {self.points}")
 
         if self.dimensions == (2, 2):
-            return (
-                self.points[0][0] * self.points[1][1]
-                - self.points[0][1] * self.points[1][0]
-            )
+            return self.points[0][0] * self.points[1][1] - self.points[0][1] * self.points[1][0]
 
         raise NotImplementedError("Determinant only implemented for 2x2 matrices")
