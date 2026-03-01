@@ -35,7 +35,6 @@ from controllers import ControllerRequest
 from controllers import ControllerResponse
 from controllers import PrivateControllerMixin
 from enums import Action
-from enums import StepName
 from exceptions import BoundaryRequiredError
 from exceptions import JobNotFinishedToPublishError
 from exceptions import JobStdoutMissingGeometryError
@@ -358,8 +357,7 @@ class JobDeleteMutation(PrivateControllerMixin, Mutation):
             return
         for child_id in job.children_ids:
             self.kill(child_id, user_email)
-        if job.step_name == StepName.ART_GALLERY:
-            index = JobsPrivateIndex(user_email=user_email)
-            index.delete(Identifier(Countdown.from_timestamp(job.created_at)))
+        index = JobsPrivateIndex(user_email=user_email)
+        index.delete(Identifier(Countdown.from_timestamp(job.created_at)))
         repo.delete(job.id)
         logger.info("JobDeleteMutation.kill() | deleted job_id=%s user=%s", job_id, user_email)

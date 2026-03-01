@@ -14,6 +14,12 @@ PrivateRepository (data/{email.slug}/jobs). Results holds paginated
 search results (records, next_token). Used by mutations, queries,
 indexes (to load full record by real_id), and worker tasks.
 
+**List responses and 404:** Use ``get_optional(identifier)`` when building
+list responses (e.g. from index entries). If the record is missing it returns
+None instead of raising RecordNotFoundError; callers can skip it and avoid
+surfacing 404 for a single missing item. Indexes use this and perform
+read-repair by deleting stale index entries when the underlying record is gone.
+
 Examples:
 >>> from repositories import ArtGalleryRepository, JobsRepository, Results
 >>> repo = ArtGalleryRepository()
@@ -50,7 +56,7 @@ from models import Model
 from models import User
 from settings import DEFAULT_LIMIT
 
-bucket = Bucket()
+bucket: Bucket = Bucket()
 logger = get_logger(__name__)
 T = TypeVar("T", bound=Model)
 
@@ -121,6 +127,25 @@ class Repository(Generic[T], ABC):
             raise CorruptionError("ID mismatch in record")
         return cast(T, self.MODEL.unserialize(data))
 
+    def get_optional(self, identifier: Identifier) -> T | None:
+        """
+        Load a record by identifier. Returns None if not found (does not raise).
+
+        Use when building list responses (e.g. index.search, index.all): skip
+        missing records instead of surfacing 404. Callers should delete the
+        corresponding index entry when None is returned (read-repair).
+        """
+        if not self.MODEL:
+            raise ConfigurationError("MODEL is not set")
+        key: str = f"{self.path}/{identifier}.json"
+        data: Any = bucket.load(key)
+        if data is None:
+            logger.debug("Repository.get_optional() | record not found path=%s id=%s", self.path, identifier)
+            return None
+        if not isinstance(data, dict) or data.get("id") != identifier:
+            raise CorruptionError("ID mismatch in record")
+        return cast(T, self.MODEL.unserialize(data))
+
     def save(self, record: T) -> T:
         """
         Persist a record and return the loaded instance.
@@ -133,7 +158,7 @@ class Repository(Generic[T], ABC):
             raise ConfigurationError("MODEL is not set")
         if not isinstance(record, self.MODEL):
             raise ValidationError(f"Object must be a {self.MODEL.__name__}")
-        key = f"{self.path}/{record.id}.json"
+        key: str = f"{self.path}/{record.id}.json"
         bucket.save(key, record.serialize())
         logger.debug("Repository.save() | path=%s id=%s", self.path, record.id)
         return self.get(record.id)
@@ -182,7 +207,7 @@ class Repository(Generic[T], ABC):
             next_token=next_token,
         )
         for key in page:
-            data = bucket.load(key)
+            data: Any = bucket.load(key)
             if data is None:
                 continue
             results.records.append(cast(T, self.MODEL.unserialize(data)))

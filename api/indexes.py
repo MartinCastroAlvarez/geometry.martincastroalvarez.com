@@ -12,6 +12,11 @@ Countdown). Index and PrivateIndex define get, save, delete, exists,
 search, and all; path is index/{NAME}/ or index/{NAME}/{email.slug}/.
 ArtGalleryPublicIndex lists galleries by reversed created_at. JobsPrivateIndex
 lists jobs per user. Indexed holds index_id (sort key) and real_id (record id).
+
+**Read-repair:** search() and all() load full records via repository.get_optional().
+If a record is missing (e.g. deleted but index not updated), the entry is skipped
+and the stale index key is deleted, so list responses never surface 404 for a
+single missing item.
 """
 
 from __future__ import annotations
@@ -165,7 +170,10 @@ class Index(Generic[T]):
         limit: Limit = Limit(DEFAULT_LIMIT),
     ) -> tuple[list[Any], Offset | None]:
         """
-        List index entries with pagination. Returns (records, next_token). Stale index keys are removed as read-repair.
+        List index entries with pagination. Returns (records, next_token).
+        Read-repair: if the underlying record is missing (repository.get_optional
+        returns None), the index entry is deleted and the item is skipped so the
+        response is not 404.
 
         For example, to list newest galleries:
         >>> records, next_token = index.search(limit=Limit(20))
@@ -184,12 +192,18 @@ class Index(Generic[T]):
                 bucket.delete(key)
                 continue
             indexed = Indexed.unserialize(data)
-            records.append(self.repository.get(indexed.real_id))
+            record = self.repository.get_optional(indexed.real_id)
+            if record is None:
+                bucket.delete(key)
+                continue
+            records.append(record)
         return (records, page.next_token)
 
     def all(self) -> Iterator[Any]:
         """
-        Iterate over all index entries (paginated internally). Stale index keys are removed as read-repair.
+        Iterate over all index entries (paginated internally). Read-repair: if the
+        underlying record is missing (repository.get_optional returns None), the
+        index entry is deleted and the item is skipped.
 
         For example, to iterate over every gallery in the index:
         >>> for gallery in index.all():
@@ -208,7 +222,11 @@ class Index(Generic[T]):
                     bucket.delete(key)
                     continue
                 indexed = Indexed.unserialize(data)
-                yield self.repository.get(indexed.real_id)
+                record = self.repository.get_optional(indexed.real_id)
+                if record is None:
+                    bucket.delete(key)
+                    continue
+                yield record
             if not page.continues:
                 break
             next_token = page.next_token
