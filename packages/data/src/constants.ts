@@ -14,6 +14,7 @@ export const AUTH_REDIRECT_URL = "https://login.martincastroalvarez.com";
 export const SESSION_QUERY_KEY = ["session"] as const;
 export const JOBS_QUERY_KEY = ["jobs"] as const;
 export const JOB_QUERY_KEY = (jobId: string) => ["jobs", jobId] as const;
+export const JOB_CHILDREN_QUERY_KEY = (jobIds: string[]) => ["jobs", "children", jobIds.join(",")] as const;
 export const GALLERIES_QUERY_KEY = ["galleries"] as const;
 export const GALLERY_QUERY_KEY = (galleryId: string) => ["galleries", galleryId] as const;
 

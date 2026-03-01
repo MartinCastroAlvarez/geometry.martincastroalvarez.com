@@ -14,7 +14,7 @@ from attributes import Identifier
 from attributes import Origin
 from attributes import Path
 from data import Page
-from enums import Stage
+from enums import StepName
 from enums import Status
 from exceptions import PathMissingResourceIdError
 from exceptions import ValidationError
@@ -334,7 +334,7 @@ class TestHandler:
         mock_repo.get.return_value = Job(
             id=Identifier("j1"),
             status=Status.PENDING,
-            stage=Stage.ART_GALLERY,
+            step_name=StepName.ART_GALLERY,
             meta={},
             stdout={},
         )

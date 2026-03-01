@@ -19,13 +19,40 @@ import {
     GALLERIES_QUERY_KEY,
     JOBS_QUERY_KEY,
     JOB_QUERY_KEY,
+    JOB_CHILDREN_QUERY_KEY,
     STALE_TIME_JOBS_LIST_MS,
     STALE_TIME_JOB_MS,
 } from "./constants";
 import { useAuthentication } from "./useAuthToken";
-import type { ArtGallery } from "@geometry/domain";
+import type { ArtGallery, Job } from "@geometry/domain";
 
-export { JOBS_QUERY_KEY, JOB_QUERY_KEY } from "./constants";
+export { JOBS_QUERY_KEY, JOB_QUERY_KEY, JOB_CHILDREN_QUERY_KEY } from "./constants";
+
+/** Fetches multiple jobs by ID in parallel and returns them in the same order as the given ids. */
+export async function getChildren(
+    baseUrl: string,
+    token: string | null | undefined,
+    jobIds: string[],
+): Promise<Job[]> {
+    if (jobIds.length === 0) return [];
+    const client = new GeometryApiClient(baseUrl, token);
+    const results = await Promise.all(jobIds.map((id) => client.getJob(id)));
+    return results.map((r) => toDomainJob(fromApiJob(r)));
+}
+
+export const useJobChildren = (jobIds: string[] | null | undefined) => {
+    const token = useAuthentication();
+    const query = useQuery({
+        queryKey: [...JOB_CHILDREN_QUERY_KEY(jobIds ?? []), token ?? ""],
+        queryFn: async () => {
+            if (!jobIds?.length) return [];
+            return getChildren(GEOMETRY_API_URL, token, jobIds);
+        },
+        enabled: !!token && !!jobIds?.length,
+        staleTime: STALE_TIME_JOB_MS,
+    });
+    return { ...query, children: query.data ?? [], isLoading: query.isLoading };
+};
 
 /** Extract boundary and obstacles from an ArtGallery for validation/create API calls. */
 export function validateJob(artGallery: ArtGallery): {

@@ -46,7 +46,7 @@ class JobDict(ModelDict):
     parent_id: str | None
     children_ids: list[str]
     status: str
-    stage: str
+    step_name: str
     stdin: dict[str, Any]
     stdout: dict[str, Any]
     meta: dict[str, Any]

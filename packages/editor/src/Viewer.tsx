@@ -79,7 +79,7 @@ const ViewerInner = ({
     const [isPanning, setIsPanning] = useState(false);
     const panStartRef = useRef<{ clientX: number; clientY: number; panX: number; panY: number } | null>(null);
     const scaleRef = useRef(1);
-    const [scale, setScale] = useState(1);
+    const [scale] = useState(1);
     scaleRef.current = scale;
 
     const effectiveWidth = Math.max(containerSize.width, 1);

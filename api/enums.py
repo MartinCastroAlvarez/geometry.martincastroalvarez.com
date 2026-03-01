@@ -1,5 +1,5 @@
 """
-API enums: Action, LogLevel, Method, Orientation, Stage, Status.
+API enums: Action, LogLevel, Method, Orientation, StepName, Status.
 
 Title
 -----
@@ -11,7 +11,7 @@ This module exports enums used across the API and workers. Method is
 HTTP method (OPTIONS, GET, POST, PATCH, DELETE) with parse() that raises
 MethodNotAllowedError. Action is worker action (START, REPORT) with parse()
 defaulting to START. Status is task status (PENDING, SUCCESS, FAILED).
-Stage is job pipeline stage (ART_GALLERY, STITCHING, EAR_CLIPPING, etc.).
+StepName is job pipeline step name (ART_GALLERY, STITCHING, EAR_CLIPPING, etc.).
 Orientation is geometric turn direction (COLLINEAR, CLOCKWISE, COUNTER_CLOCKWISE).
 LogLevel is logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL) for LOG_LEVEL env.
 All have parse() or value coercion where used in request/response.
@@ -137,13 +137,13 @@ class Orientation(int, Enum):
     COUNTER_CLOCKWISE = 1
 
 
-class Stage(str, Enum):
+class StepName(str, Enum):
     """
-    Job pipeline stage.
+    Job pipeline step name.
 
-    For example, to parse stage from job data:
-    >>> Stage.parse("ear_clipping")
-    <Stage.EAR_CLIPPING: 'ear_clipping'>
+    For example, to parse step_name from job data:
+    >>> StepName.parse("ear_clipping")
+    <StepName.EAR_CLIPPING: 'ear_clipping'>
     """
 
     ART_GALLERY = "art_gallery"
@@ -154,21 +154,21 @@ class Stage(str, Enum):
     GUARD_PLACEMENT = "guard_placement"
 
     @classmethod
-    def parse(cls, value: str | None) -> Stage:
+    def parse(cls, value: str | None) -> StepName:
         """
-        Coerce string to Stage; raises ValidationError (400) if invalid.
+        Coerce string to StepName; raises ValidationError (400) if invalid.
 
         For example, to parse from job dict:
-        >>> stage = Stage.parse(data.get("stage"))
+        >>> step_name = StepName.parse(data.get("step_name"))
         """
         if value is None or (isinstance(value, str) and not value.strip()):
-            raise ValidationError("stage is required and must be a non-empty string")
+            raise ValidationError("step_name is required and must be a non-empty string")
         raw: str = value.strip().lower().replace(" ", "_") if isinstance(value, str) else str(value).strip().lower().replace(" ", "_")
         try:
             return cls(raw)
         except ValueError:
             allowed = ", ".join(repr(s.value) for s in cls)
-            raise ValidationError(f"stage must be one of [{allowed}], got {raw!r}")
+            raise ValidationError(f"step_name must be one of [{allowed}], got {raw!r}")
 
 
 class Status(str, Enum):

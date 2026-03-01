@@ -36,7 +36,7 @@ export const Badge: React.FC<BadgeProps> = ({ children, danger = false, success 
 
 /**
  * Container for multiple Badge components in a horizontal row with gap.
- * Use when displaying several badges next to each other (e.g. status, stage, created, updated).
+ * Use when displaying several badges next to each other (e.g. status, step_name, created, updated).
  * Supports left/right alignment (e.g. left={!isMobile} for desktop/tablet, centered on mobile).
  */
 export const Badges: React.FC<{ children?: React.ReactNode; left?: boolean; right?: boolean }> = ({ children, left = false, right = false }) => {

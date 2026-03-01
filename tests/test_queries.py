@@ -120,13 +120,13 @@ class TestJobDetailsQuery:
     @patch("queries.JobsRepository")
     def test_handler_returns_data_wrapper(self, mock_repo_cls):
         from attributes import Identifier
-        from enums import Stage
+        from enums import StepName
         from enums import Status
 
         job = Job(
             id=Identifier("j1"),
             status=Status.PENDING,
-            stage=Stage.ART_GALLERY,
+            step_name=StepName.ART_GALLERY,
             meta={},
             stdout={},
         )

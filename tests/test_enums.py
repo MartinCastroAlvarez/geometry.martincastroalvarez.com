@@ -5,7 +5,7 @@ import pytest
 from enums import Action
 from enums import LogLevel
 from enums import Method
-from enums import Stage
+from enums import StepName
 from enums import Status
 from exceptions import InvalidActionError
 from exceptions import MethodNotAllowedError
@@ -89,23 +89,23 @@ class TestAction:
             Action.parse("invalid")
 
 
-class TestStage:
-    """Test Stage enum."""
+class TestStepName:
+    """Test StepName enum."""
 
     def test_parse_none_raises(self):
-        with pytest.raises(ValidationError, match="stage"):
-            Stage.parse(None)
+        with pytest.raises(ValidationError, match="step_name"):
+            StepName.parse(None)
 
     def test_parse_empty_raises(self):
-        with pytest.raises(ValidationError, match="stage"):
-            Stage.parse("")
-        with pytest.raises(ValidationError, match="stage"):
-            Stage.parse("   ")
+        with pytest.raises(ValidationError, match="step_name"):
+            StepName.parse("")
+        with pytest.raises(ValidationError, match="step_name"):
+            StepName.parse("   ")
 
     def test_parse_invalid_raises(self):
-        with pytest.raises(ValidationError, match="stage must be one of"):
-            Stage.parse("invalid_stage")
+        with pytest.raises(ValidationError, match="step_name must be one of"):
+            StepName.parse("invalid_stage")
 
     def test_parse_valid(self):
-        assert Stage.parse("ear_clipping") == Stage.EAR_CLIPPING
-        assert Stage.parse("ART_GALLERY") == Stage.ART_GALLERY
+        assert StepName.parse("ear_clipping") == StepName.EAR_CLIPPING
+        assert StepName.parse("ART_GALLERY") == StepName.ART_GALLERY

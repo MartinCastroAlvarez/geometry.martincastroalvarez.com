@@ -10,7 +10,7 @@ export interface PageProps {
  * Use as the root layout for app pages so future page-level changes can be made in one place.
  */
 export const Page = ({ children }: PageProps) => (
-    <Container padded spaced>
+    <Container>
         {children}
     </Container>
 );

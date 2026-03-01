@@ -24,7 +24,7 @@ export interface ApiJob {
     parent_id: string | null;
     children_ids: string[];
     status: string;
-    stage: string;
+    step_name: string;
     stdin: Record<string, unknown>;
     stdout: Record<string, unknown>;
     meta: Record<string, unknown>;
@@ -79,7 +79,7 @@ export interface GeometryApiJob {
     parent_id: string | null;
     children_ids: string[];
     status: string;
-    stage: string;
+    step_name: string;
     stdin: Record<string, unknown>;
     stdout: Record<string, unknown>;
     meta: Record<string, unknown>;

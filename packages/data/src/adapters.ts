@@ -112,13 +112,14 @@ export const toDomainJob = (api: ApiJob): Job => {
     return {
         id: api.id,
         status: parseStatus(api.status),
-        stage: api.stage,
+        step_name: api.step_name,
         meta: api.meta ?? {},
         stdin: api.stdin ?? {},
         stdout: api.stdout ?? {},
         stderr: api.stderr ?? {},
         created_at: api.created_at ?? undefined,
         updated_at: api.updated_at ?? undefined,
+        children_ids: api.children_ids ?? [],
         ...(artGallery != null ? { artGallery } : {}),
     };
 };
@@ -144,7 +145,7 @@ export const fromApiJob = (raw: unknown): ApiJob => {
         parent_id: d.parent_id != null ? String(d.parent_id) : null,
         children_ids: Array.isArray(d.children_ids) ? d.children_ids.map(String) : [],
         status: String(d.status ?? "pending"),
-        stage: String(d.stage ?? "art_gallery"),
+        step_name: String(d.step_name ?? d.stage ?? "art_gallery"),
         stdin: (d.stdin as Record<string, unknown>) ?? {},
         stdout: (d.stdout as Record<string, unknown>) ?? {},
         meta: (d.meta as Record<string, unknown>) ?? {},

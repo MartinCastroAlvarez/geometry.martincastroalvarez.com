@@ -99,7 +99,11 @@ class WorkerRequest(Serializable[dict[str, Any]]):
 
     @property
     def body(self) -> dict[str, Any]:
-        return {"job_id": str(self.job_id), "user_email": str(self.user_email)}
+        out: dict[str, Any] = {"job_id": str(self.job_id), "user_email": str(self.user_email)}
+        meta = self.data.get("meta")
+        if isinstance(meta, dict):
+            out["meta"] = meta
+        return out
 
     @classmethod
     def unserialize(cls, data: dict[str, Any]) -> WorkerRequest:

@@ -1,5 +1,5 @@
 /**
- * Single job page: detail with title, status/stage/created/updated badges, and stdin/stdout/stderr/meta inspectors.
+ * Single job page: detail with title, status/step_name/created/updated badges, and stdin/stdout/stderr/meta inspectors.
  *
  * Context: This page shows the detail view for one job, identified by the URL param :id. It is
  * protected (e.g. via PrivateRoute). useJob(id) fetches the job; when loading and job is null,
@@ -9,16 +9,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
-import { Page, Container, Title, Text, Badge, Badges, Inspector, Input, Toolbar, Button, Problem, Confirm, useDevice, useDebounce } from "@geometry/ui";
+import { Page, Container, Title, Text, Badge, Badges, Inspector, Input, Toolbar, Button, Problem, Confirm, Milestones, Milestone, useDevice, useDebounce } from "@geometry/ui";
 import { Viewer } from "@geometry/editor";
-import { useJob, useUpdateJob, usePublish, useSession } from "@geometry/data";
+import { useJob, useJobChildren, useUpdateJob, usePublish, useSession } from "@geometry/data";
 import { Status } from "@geometry/domain";
 import { useAnalytics, GoogleAnalyticsActions, GoogleAnalyticsCategories } from "@geometry/analytics";
 import { useLocale } from "@geometry/i18n";
 import { JobPageSkeleton } from "../skeletons";
 
 const INSPECTOR_HEIGHT = 480;
-const VIEWER_HEIGHT = 320;
+const VIEWER_HEIGHT = 520;
 
 export const JobPage = () => {
     const { id } = useParams<{ id: string }>();
@@ -27,6 +27,8 @@ export const JobPage = () => {
     const { isMobile } = useDevice();
     const { isLoading: sessionLoading } = useSession();
     const { job, isLoading: jobLoading } = useJob(id ?? null);
+    const childIds = job?.children_ids ?? [];
+    const { children: childJobs, isLoading: childrenLoading } = useJobChildren(childIds.length ? childIds : null);
     const updateJobMutation = useUpdateJob();
     const publishMutation = usePublish();
     const { track } = useAnalytics();
@@ -131,7 +133,11 @@ export const JobPage = () => {
     return (
         <Page>
             <Container padded spaced>
-                <Container size={12} left={!isMobile} center={isMobile}>
+                <Container
+                    size={job!.status === Status.SUCCESS ? (isMobile ? 12 : 8) : 12}
+                    left={!isMobile}
+                    center={isMobile}
+                >
                     <Input
                         type="text"
                         value={localTitle}
@@ -147,33 +153,6 @@ export const JobPage = () => {
                         transparent
                         strong
                     />
-                </Container>
-            </Container>
-            <Confirm
-                isOpen={showPublishConfirm}
-                message={t("jobs.job.publishConfirm")}
-                onConfirm={handlePublishConfirm}
-                onCancel={() => setShowPublishConfirm(false)}
-            />
-            {publishError && (
-                <Container padded spaced>
-                    <Problem align="center">{publishError}</Problem>
-                </Container>
-            )}
-            <Container padded spaced>
-                <Container
-                    size={job!.status === Status.SUCCESS ? (isMobile ? 12 : 8) : 12}
-                    left={!isMobile}
-                    center={isMobile}
-                >
-                    <Badges left={!isMobile}>
-                        <Badge danger={job!.status === Status.FAILED} success={job!.status === Status.SUCCESS}>
-                            {t(`jobs.status.${job!.status}`)}
-                        </Badge>
-                        <Badge>
-                            {t("jobs.job.updated")} {updatedLabel}
-                        </Badge>
-                    </Badges>
                 </Container>
                 {job!.status === Status.SUCCESS && (
                     <Container size={isMobile ? 12 : 4} center={isMobile} right={isMobile ? false : true}>
@@ -192,8 +171,50 @@ export const JobPage = () => {
                     </Container>
                 )}
             </Container>
+            <Confirm
+                isOpen={showPublishConfirm}
+                message={t("jobs.job.publishConfirm")}
+                onConfirm={handlePublishConfirm}
+                onCancel={() => setShowPublishConfirm(false)}
+            />
+            {publishError && (
+                <Container padded spaced>
+                    <Problem align="center">{publishError}</Problem>
+                </Container>
+            )}
             <Container padded spaced>
-                <Viewer artGallery={job!.artGallery} height={VIEWER_HEIGHT} />
+                <Container size={12} left={!isMobile} center={isMobile}>
+                    <Badges left={!isMobile}>
+                        <Badge danger={job!.status === Status.FAILED} success={job!.status === Status.SUCCESS}>
+                            {t(`jobs.status.${job!.status}`)}
+                        </Badge>
+                        <Badge>
+                            {t("jobs.job.updated")} {updatedLabel}
+                        </Badge>
+                    </Badges>
+                </Container>
+            </Container>
+            {childIds.length > 0 && (
+                <Container padded spaced>
+                    <Container size={12} left center>
+                        <Milestones>
+                            {childrenLoading
+                                ? childIds.map((_, i) => (
+                                      <Milestone key={i} completed={false}>
+                                          ...
+                                      </Milestone>
+                                  ))
+                                : childJobs.map((child) => (
+                                      <Milestone key={child.id} completed={child.status === Status.SUCCESS}>
+                                          {child.step_name}
+                                      </Milestone>
+                                  ))}
+                        </Milestones>
+                    </Container>
+                </Container>
+            )}
+            <Container padded spaced>
+                <Viewer artGallery={job!.artGallery} height={VIEWER_HEIGHT} readonly fitToView />
             </Container>
             <Container padded spaced>
                 <Container size={12} spaced>

@@ -8,13 +8,15 @@ Tasks Module
 Context
 -------
 This module defines the worker tasks: StartTask and ReportTask. Task is
-the base (validate, execute, handler). StartTask logs job stdin and
-enqueues a REPORT message; returns FAILED if job already failed.
-ReportTask loads job and children, merges children stdout/stderr into
-job, sets status (SUCCESS/FAILED), saves, and notifies parent with
-REPORT. TaskRequest has job_id and user_email; TaskResponse has status
-and optional job_id, error, traceback. Used by workers.handler and
-workers (ROUTES).
+the base (validate, execute, handler). StartTask maps job.step_name to
+a Step (api/steps.py), runs step.run(**meta), updates job from step.job
+and merges run output into job.stdout, saves the job, and enqueues REPORT
+unless the step is ArtGalleryStep (which enqueues REPORT itself). Returns
+FAILED if job already failed. ReportTask loads job and children, merges
+children stdout/stderr into job, sets status (SUCCESS/FAILED), saves, and
+notifies parent with REPORT. TaskRequest has job_id, user_email, and
+optional meta; TaskResponse has status and optional job_id, error, traceback.
+Used by workers.handler and workers (ROUTES).
 
 Examples:
 >>> task = StartTask()
@@ -34,12 +36,16 @@ from controllers import ControllerRequest
 from controllers import ControllerResponse
 from enums import Action
 from enums import Status
+from enums import StepName
 from logger import get_logger
 from messages import Message
 from messages import Queue
 from models import Job
 from models import User
 from repositories import JobsRepository
+from steps import STEP_CLASS_BY_NAME
+from steps import ArtGalleryStep
+from steps import Step
 
 logger = get_logger(__name__)
 
@@ -47,10 +53,11 @@ queue: Queue = Queue()
 
 
 class TaskRequest(ControllerRequest):
-    """Task request: job_id and user_email."""
+    """Task request: job_id, user_email, and optional meta for step run()."""
 
     job_id: Identifier
     user_email: Email
+    meta: NotRequired[dict[str, Any]]
 
 
 class TaskResponse(ControllerResponse):
@@ -114,14 +121,19 @@ class StartTask(Task):
     """
 
     def validate(self, body: dict[str, Any]) -> TaskRequest:
-        return TaskRequest(
-            job_id=Identifier(body.get("job_id")),
-            user_email=Email(body.get("user_email")),
-        )
+        req: TaskRequest = {
+            "job_id": Identifier(body.get("job_id")),
+            "user_email": Email(body.get("user_email")),
+        }
+        meta = body.get("meta")
+        if meta is not None and isinstance(meta, dict):
+            req["meta"] = meta
+        return req
 
     def execute(self, validated_input: TaskRequest) -> StartTaskResponse:
         job_id: Identifier = validated_input["job_id"]
         user_email: Email = validated_input["user_email"]
+        meta: dict[str, Any] = validated_input.get("meta") or {}
         user: User = User(email=user_email)
         repository: JobsRepository = JobsRepository(user=user)
         job: Job = repository.get(job_id)
@@ -131,13 +143,24 @@ class StartTask(Task):
                 "job_id": job_id,
                 "reason": "job_failed",
             }
-        logger.info("StartTask.execute() | job stdin=%s", job.stdin)
-        message: Message = Message(
-            action=Action.REPORT,
-            job_id=job.id,
-            user_email=user_email,
-        )
-        queue.put(message)
+        step_name: StepName = job.step_name
+        step_class = STEP_CLASS_BY_NAME.get(step_name)
+        if step_class is None:
+            logger.warning("StartTask.execute() | unknown step_name=%s job_id=%s", step_name, job_id)
+            return {"status": Status.FAILED, "job_id": job_id, "reason": "unknown_step"}
+        step: Step = step_class(job=job, user_email=user_email)
+        run_output: dict[str, Any] = step.run(**meta)
+        job = step.job
+        job.stdout.update(run_output)
+        repository.save(job)
+        if not isinstance(step, ArtGalleryStep):
+            message: Message = Message(
+                action=Action.REPORT,
+                job_id=job.id,
+                user_email=user_email,
+                meta=meta if meta else None,
+            )
+            queue.put(message)
         return {"status": Status.SUCCESS, "job_id": job_id}
 
 

@@ -44,6 +44,7 @@ logger = get_logger(__name__)
 class Message(Serializable[dict[str, Any]]):
     """
     Message for geometry queue. action is Action (START, REPORT); job_id and user_email required.
+    Optional meta (dict) carries volatile data to pass to the next task (e.g. for steps).
 
     For example, to create and serialize a start message:
     >>> msg = Message(action=Action.START, job_id=Identifier("j1"), user_email=Email("u@e.com"))
@@ -55,6 +56,7 @@ class Message(Serializable[dict[str, Any]]):
     job_id: Identifier
     user_email: Email
     receipt_handle: ReceiptHandle | None = None
+    meta: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.action, Action):
@@ -65,13 +67,18 @@ class Message(Serializable[dict[str, Any]]):
             self.user_email = Email(str(self.user_email))
         if self.receipt_handle is not None and not isinstance(self.receipt_handle, ReceiptHandle):
             self.receipt_handle = ReceiptHandle(self.receipt_handle)
+        if self.meta is not None and not isinstance(self.meta, dict):
+            self.meta = dict(self.meta) if self.meta else None
 
     def serialize(self) -> dict[str, Any]:
-        return {
+        out: dict[str, Any] = {
             "action": self.action.value,
             "job_id": str(self.job_id),
             "user_email": str(self.user_email),
         }
+        if self.meta:
+            out["meta"] = self.meta
+        return out
 
     @classmethod
     def unserialize(cls, data: dict[str, Any]) -> Message:
@@ -85,11 +92,14 @@ class Message(Serializable[dict[str, Any]]):
         """
         if not isinstance(data, dict):
             raise ValidationError("Message data must be a dictionary")
+        meta_raw = data.get("meta")
+        meta = dict(meta_raw) if isinstance(meta_raw, dict) else None
         return cls(
             action=Action.parse(data.get("action")),
             job_id=Identifier(data.get("job_id")),
             user_email=Email(str(data.get("user_email", "")).strip()),
             receipt_handle=(ReceiptHandle(r) if (r := data.get("receipt_handle")) else None),
+            meta=meta,
         )
 
 

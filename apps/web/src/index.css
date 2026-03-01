@@ -74,3 +74,13 @@ body {
 .scroll-no::-webkit-scrollbar {
   display: none;
 }
+
+/* Light-mode Inspector: force theme colors; override react-json-view inline styles */
+[data-theme="light"] [data-inspector-light] {
+  background: rgb(var(--color-bg)) !important;
+  color: rgb(var(--color-text)) !important;
+}
+[data-theme="light"] [data-inspector-light] * {
+  color: rgb(var(--color-text)) !important;
+  background: transparent !important;
+}

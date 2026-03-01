@@ -12,7 +12,7 @@ All implement Serializable[dict] for S3 persistence and JSON API transport.
 Model has id, created_at, updated_at; subclasses add fields and implement
 serialize/unserialize. ArtGallery holds boundary, obstacles, ears, convex
 components, guards, visibility, owner_job_id. Job holds
-status, stage, stdin, stdout, meta, stderr, parent/children. User holds
+status, step_name, stdin, stdout, meta, stderr, parent/children. User holds
 email, name, avatar_url and is used for auth and private repos. Used by
 repositories, indexes, mutations, and queries.
 
@@ -37,8 +37,8 @@ from attributes import Signature
 from attributes import Timestamp
 from attributes import Title
 from attributes import Url
-from enums import Stage
 from enums import Status
+from enums import StepName
 from exceptions import ValidationError
 from geometry import ConvexComponent
 from geometry import Ear
@@ -218,7 +218,7 @@ class User(Model):
 @dataclass
 class Job(Model):
     """
-    Job for async processing. parent_id, children_ids, status, stage, stdin, stdout, meta, stderr.
+    Job for async processing. parent_id, children_ids, status, step_name, stdin, stdout, meta, stderr.
 
     For example, to check job status:
     >>> job = Job.unserialize(data)
@@ -232,7 +232,7 @@ class Job(Model):
     parent_id: Identifier | None = None
     children_ids: list[Identifier] = field(default_factory=list)
     status: Status = Status.PENDING
-    stage: Stage = Stage.ART_GALLERY
+    step_name: StepName = StepName.ART_GALLERY
     stdin: dict[str, Any] = field(default_factory=dict)
     stdout: dict[str, Any] = field(default_factory=dict)
     meta: dict[str, Any] = field(default_factory=dict)
@@ -241,10 +241,10 @@ class Job(Model):
     updated_at: Timestamp = field(default_factory=Timestamp.now)
 
     def __str__(self) -> str:
-        return f"Job(id={self.id}, status={self.status}, stage={self.stage})"
+        return f"Job(id={self.id}, status={self.status}, step_name={self.step_name})"
 
     def __repr__(self) -> str:
-        return f"Job(id={self.id!r}, status={self.status!r}, stage={self.stage!r})"
+        return f"Job(id={self.id!r}, status={self.status!r}, step_name={self.step_name!r})"
 
     def is_pending(self) -> bool:
         """
@@ -279,10 +279,10 @@ class Job(Model):
     @classmethod
     def unserialize(cls, data: Any) -> Job:
         """
-        Build Job from dict. Parses status, stage, children_ids, parent_id.
+        Build Job from dict. Parses status, step_name, children_ids, parent_id.
 
         For example, to load a job from S3 or API response:
-        >>> job = Job.unserialize({"id": "abc", "status": "pending", "stage": "art_gallery"})
+        >>> job = Job.unserialize({"id": "abc", "status": "pending", "step_name": "art_gallery"})
         >>> job.id
         Identifier('abc')
         """
@@ -292,14 +292,14 @@ class Job(Model):
         parent_id: Identifier | None = Identifier(parent_raw) if parent_raw else None
         status_raw = data.get("status")
         status: Status = Status.parse(status_raw) if status_raw else Status.PENDING
-        stage_raw = data.get("stage") or data.get("task")
-        stage: Stage = Stage.parse(stage_raw) if stage_raw else Stage.ART_GALLERY
+        step_name_raw = data.get("step_name") or data.get("stage") or data.get("task")
+        step_name: StepName = StepName.parse(step_name_raw) if step_name_raw else StepName.ART_GALLERY
         return cls(
             id=Identifier(data.get("id", "")),
             parent_id=parent_id,
             children_ids=children_ids,
             status=status,
-            stage=stage,
+            step_name=step_name,
             stdin=dict(data.get("stdin") or {}),
             stdout=dict(data.get("stdout") or {}),
             meta=dict(data.get("meta") or {}),
@@ -314,7 +314,7 @@ class Job(Model):
             "parent_id": str(self.parent_id) if self.parent_id is not None else None,
             "children_ids": [str(c) for c in self.children_ids],
             "status": self.status.value,
-            "stage": self.stage.value,
+            "step_name": self.step_name.value,
             "stdin": dict(self.stdin),
             "stdout": dict(self.stdout),
             "meta": dict(self.meta),
