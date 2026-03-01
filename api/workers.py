@@ -23,7 +23,6 @@ Examples:
 from __future__ import annotations
 
 import json
-import logging
 from typing import Any
 from typing import Iterator
 from typing import Type
@@ -43,8 +42,6 @@ from tasks import Task
 from tasks import TaskResponse
 
 logger = get_logger(__name__)
-_logger = logging.getLogger()
-_logger.setLevel(logging.INFO)
 
 
 ROUTES: dict[Action, Type[Task]] = {
@@ -110,7 +107,7 @@ class WorkerRequest(Serializable[dict[str, Any]]):
             try:
                 message_data: dict[str, Any] = json.loads(body) if body else {}
             except json.JSONDecodeError:
-                _logger.warning("Invalid JSON in SQS message body: %s", body)
+                logger.warning("Invalid JSON in SQS message body: %s", body)
                 message_data = {}
             receipt_handle: ReceiptHandle = ReceiptHandle(data.get("receiptHandle"))
             return cls(message_data, receipt_handle)
@@ -156,7 +153,7 @@ class WorkerResponse(Serializable[dict[str, Any]]):
         raise NotImplementedError("WorkerResponse.unserialize is not used")
 
 
-def handler(event: dict[str, Any], context: Any) -> WorkerResponse:
+def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """
     Process SQS messages: dispatch by action to StartTask or ReportTask, then commit each message.
 
@@ -165,7 +162,7 @@ def handler(event: dict[str, Any], context: Any) -> WorkerResponse:
     still committed. If task execution fails, the exception is logged and the message
     is not committed so SQS can retry. The worker always processes all messages.
 
-    Returns a WorkerResponse with results as list of TaskResponse.
+    Returns a JSON-serializable dict with key "results" (list of task result dicts).
     """
     logger.info(
         "handler.handler() | received event keys=%s",
@@ -195,4 +192,6 @@ def handler(event: dict[str, Any], context: Any) -> WorkerResponse:
             results.append(out)
             queue.commit(request.message)
 
-    return WorkerResponse(results=results)
+    response = WorkerResponse(results=results)
+    payload = response.serialize()
+    return json.loads(json.dumps(payload, default=str))

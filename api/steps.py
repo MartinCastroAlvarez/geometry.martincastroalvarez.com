@@ -39,14 +39,15 @@ from exceptions import StepNotHandledError
 from exceptions import StitchWinnerSubsequenceError
 from exceptions import ValidationBoundaryNotCCWError
 from exceptions import ValidationObstacleNotCWError
+from geometry import Point
+from geometry import Polygon
 from geometry.segment import Segment
 from geometry.walk import Walk
 from models import Job
 from models import User
 from repositories import JobsRepository
-
-from geometry import Point
-from geometry import Polygon
+from settings import STITCH_MAX_BUCKET_SIZE
+from settings import STITCH_MIN_EDGES_FOR_OPTIMIZATION
 
 logger = logging.getLogger(__name__)
 
@@ -282,6 +283,13 @@ class StitchingStep(SequenceStep):
     by sorting obstacles by rightmost vertex and bridging each to the current outer
     polygon. Same logic as lab ArtGallery.points. Idempotent: same job and inputs
     yield the same stitched polygon. Emits "stitched" (serialized Polygon) in stdout.
+
+    Performance optimization (see docs 3 BACKEND.md and 12 PROTOTYPE.md): when a hole
+    is connected to the polygon by at least STITCH_MIN_EDGES_FOR_OPTIMIZATION valid
+    candidate bridges, we maintain a bucket of the shortest STITCH_MAX_BUCKET_SIZE
+    candidates. Once we have that many valid candidates and the bucket is full, we
+    pick the best (shortest) from the bucket and stop iterating over the rest of the
+    polygon, avoiding O(n) checks for every vertex when many short bridges exist.
     """
 
     def __init__(self, job: Job, user: User) -> None:
@@ -315,6 +323,8 @@ class StitchingStep(SequenceStep):
             obstacle_points: Polygon = obstacle if obstacle.is_cw() else Polygon(list(~obstacle))
             anchor: Point = obstacle_points.rightmost
             bridge: Segment | None = None
+            total_valid: int = 0
+            bucket: list[Segment] = []  # shortest STITCH_MAX_BUCKET_SIZE candidates for early-exit
 
             # Find shortest valid bridge from current polygon to anchor (inside boundary, no crossings).
             for candidate in points:
@@ -336,6 +346,14 @@ class StitchingStep(SequenceStep):
                     continue
                 if any(edge.intersects(segment) for edge in edges if not edge.connects(segment)):
                     continue
+                total_valid += 1
+                bucket.append(segment)
+                bucket.sort(key=lambda s: s.size)
+                if len(bucket) > STITCH_MAX_BUCKET_SIZE:
+                    bucket = bucket[:STITCH_MAX_BUCKET_SIZE]
+                if total_valid >= STITCH_MIN_EDGES_FOR_OPTIMIZATION and len(bucket) >= STITCH_MAX_BUCKET_SIZE:
+                    bridge = bucket[0]
+                    break
                 if bridge is None or segment.size < bridge.size:
                     bridge = segment
 

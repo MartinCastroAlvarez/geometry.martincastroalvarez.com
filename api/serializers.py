@@ -64,3 +64,4 @@ class ArtGalleryDict(ModelDict):
     convex_components: dict[str, Any]
     guards: dict[str, Any]
     visibility: dict[str, Any]
+    stitched: list[Any]

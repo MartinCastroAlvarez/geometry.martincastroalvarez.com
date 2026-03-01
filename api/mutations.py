@@ -44,6 +44,7 @@ from exceptions import MetaValuesMustBeStringsError
 from exceptions import ObstaclesMustBeListError
 from exceptions import PolygonValidationError
 from exceptions import TitleMustBeStringError
+from geometry import Polygon
 from indexes import ArtGalleryPublicIndex
 from indexes import JobsPrivateIndex
 from logger import get_logger
@@ -57,8 +58,6 @@ from repositories import JobsRepository
 from settings import UNTITLED_ART_GALLERY_NAME
 from structs import Table
 from validators import PolygonValidator
-
-from geometry import Polygon
 
 queue = Queue()
 logger = get_logger(__name__)

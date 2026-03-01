@@ -130,9 +130,9 @@ class TestHandler:
         with patch("workers.ROUTES", {Action.REPORT: type("ReportTask", (), {})()}):
             # Only REPORT in ROUTES, so START raises KeyError
             resp = handler(event, None)
-        assert len(resp.results) == 1
-        assert resp.results[0]["status"] == Status.FAILED
-        assert "error" in resp.results[0]
+        assert len(resp["results"]) == 1
+        assert resp["results"][0]["status"] == Status.FAILED.value
+        assert "error" in resp["results"][0]
 
     @patch("workers.Queue")
     def test_handler_start_dispatches_and_commits(self, mock_queue_cls):
@@ -150,8 +150,8 @@ class TestHandler:
                 ]
             }
             resp = handler(event, None)
-        assert len(resp.results) == 1
-        assert resp.results[0]["status"] == Status.SUCCESS
+        assert len(resp["results"]) == 1
+        assert resp["results"][0]["status"] == Status.SUCCESS.value
         mock_queue.commit.assert_called_once()
 
     @patch("workers.Queue")

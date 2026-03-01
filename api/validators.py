@@ -33,9 +33,8 @@ from enums import Status
 from exceptions import ValidationBoundaryMustBeListError
 from exceptions import ValidationBoundaryRequiredError
 from exceptions import ValidationObstaclesMustBeListError
-from structs import Table
-
 from geometry import Polygon
+from structs import Table
 
 logger = logging.getLogger(__name__)
 

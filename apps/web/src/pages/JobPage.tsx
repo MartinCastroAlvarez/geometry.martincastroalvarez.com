@@ -194,7 +194,7 @@ export const JobPage = () => {
                 onCancel={handleDeleteConfirmCancel}
             />
             <Container padded spaced>
-                <Viewer artGallery={job!.artGallery} height={VIEWER_HEIGHT} readonly fitToView />
+                <Viewer artGallery={job!.artGallery} size={VIEWER_HEIGHT} interactive />
             </Container>
             <Container padded spaced>
                 <Container size={isMobile ? 12 : 6} left={!isMobile} center={isMobile}>

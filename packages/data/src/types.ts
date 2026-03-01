@@ -53,6 +53,8 @@ export interface ApiArtGallery {
     convex_components?: Record<string, unknown>;
     guards?: Record<string, ApiPoint>;
     visibility?: Record<string, ApiPoint[]>;
+    /** Optional stitched polygon (list of points or { points } from API). */
+    stitched?: ApiPolygon | Array<{ x: number; y: number } | [number, number]>;
     created_at: string;
     updated_at: string;
 }

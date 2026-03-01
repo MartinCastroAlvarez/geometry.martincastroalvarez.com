@@ -1,10 +1,11 @@
 /**
- * Read-only viewer for an ArtGallery: grid background, vertices and edges.
+ * Display-only viewer for an ArtGallery: grid background and edges (no vertices).
  * When artGallery is null or undefined, the grid is shown but no polygon (empty state).
+ * When the gallery has stitched, edges that are only in the stitched polygon (not on
+ * boundary or obstacles) are drawn with a dimmer stroke.
  *
  * Context: Same layout as Editor (Grid, Stage, Layer) but display-only. Used on job
- * and gallery pages to show boundary and obstacles. Occupies 100% width and accepts
- * a height (size) prop.
+ * and gallery pages to show boundary and obstacles. When interactive is true, pan is enabled.
  */
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -14,43 +15,37 @@ import { artGalleryToEditorState } from "./adapters";
 import type { EditorVertex } from "./types";
 import { Edge } from "./Edge";
 import { Grid } from "./Grid";
-import { Vertex } from "./Vertex";
 
 const FIT_PADDING = 16;
 
 export interface ViewerProps {
     /** Art gallery to display; when null or undefined, grid is shown with no polygon. */
     artGallery?: ArtGallery | null;
-    /** Height of the canvas in pixels. Width is 100% of the container. */
-    height: number;
-    /** When true, disables pan and interaction (e.g. for list thumbnails). Default false. */
-    readonly?: boolean;
-    /** When true, scales and centers the polygon so it fits in the viewer with padding. Default false. */
-    fitToView?: boolean;
-    /** When true, vertices (dots) are shown; when false, only edges are shown. Defaults to !readonly. */
-    showVertices?: boolean;
+    /** Size (height) of the canvas in pixels. Width is 100% of the container. */
+    size: number;
+    /** When true, pan and interaction are enabled. Default false. */
+    interactive?: boolean;
 }
 
 export const Viewer = ({
     artGallery,
-    height,
-    readonly = false,
-    fitToView = false,
-    showVertices: showVerticesProp,
+    size,
+    interactive = false,
 }: ViewerProps) => {
-    const showVertices = showVerticesProp ?? !readonly;
     return (
         <ViewerInner
             artGallery={artGallery}
-            height={height}
-            readonly={readonly}
-            fitToView={fitToView}
-            showVertices={showVertices}
+            size={size}
+            interactive={interactive}
         />
     );
 };
 
-const EMPTY_STATE: { vertices: EditorVertex[]; edges: [number, number][] } = { vertices: [], edges: [] };
+const EMPTY_STATE: {
+    vertices: EditorVertex[];
+    edges: [number, number][];
+    stitchedEdgeIndices: number[];
+} = { vertices: [], edges: [], stitchedEdgeIndices: [] };
 
 function computeFitTransform(
     vertices: EditorVertex[],
@@ -80,20 +75,17 @@ function computeFitTransform(
 
 const ViewerInner = ({
     artGallery,
-    height,
-    readonly = false,
-    fitToView = false,
-    showVertices = true,
+    size,
+    interactive = false,
 }: {
     artGallery?: ArtGallery | null;
-    height: number;
-    readonly?: boolean;
-    fitToView?: boolean;
-    showVertices?: boolean;
+    size: number;
+    interactive?: boolean;
 }) => {
+    const readonly = !interactive;
     const containerRef = useRef<HTMLDivElement>(null);
     const stageWrapperRef = useRef<HTMLDivElement>(null);
-    const [containerSize, setContainerSize] = useState({ width: 0, height });
+    const [containerSize, setContainerSize] = useState({ width: 0, height: size });
     const [pan, setPan] = useState({ x: 0, y: 0 });
     const [isPanning, setIsPanning] = useState(false);
     const panStartRef = useRef<{ clientX: number; clientY: number; panX: number; panY: number } | null>(null);
@@ -102,7 +94,7 @@ const ViewerInner = ({
     scaleRef.current = scale;
 
     const effectiveWidth = Math.max(containerSize.width, 1);
-    const effectiveHeight = Math.max(containerSize.height, height);
+    const effectiveHeight = Math.max(containerSize.height, size);
     const stageWidth = scale <= 1 ? effectiveWidth / scale : effectiveWidth;
     const stageHeight = scale <= 1 ? effectiveHeight / scale : effectiveHeight;
 
@@ -119,32 +111,32 @@ const ViewerInner = ({
         return () => ro.disconnect();
     }, []);
 
-    const { vertices, edges } = useMemo(
+    const { vertices, edges, stitchedEdgeIndices } = useMemo(
         () => (artGallery != null ? artGalleryToEditorState(artGallery) : EMPTY_STATE),
         [artGallery]
+    );
+
+    const stitchedSet = useMemo(
+        () => new Set(stitchedEdgeIndices),
+        [stitchedEdgeIndices]
     );
 
     const allEdges = useMemo(
         () =>
             edges
                 .filter(([a, b]) => a < vertices.length && b < vertices.length)
-                .map(([a, b]) => ({ start: vertices[a], end: vertices[b] })),
-        [vertices, edges]
+                .map(([a, b], i) => ({ start: vertices[a], end: vertices[b], stitched: stitchedSet.has(i) })),
+        [vertices, edges, stitchedSet]
     );
 
     const fitTransform = useMemo(
-        () => (fitToView && vertices.length > 0 ? computeFitTransform(vertices, stageWidth, stageHeight) : null),
-        [fitToView, vertices, stageWidth, stageHeight]
+        () => (vertices.length > 0 ? computeFitTransform(vertices, stageWidth, stageHeight) : null),
+        [vertices, stageWidth, stageHeight]
     );
 
     const layerScale = fitTransform ? fitTransform.scale : 1;
     const layerX = fitTransform ? fitTransform.x : pan.x;
     const layerY = fitTransform ? fitTransform.y : pan.y;
-
-    const dragBounds = useMemo(
-        () => ({ width: stageWidth, height: stageHeight }),
-        [stageWidth, stageHeight]
-    );
 
     const handleStageMouseDown = useCallback(
         (e: { target: { getStage: () => unknown }; evt?: MouseEvent }) => {
@@ -216,7 +208,7 @@ const ViewerInner = ({
                         position: "relative",
                         width: "100%",
                         height: effectiveHeight,
-                        minHeight: height,
+                        minHeight: size,
                     }}
                 >
                     <Grid
@@ -249,26 +241,16 @@ const ViewerInner = ({
                                 scaleX={layerScale}
                                 scaleY={layerScale}
                             >
-                                {allEdges.map(({ start, end }, i) => (
+                                {allEdges.map(({ start, end, stitched }, i) => (
                                     <Edge
                                         key={`edge-${i}`}
                                         start={start}
                                         end={end}
                                         edgeIndex={i}
+                                        stitched={stitched}
                                         scale={scale * layerScale}
                                     />
                                 ))}
-                                {showVertices &&
-                                    vertices.map((v, i) => (
-                                        <Vertex
-                                            key={v.id}
-                                            vertex={v}
-                                            index={i}
-                                            draggable={false}
-                                            dragBounds={dragBounds}
-                                            scale={scale * layerScale}
-                                        />
-                                    ))}
                             </Layer>
                         </Stage>
                     </div>

@@ -18,7 +18,7 @@
  */
 
 import { ArtGallery, Point, Polygon, parseStatus } from "@geometry/domain";
-import type { Job, Gallery } from "@geometry/domain";
+import type { ArtGalleryDict, Gallery, Job } from "@geometry/domain";
 import type { ApiUser, ApiJob, ApiArtGallery, ApiPolygon } from "./types";
 
 export const toDomainUser = (api: ApiUser): { email: string | null; name: string | null; avatarUrl: string | null } => {
@@ -92,14 +92,25 @@ function parseObstacles(stdin: Record<string, unknown>): Polygon[] {
 
 /**
  * Build an ArtGallery from a record (stdin or stdout) when it contains valid boundary and obstacles.
- * Used when reading job list, single job, or createJob response. The gallery is conceptually
- * identified by the job id (see module doc); we do not set a separate id on ArtGallery.
+ * Used when reading job list, single job, or createJob response. Optional stitched from stdout
+ * (key "stitched" or "stiteched"). The gallery is conceptually identified by the job id (see module doc).
  */
 export function artGalleryFromPolygonData(_jobId: string, data: Record<string, unknown>): ArtGallery | undefined {
     const boundary = parseBoundary(data);
     if (!boundary) return undefined;
     const obstacles = parseObstacles(data);
-    return new ArtGallery(boundary, obstacles, []);
+    const rawStitched = data.stitched ?? data.stiteched;
+    let stitched: Polygon | undefined;
+    if (Array.isArray(rawStitched) && rawStitched.length >= 2) {
+        const points: Point[] = [];
+        for (const p of rawStitched) {
+            const pt = parsePoint(p);
+            if (!pt) break;
+            points.push(new Point(pt.x, pt.y));
+        }
+        if (points.length >= 2) stitched = new Polygon(points);
+    }
+    return new ArtGallery(boundary, obstacles, [], stitched, [], [], []);
 }
 
 export const toDomainJob = (api: ApiJob): Job => {
@@ -125,12 +136,15 @@ export const toDomainJob = (api: ApiJob): Job => {
 };
 
 export const toDomainArtGallery = (api: ApiArtGallery): Gallery => {
-    const boundary = new Polygon(api.boundary.points.map((p) => new Point(p.x, p.y)));
-    const obstacles = Object.values(api.obstacles).map(
-        (obs) => new Polygon((obs?.points ?? []).map((p) => new Point(p.x, p.y)))
-    );
-    const guards = Object.values(api.guards ?? {}).map((p) => new Point(p.x, p.y));
-    const artGallery = new ArtGallery(boundary, obstacles, guards);
+    const artGallery = ArtGallery.fromDict({
+        boundary: api.boundary,
+        obstacles: Object.values(api.obstacles),
+        guards: Object.values(api.guards ?? {}),
+        ...(api.stitched != null && { stitched: api.stitched as { points: Array<{ x: number; y: number }> } }),
+        ...(api.ears != null && { ears: api.ears as ArtGalleryDict['ears'] }),
+        ...(api.convex_components != null && { convex_components: api.convex_components as ArtGalleryDict['convex_components'] }),
+        ...(api.visibility != null && { visibility: Object.values(api.visibility) }),
+    });
     return {
         id: api.id,
         title: api.title,
@@ -212,6 +226,7 @@ export const fromApiArtGallery = (raw: unknown): ApiArtGallery => {
     const boundary = (d.boundary as ApiPolygon) ?? { points: [] };
     const obstacles = (d.obstacles as Record<string, ApiPolygon>) ?? {};
     const guards = (d.guards as Record<string, { x: number; y: number }>) ?? {};
+    const stitchedRaw = d.stitched ?? d.stiteched ?? null;
     return {
         id: String(d.id ?? ""),
         boundary: Array.isArray(boundary.points) ? boundary : { points: [] },
@@ -222,6 +237,7 @@ export const fromApiArtGallery = (raw: unknown): ApiArtGallery => {
         convex_components: (d.convex_components as Record<string, unknown>) ?? {},
         guards,
         visibility: (d.visibility as Record<string, { x: number; y: number }[]>) ?? {},
+        stitched: stitchedRaw != null ? (stitchedRaw as ApiArtGallery["stitched"]) : undefined,
         created_at: String(d.created_at ?? ""),
         updated_at: String(d.updated_at ?? ""),
     };

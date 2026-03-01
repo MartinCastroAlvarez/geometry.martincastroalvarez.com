@@ -31,7 +31,7 @@ const Cell = ({ gallery }: CellProps) => {
     return (
         <Container padded spaced rounded left onClick={() => navigate(`/${gallery.id}`)}>
             <Container size={12}>
-                <Viewer artGallery={gallery.artGallery} height={VIEWER_HEIGHT} readonly fitToView />
+                <Viewer artGallery={gallery.artGallery} size={VIEWER_HEIGHT} />
             </Container>
             <Container size={12} left>
                 <Title left truncate>{title}</Title>

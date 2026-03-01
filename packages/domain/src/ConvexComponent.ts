@@ -2,12 +2,14 @@
  * ConvexComponent: convex polygon used in triangulation/ear-clipping.
  *
  * Context: Extends Polygon; constructor validates convexity via cross-product sign. Reflects backend
- * ConvexComponent. Ear extends this with exactly 3 points.
+ * ConvexComponent. Ear extends this with exactly 3 points. fromDict/toDict for API (same shape as PolygonDict).
  *
  * Example:
  *   const c = new ConvexComponent([p1, p2, p3, p4]);  c.isConvex();  // true
+ *   const c = ConvexComponent.fromDict({ points: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }] });
  */
 import { Point } from './Point';
+import type { PolygonDict } from './Polygon';
 import { Polygon } from './Polygon';
 
 /**
@@ -20,6 +22,10 @@ export class ConvexComponent extends Polygon {
         if (points.length >= 3 && !this.isConvex()) {
             throw new Error('ConvexComponent must be convex');
         }
+    }
+
+    static fromDict(dict: PolygonDict): ConvexComponent {
+        return new ConvexComponent(Polygon.fromDict(dict).points);
     }
 
     isConvex(): boolean {

@@ -11,7 +11,7 @@ This module defines the domain models: Model (base), ArtGallery, Job, User.
 All implement Serializable[dict] for S3 persistence and JSON API transport.
 Model has id, created_at, updated_at; subclasses add fields and implement
 serialize/unserialize. ArtGallery holds boundary, obstacles, ears, convex
-components, guards, visibility, owner_job_id. Job holds
+components, guards, visibility, stitched, owner_job_id. Job holds
 status, step_name, stdin, stdout, meta, stderr, parent/children. User holds
 email, name, avatar_url and is used for auth and private repos. Used by
 repositories, indexes, mutations, and queries.
@@ -40,6 +40,9 @@ from attributes import Url
 from enums import Status
 from enums import StepName
 from exceptions import ValidationError
+from geometry import ConvexComponent
+from geometry import Ear
+from geometry import Polygon
 from interfaces import Serializable
 from serializers import ArtGalleryDict
 from serializers import JobDict
@@ -55,10 +58,6 @@ from settings import TEST_NAME
 from settings import UNTITLED_ART_GALLERY_NAME
 from structs import Sequence
 from structs import Table
-
-from geometry import ConvexComponent
-from geometry import Ear
-from geometry import Polygon
 
 
 class Model(Serializable[Serialized]):
@@ -329,13 +328,14 @@ class Job(Model):
 @dataclass
 class ArtGallery(Model):
     """
-    Art gallery with boundary, obstacles, and computed attributes (ears, convex_components, guards, visibility).
-    owner_job_id links to the job that created it.
+    Art gallery with boundary, obstacles, and computed attributes (ears, convex_components, guards, visibility, stitched).
+    owner_job_id links to the job that created it. stitched is the polygon from the stitching step (optional).
 
     For example, to load a gallery from job stdout or repository:
     >>> gallery = ArtGallery.unserialize(data)
     >>> gallery.boundary.serialize()
     [...]
+    >>> gallery.stitched  # Polygon or empty list when absent
     """
 
     id: Identifier
@@ -349,6 +349,7 @@ class ArtGallery(Model):
     convex_components: Table[ConvexComponent] = field(default_factory=Table)
     guards: Table[Point] = field(default_factory=Table)
     visibility: Table[Sequence[Point]] = field(default_factory=Table)
+    stitched: Polygon = field(default_factory=lambda: Polygon([]))
 
     def __str__(self) -> str:
         return f"ArtGallery(id={self.id})"
@@ -359,12 +360,16 @@ class ArtGallery(Model):
     @classmethod
     def unserialize(cls, data: Any) -> ArtGallery:
         """
-        Build ArtGallery from dict. Unserializes boundary, obstacles, ears, guards, visibility.
+        Build ArtGallery from dict. Unserializes boundary, obstacles, ears, guards, visibility, stitched.
+        stitched is optional; accepts key "stitched" or "stiteched"; defaults to empty polygon.
 
         For example, to build a gallery from publish response:
         >>> gallery = ArtGallery.unserialize({"id": "g1", "boundary": [...], "owner_job_id": "j1", ...})
         >>> gallery.boundary
         Polygon(...)
+        >>> gallery = ArtGallery.unserialize({"id": "g1", "boundary": [...], "stitched": [[0,0],[1,0],[1,1]]})
+        >>> len(gallery.stitched)
+        3
         """
         boundary = data.get("boundary") or data.get("boundaries") or []
         obstacles = data.get("obstacles") or data.get("holes") or []
@@ -372,6 +377,8 @@ class ArtGallery(Model):
         convex_components = data.get("convex_components") or []
         guards = data.get("guards") or []
         visibility = data.get("visibility") or []
+        stitched_raw = data.get("stitched") or data.get("stiteched") or []
+        stitched = Polygon.unserialize(stitched_raw) if stitched_raw else Polygon([])
         return cls(
             id=Identifier(data.get("id")),
             boundary=Polygon.unserialize(boundary),
@@ -384,6 +391,7 @@ class ArtGallery(Model):
             convex_components=Table.unserialize([ConvexComponent.unserialize(convex_component) for convex_component in convex_components]),
             guards=Table.unserialize([Point.unserialize(guard) for guard in guards]),
             visibility=Table.unserialize([Sequence([Point.unserialize(point) for point in points]) for points in visibility]),
+            stitched=stitched,
         )
 
     def serialize(self) -> ArtGalleryDict:
@@ -399,4 +407,5 @@ class ArtGallery(Model):
             "convex_components": self.convex_components.serialize(),
             "guards": self.guards.serialize(),
             "visibility": self.visibility.serialize(),
+            "stitched": self.stitched.serialize(),
         }

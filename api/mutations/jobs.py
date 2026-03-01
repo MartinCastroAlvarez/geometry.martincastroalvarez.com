@@ -34,6 +34,7 @@ from enums import Action
 from exceptions import PolygonValidationError
 from exceptions import UnauthorizedError
 from exceptions import ValidationError
+from geometry import Polygon
 from indexes import JobsPrivateIndex
 from logger import get_logger
 from messages import Message
@@ -49,8 +50,6 @@ from repositories import ArtGalleryRepository
 from repositories import JobsRepository
 from structs import Table
 from validators import PolygonValidator
-
-from geometry import Polygon
 
 queue: Queue = Queue()
 logger: logging.Logger = get_logger(__name__)

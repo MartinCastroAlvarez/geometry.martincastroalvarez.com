@@ -270,7 +270,7 @@ def interceptor(
             )
 
             origin: Origin = _request_origin(event)
-            return ApiResponse(http.HTTPStatus.OK, json.dumps(result), origin).serialize()
+            return ApiResponse(http.HTTPStatus.OK, json.dumps(result, default=str), origin).serialize()
 
         except GeometryException as e:
             elapsed_ms: float = (time.perf_counter() - start) * 1000
