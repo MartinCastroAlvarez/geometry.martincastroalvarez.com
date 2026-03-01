@@ -94,6 +94,7 @@ class TestStartTask:
         job = Job(
             id=Identifier("j1"),
             step_name=StepName.STITCHING,
+            stdin={"boundary": [[0, 0], [10, 0], [10, 10], [0, 10]], "obstacles": []},
             stdout={},
             children_ids=[],
             parent_id=None,

@@ -76,6 +76,13 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[list[Any]]
                 raise PolygonItemMustBePointError(f"Polygon item at index {i} must be a Point, got {type(item).__name__}")
         super().__init__(value)
 
+    @property
+    def rightmost(self) -> Point:
+        """Rightmost vertex by (x, y) order; used for bridge anchor in stitching."""
+        if not self:
+            raise PolygonBoxRequiresOnePointError("Polygon.rightmost requires at least one point")
+        return max(self, key=lambda p: (p.x, p.y))
+
     def degree(self, point: Point) -> int:
         """
         Return 2 times the number of times the point appears as a vertex.
@@ -92,6 +99,22 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[list[Any]]
         2
         """
         return 2 * len([v for v in self if (v.x, v.y) == (point.x, point.y)])
+
+    def __contains__(self, obj: object) -> bool:
+        """Element in self, or Segment as contiguous subsequence (with wrap), or delegate to Sequence."""
+        if isinstance(obj, Segment):
+            if len(self) < 2:
+                return False
+            try:
+                i: int = self.index(obj[0])
+            except ValueError:
+                return False
+            if self[i + 1] == obj[1]:
+                return True
+            if self[i - 1] == obj[1]:
+                return True
+            return False
+        return list.__contains__(self, obj)
 
     @property
     def edges(self) -> Sequence[Segment]:

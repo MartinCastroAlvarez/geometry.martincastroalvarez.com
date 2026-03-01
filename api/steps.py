@@ -22,6 +22,7 @@ the caller persists the updated job after run().
 
 from __future__ import annotations
 
+import logging
 from abc import ABC
 from abc import abstractmethod
 from functools import cached_property
@@ -32,14 +33,21 @@ from attributes import Identifier
 from attributes import Signature
 from enums import Status
 from enums import StepName
+from exceptions import BridgeFailureError
 from exceptions import PolygonNotSimpleError
 from exceptions import StepNotHandledError
+from exceptions import StitchWinnerSubsequenceError
 from exceptions import ValidationBoundaryNotCCWError
 from exceptions import ValidationObstacleNotCWError
+from geometry import Point
 from geometry import Polygon
+from geometry.segment import Segment
+from geometry.walk import Walk
 from models import Job
 from models import User
 from repositories import JobsRepository
+
+logger = logging.getLogger(__name__)
 
 
 class Step(ABC):
@@ -202,19 +210,44 @@ class ValidationPolygonStep(SequenceStep):
         self.boundary: Polygon | None = None
         self.obstacles: list[Polygon] = []
 
-    def run(self, **kwargs: Any) -> dict[str, Any]:
-        self.boundary = Polygon.unserialize(self.job.stdin.get("boundary"))
-        self.obstacles = [Polygon.unserialize(obstacle) for obstacle in (self.job.stdin.get("obstacles") or [])]
+    def validate_simplicity(self) -> None:
+        """
+        Ensure boundary and every obstacle are simple (degree 2, no self-intersection).
+        Required so later steps (ear clipping, stitching) operate on well-defined polygons.
+        """
+        assert self.boundary is not None
         if not self.boundary.is_simple():
             raise PolygonNotSimpleError("Boundary polygon is not simple.")
         if any(not obstacle.is_simple() for obstacle in self.obstacles):
             raise PolygonNotSimpleError("Obstacle polygon is not simple.")
+
+    def validate_orientation(self) -> None:
+        """
+        Ensure boundary is CCW (outer ring) and every obstacle is CW (hole).
+        Convention required for containment tests and stitching (bridge/merge logic).
+        """
+        assert self.boundary is not None
         if not self.boundary.is_ccw():
             raise ValidationBoundaryNotCCWError()
         if any(not obstacle.is_cw() for obstacle in self.obstacles):
             raise ValidationObstacleNotCWError()
+
+    def validate_containment(self) -> None:
+        """
+        Ensure every obstacle vertex lies strictly inside the boundary.
+        Obstacles must be holes fully enclosed by the outer polygon for valid stitching.
+        """
+        assert self.boundary is not None
         if any(not all(self.boundary.contains(point, inclusive=False) for point in obstacle) for obstacle in self.obstacles):
             raise PolygonNotSimpleError(f"Obstacle is not strictly inside the boundary ({self.boundary}).")
+
+    def validate_intersections(self) -> None:
+        """
+        Ensure no invalid contact: obstacle edges must not cross/touch boundary edges
+        (except at shared vertices), no obstacle vertex on a boundary edge, and no
+        two obstacles may intersect or touch. Prevents ambiguous topology for bridging.
+        """
+        assert self.boundary is not None
         if any(
             edge.intersects(boundary_edge, inclusive=True) and not edge.connects(boundary_edge)
             for obstacle in self.obstacles
@@ -231,18 +264,106 @@ class ValidationPolygonStep(SequenceStep):
             raise PolygonNotSimpleError("Obstacle has a vertex on the boundary.")
         if any(obstacle.intersects(other, inclusive=True) for obstacle in self.obstacles for other in self.obstacles if obstacle != other):
             raise PolygonNotSimpleError("Obstacles intersect or touch.")
+
+    def run(self, **kwargs: Any) -> dict[str, Any]:
+        self.boundary = Polygon.unserialize(self.job.stdin.get("boundary"))
+        self.obstacles = [Polygon.unserialize(obstacle) for obstacle in (self.job.stdin.get("obstacles") or [])]
+        self.validate_simplicity()
+        self.validate_orientation()
+        self.validate_containment()
+        self.validate_intersections()
         return {"step:validate_polygons": "success"}
 
 
 class StitchingStep(SequenceStep):
     """
-    Stitching step. Idempotent: given the same job and inputs, running
-    multiple times produces the same outcome.
+    Stitching step: merges boundary and obstacles into a single polygon (stitched)
+    by sorting obstacles by rightmost vertex and bridging each to the current outer
+    polygon. Same logic as lab ArtGallery.points. Idempotent: same job and inputs
+    yield the same stitched polygon. Emits "stitched" (serialized Polygon) in stdout.
     """
 
+    def __init__(self, job: Job, user: User) -> None:
+        super().__init__(job, user)
+        self.boundary: Polygon | None = None
+        self.obstacles: list[Polygon] = []
+        self.points: Polygon | None = None
+
+    def sort(self) -> None:
+        """Sort obstacles in place by rightmost vertex (x, y) descending for bridge order."""
+        self.obstacles.sort(key=lambda o: (o.rightmost.x, o.rightmost.y), reverse=True)
+
     def run(self, **kwargs: Any) -> dict[str, Any]:
-        out: dict[str, Any] = {"step:stitching": "success"}
-        return out
+        # Parse boundary and obstacles from job stdin (Polygon.unserialize may raise).
+        self.boundary = Polygon.unserialize(self.job.stdin.get("boundary"))
+        self.obstacles = [Polygon.unserialize(obstacle) for obstacle in (self.job.stdin.get("obstacles") or [])]
+
+        # No obstacles: stitched result is the boundary; return immediately.
+        if not self.obstacles:
+            self.points = self.boundary
+            return {"step:stitching": "success", "stitched": self.points.serialize()}
+
+        # Sort obstacles by rightmost vertex (desc) and init working polygon and its edges.
+        self.sort()
+        logger.info("Stitching %d obstacles to boundary (%d points).", len(self.obstacles), len(self.boundary))
+        points: Polygon = Polygon(list(self.boundary))
+        edges: list[Segment] = list(points.edges)
+
+        for obstacle in self.obstacles:
+            # Normalize obstacle to CW and take rightmost vertex as bridge anchor.
+            obstacle_points: Polygon = obstacle if obstacle.is_cw() else Polygon(list(~obstacle))
+            anchor: Point = obstacle_points.rightmost
+            bridge: Segment | None = None
+
+            # Find shortest valid bridge from current polygon to anchor (inside boundary, no crossings).
+            for candidate in points:
+                if candidate == anchor:
+                    continue
+                if candidate.x < anchor.x or candidate.y < anchor.y:
+                    continue
+                segment: Segment = candidate.to(anchor)
+                if not self.boundary.contains(segment, inclusive=True):
+                    continue
+                if any(
+                    Walk(start=edge[0], center=edge[1], end=segment[0]).is_collinear()
+                    and Walk(start=edge[0], center=edge[1], end=segment[1]).is_collinear()
+                    for edge in self.boundary.edges
+                    if not edge.connects(segment)
+                ):
+                    continue
+                if any(other.intersects(segment, inclusive=False) for other in self.obstacles if other is not obstacle):
+                    continue
+                if any(edge.intersects(segment) for edge in edges if not edge.connects(segment)):
+                    continue
+                if bridge is None or segment.size < bridge.size:
+                    bridge = segment
+
+            if bridge is None:
+                raise BridgeFailureError(f"No valid bridge found for obstacle: {obstacle}")
+
+            # Reject if bridge is a contiguous subsequence of polygon or obstacle (cannot stitch).
+            vertex: Point = bridge[0]
+            if bridge in points:
+                raise StitchWinnerSubsequenceError("Winner is a subsequence of boundary points; cannot stitch")
+            if bridge in obstacle_points:
+                raise StitchWinnerSubsequenceError("Winner is a subsequence of obstacle; cannot stitch")
+
+            # Rotate polygon so vertex is last, obstacle so anchor is first; require CCW/CW; merge and update.
+            left: Polygon = Polygon(list(points >> vertex))
+            right: Polygon = Polygon(list(obstacle_points << anchor))
+            if not left.is_ccw():
+                raise StitchWinnerSubsequenceError("Left is not CCW; cannot stitch")
+            if not right.is_cw():
+                raise StitchWinnerSubsequenceError("Right is not CW; cannot stitch")
+            merged: list[Point] = list(left) + list(right) + [anchor, vertex]
+            points = Polygon(merged)
+            edges = list(points.edges)
+
+        # Ensure final polygon is CCW; store and return serialized stitched polygon.
+        if not points.is_ccw():
+            points = Polygon(list(~points))
+        self.points = points
+        return {"step:stitching": "success", "stitched": self.points.serialize()}
 
 
 class EarClippingStep(SequenceStep):

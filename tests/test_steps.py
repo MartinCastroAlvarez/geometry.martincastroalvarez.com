@@ -36,10 +36,20 @@ class TestSimpleSteps:
     """Test simple steps that return a fixed dict (steps do not enqueue messages; StartTask does)."""
 
     def test_stitching_step_run(self):
-        job = Job(id=Identifier("j1"), step_name=StepName.STITCHING)
+        job = Job(
+            id=Identifier("j1"),
+            step_name=StepName.STITCHING,
+            stdin={
+                "boundary": [[0, 0], [10, 0], [10, 10], [0, 10]],
+                "obstacles": [],
+            },
+        )
         step = StitchingStep(job=job, user=_user())
         out = step.run()
-        assert out == {"step:stitching": "success"}
+        assert out["step:stitching"] == "success"
+        assert "stitched" in out
+        assert len(out["stitched"]) == 4
+        assert out["stitched"][0] in ([0, 0], ["0", "0"])
 
     def test_validate_polygons_step_run_success(self):
         job = Job(

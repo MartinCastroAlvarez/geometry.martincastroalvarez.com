@@ -461,6 +461,24 @@ class PolygonsDoNotShareEdgeError(ValidationError):
         super().__init__(message)
 
 
+class BridgeFailureError(GeometryException):
+    """No valid bridge segment found from obstacle anchor to boundary in stitching."""
+
+    code: http.HTTPStatus = http.HTTPStatus.BAD_REQUEST
+
+    def __init__(self, message: str = "No valid bridge found for obstacle"):
+        super().__init__(message)
+
+
+class StitchWinnerSubsequenceError(GeometryException):
+    """Bridge segment is a contiguous subsequence of boundary or obstacle; cannot stitch."""
+
+    code: http.HTTPStatus = http.HTTPStatus.BAD_REQUEST
+
+    def __init__(self, message: str = "Winner is a subsequence of boundary or obstacle; cannot stitch"):
+        super().__init__(message)
+
+
 class CoordinatorStepRequiresChildrenError(GeometryException):
     """CoordinatorStep requires the job to have children."""
 
