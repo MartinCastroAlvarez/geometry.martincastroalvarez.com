@@ -25,16 +25,19 @@ from __future__ import annotations
 
 import json
 from decimal import Decimal
+from typing import TYPE_CHECKING
 from typing import Any
 
 from attributes import Signature
 from exceptions import ValidationError
-from geometry.box import Box
 from geometry.point import Point
 from geometry.walk import Walk
 from interfaces import Bounded
 from interfaces import Serializable
 from interfaces import Spatial
+
+if TYPE_CHECKING:
+    from geometry.box import Box
 
 
 class Segment(list, Spatial, Bounded, Serializable[list[Any]]):
@@ -112,6 +115,8 @@ class Segment(list, Spatial, Bounded, Serializable[list[Any]]):
 
     @property
     def box(self) -> Box:
+        from geometry.box import Box
+
         min_x = min(self[0].x, self[1].x)
         max_x = max(self[0].x, self[1].x)
         min_y = min(self[0].y, self[1].y)

@@ -419,6 +419,20 @@ class ValidationObstaclesMustBeListError(ValidationError):
         super().__init__(message)
 
 
+class ValidationBoundaryNotCCWError(ValidationError):
+    """Boundary polygon must be counter-clockwise (CCW)."""
+
+    def __init__(self, message: str = "boundary must be counter-clockwise (CCW)"):
+        super().__init__(message)
+
+
+class ValidationObstacleNotCWError(ValidationError):
+    """Obstacle polygon must be clockwise (CW)."""
+
+    def __init__(self, message: str = "obstacle must be clockwise (CW)"):
+        super().__init__(message)
+
+
 class PolygonItemMustBePointError(ValidationError):
     """Polygon item at index must be a Point."""
 

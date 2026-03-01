@@ -34,6 +34,8 @@ from enums import Status
 from enums import StepName
 from exceptions import PolygonNotSimpleError
 from exceptions import StepNotHandledError
+from exceptions import ValidationBoundaryNotCCWError
+from exceptions import ValidationObstacleNotCWError
 from geometry import Polygon
 from models import Job
 from models import User
@@ -181,70 +183,54 @@ class ArtGalleryStep(CoordinatorStep):
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
         self.spawn()
-        stdout: dict[str, Any] = {"step:art_gallery": "success"}
-        if "boundary" in self.job.stdin:
-            stdout["boundary"] = self.job.stdin["boundary"]
-        if "obstacles" in self.job.stdin:
-            stdout["obstacles"] = self.job.stdin["obstacles"]
-        return stdout
+        return {
+            "step:art_gallery": "success",
+            "boundary": self.job.stdin.get("boundary"),
+            "obstacles": self.job.stdin.get("obstacles"),
+        }
 
 
 class ValidationPolygonStep(SequenceStep):
     """
     Validates boundary and obstacles using api/geometry (same logic as lab ArtGallery.validate()).
-    On success returns step result and calls broadcast(). We do not catch Exception; let failures
-    raise so StartTask can handle them (set job status, stderr, etc.).
+    Parses boundary and obstacles via Polygon.unserialize(); let it throw. On success returns step
+    result and calls broadcast(). We do not catch Exception; let failures raise so StartTask handles them.
     """
 
-    def parse_boundary_and_obstacles(self, stdin: dict[str, Any]) -> tuple[Polygon, list[Polygon]]:
-        """Unserialize boundary and obstacles from job stdin (list or { points })."""
-        boundary_raw: Any = stdin.get("boundary")
-        obstacles_raw: Any = stdin.get("obstacles")
-        if boundary_raw is None:
-            raise ValueError("boundary is required")
-        if isinstance(boundary_raw, dict) and "points" in boundary_raw:
-            boundary_raw = boundary_raw["points"]
-        if not isinstance(boundary_raw, list):
-            raise ValueError("boundary must be a list of points or an object with key 'points'")
-        boundary_poly: Polygon = Polygon.unserialize(boundary_raw)
-        obstacle_list: list[Any] = obstacles_raw if isinstance(obstacles_raw, list) else []
-        obstacle_polys: list[Polygon] = []
-        for obs in obstacle_list:
-            if isinstance(obs, dict) and "points" in obs:
-                pts = obs["points"]
-            else:
-                pts = obs
-            if isinstance(pts, list):
-                obstacle_polys.append(Polygon.unserialize(pts))
-        return boundary_poly, obstacle_polys
-
-    def validate_polygons_geometry(self, boundary: Polygon, obstacles: list[Polygon]) -> None:
-        """
-        Same logic as lab ArtGallery.validate(): obstacles strictly inside boundary,
-        no obstacle edge touching/intersecting boundary (except not shared), no vertex on boundary, no obstacle-over-obstacle overlap.
-        Raises PolygonNotSimpleError on failure.
-        """
-        for obstacle in obstacles:
-            for point in obstacle:
-                if not boundary.contains(point, inclusive=False):
-                    raise PolygonNotSimpleError(f"Obstacle vertex is not strictly inside the boundary ({boundary}).")
-            for edge in obstacle.edges:
-                for boundary_edge in boundary.edges:
-                    if edge.intersects(boundary_edge, inclusive=True) and not edge.connects(boundary_edge):
-                        raise PolygonNotSimpleError("Obstacle edge intersects or touches boundary.")
-            for point in obstacle:
-                for boundary_edge in boundary.edges:
-                    if boundary_edge.contains(point, inclusive=True):
-                        raise PolygonNotSimpleError("Obstacle has a vertex on the boundary.")
-        for i, obstacle in enumerate(obstacles):
-            for other in obstacles[i + 1 :]:
-                if obstacle.intersects(other, inclusive=True):
-                    raise PolygonNotSimpleError("Obstacles intersect or touch.")
+    def __init__(self, job: Job, user: User) -> None:
+        super().__init__(job, user)
+        self.boundary: Polygon | None = None
+        self.obstacles: list[Polygon] = []
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
-        # Do not try/except Exception here. Let validation failures raise; StartTask handles exceptions.
-        boundary, obstacles = self.parse_boundary_and_obstacles(self.job.stdin)
-        self.validate_polygons_geometry(boundary, obstacles)
+        self.boundary = Polygon.unserialize(self.job.stdin.get("boundary"))
+        self.obstacles = [Polygon.unserialize(obstacle) for obstacle in (self.job.stdin.get("obstacles") or [])]
+        if not self.boundary.is_simple():
+            raise PolygonNotSimpleError("Boundary polygon is not simple.")
+        if any(not obstacle.is_simple() for obstacle in self.obstacles):
+            raise PolygonNotSimpleError("Obstacle polygon is not simple.")
+        if not self.boundary.is_ccw():
+            raise ValidationBoundaryNotCCWError()
+        if any(not obstacle.is_cw() for obstacle in self.obstacles):
+            raise ValidationObstacleNotCWError()
+        if any(not all(self.boundary.contains(point, inclusive=False) for point in obstacle) for obstacle in self.obstacles):
+            raise PolygonNotSimpleError(f"Obstacle is not strictly inside the boundary ({self.boundary}).")
+        if any(
+            edge.intersects(boundary_edge, inclusive=True) and not edge.connects(boundary_edge)
+            for obstacle in self.obstacles
+            for edge in obstacle.edges
+            for boundary_edge in self.boundary.edges
+        ):
+            raise PolygonNotSimpleError("Obstacle edge intersects or touches boundary.")
+        if any(
+            boundary_edge.contains(point, inclusive=True)
+            for obstacle in self.obstacles
+            for point in obstacle
+            for boundary_edge in self.boundary.edges
+        ):
+            raise PolygonNotSimpleError("Obstacle has a vertex on the boundary.")
+        if any(obstacle.intersects(other, inclusive=True) for obstacle in self.obstacles for other in self.obstacles if obstacle != other):
+            raise PolygonNotSimpleError("Obstacles intersect or touch.")
         return {"step:validate_polygons": "success"}
 
 

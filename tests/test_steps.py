@@ -97,5 +97,5 @@ class TestArtGalleryStep:
 
         out = step.run()
 
-        assert out == {"step:art_gallery": "success"}
+        assert out == {"step:art_gallery": "success", "boundary": None, "obstacles": None}
         mock_repo.save.assert_not_called()

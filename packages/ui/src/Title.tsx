@@ -12,6 +12,7 @@
 
 import React, { useRef, useEffect, useState } from "react";
 import { Container } from "./Container";
+import { Tooltip } from "./Tooltip";
 
 interface TitleProps {
     children: React.ReactNode;
@@ -53,17 +54,26 @@ export const Title: React.FC<TitleProps> = ({
     const alignmentClass = left ? "text-left" : right ? "text-right" : "text-center";
     const truncateClass = truncate ? "truncate" : "";
 
+    const content = (
+        <div
+            ref={elRef}
+            onClick={onClick}
+            style={maxWidthStyle}
+            className={`display-block w-full mx-auto text-slate-800 dark:text-slate-100 font-semibold font-title leading-relaxed tracking-normal ${sizeClass} ${alignmentClass} ${truncateClass}`}
+        >
+            {children}
+        </div>
+    );
+
     return (
         <Container center name="geometry-title">
-            <div
-                ref={elRef}
-                onClick={onClick}
-                style={maxWidthStyle}
-                className={`display-block w-full mx-auto text-slate-800 dark:text-slate-100 font-semibold font-title leading-relaxed tracking-normal ${sizeClass} ${alignmentClass} ${truncateClass}`}
-                title={truncate ? titleWhenTruncated : undefined}
-            >
-                {children}
-            </div>
+            {truncate && titleWhenTruncated ? (
+                <Tooltip title={titleWhenTruncated}>
+                    <span className="block min-w-0">{content}</span>
+                </Tooltip>
+            ) : (
+                content
+            )}
         </Container>
     );
 };

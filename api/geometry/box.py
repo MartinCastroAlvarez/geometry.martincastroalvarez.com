@@ -30,6 +30,7 @@ from exceptions import BoxInvalidEdgeError
 from exceptions import SerializedInvalidDictError
 from geometry.interval import Interval
 from geometry.point import Point
+from geometry.segment import Segment
 from interfaces import Bounded
 from interfaces import Serializable
 from interfaces import Spatial
@@ -78,6 +79,16 @@ class Box(Spatial, Serializable[dict[str, Any]]):
             raise BoxInvalidEdgeError(f"Box must have horizontal bottom edge: {self.bottom_left.y} != {self.bottom_right.y}")
         if self.top_left.y != self.top_right.y:
             raise BoxInvalidEdgeError(f"Box must have horizontal top edge: {self.top_left.y} != {self.top_right.y}")
+
+    @property
+    def edges(self) -> list[Segment]:
+        """The four edges of the box (bottom, right, top, left)."""
+        return [
+            Segment([self.bottom_left, self.bottom_right]),
+            Segment([self.bottom_right, self.top_right]),
+            Segment([self.top_right, self.top_left]),
+            Segment([self.top_left, self.bottom_left]),
+        ]
 
     @property
     def x(self) -> Interval:

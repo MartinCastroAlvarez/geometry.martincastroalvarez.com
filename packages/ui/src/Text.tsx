@@ -12,6 +12,7 @@
 
 import React, { useRef, useEffect, useState } from "react";
 import { Container } from "./Container";
+import { Tooltip } from "./Tooltip";
 
 interface TextProps {
     children: React.ReactNode;
@@ -62,17 +63,26 @@ export const Text: React.FC<TextProps> = ({
     const leadingClass = leadingProp === "tight" ? "leading-tight" : leadingProp === "snug" ? "leading-snug" : "leading-relaxed";
     const colorClass = muted ? "text-slate-800 dark:text-slate-300" : "text-[rgb(var(--color-text))]";
 
+    const content = (
+        <div
+            ref={elRef}
+            onClick={onClick}
+            style={maxWidthStyle}
+            className={`display-block w-full mx-auto ${colorClass} font-normal ${leadingClass} ${sizeClass} ${alignmentClass} ${truncateClass}`}
+        >
+            {children}
+        </div>
+    );
+
     return (
         <Container center name="geometry-text">
-            <div
-                ref={elRef}
-                onClick={onClick}
-                style={maxWidthStyle}
-                className={`display-block w-full mx-auto ${colorClass} font-normal ${leadingClass} ${sizeClass} ${alignmentClass} ${truncateClass}`}
-                title={truncate ? titleWhenTruncated : undefined}
-            >
-                {children}
-            </div>
+            {truncate && titleWhenTruncated ? (
+                <Tooltip title={titleWhenTruncated}>
+                    <span className="block min-w-0">{content}</span>
+                </Tooltip>
+            ) : (
+                content
+            )}
         </Container>
     );
 };

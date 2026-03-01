@@ -14,9 +14,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@emotion/react": "^11.13.5",
+    "@emotion/styled": "^11.13.5",
     "@geometry/domain": "workspace:*",
     "@geometry/i18n": "workspace:*",
     "@geometry/theme": "workspace:*",
+    "@mui/material": "^7.3.8",
     "lucide-react": "^0.562.0",
     "react-json-view": "^1.21.3",
     "react-masonry": "^1.0.7",

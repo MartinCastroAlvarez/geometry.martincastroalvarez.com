@@ -11,7 +11,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Stage, Layer } from "react-konva";
 import { ArtGallery, Polygon } from "@geometry/domain";
 import { useLocale } from "@geometry/i18n";
-import { Container, Tooltip } from "@geometry/ui";
+import { Container } from "@geometry/ui";
+import { EditorTooltip } from "./EditorTooltip";
 import type { EditorVertex } from "./types";
 import { artGalleryToEditorState, editorVerticesToPolygon } from "./adapters";
 
@@ -481,16 +482,16 @@ export const Editor = ({
                             height={effectiveHeight}
                         />
                         {vertices.length === 0 && (
-                            <Tooltip
+                            <EditorTooltip
                                 width={effectiveWidth}
                                 height={effectiveHeight}
                                 z={1}
                             >
                                 {t("editor.clickToDrawPolygon")}
-                            </Tooltip>
+                            </EditorTooltip>
                         )}
                         {vertices.length === 2 && (
-                            <Tooltip
+                            <EditorTooltip
                                 width={effectiveWidth}
                                 height={effectiveHeight}
                                 z={1}
@@ -498,10 +499,10 @@ export const Editor = ({
                                 bottom
                             >
                                 {t("editor.atLeastThreePointsRequired")}
-                            </Tooltip>
+                            </EditorTooltip>
                         )}
                         {vertices.length >= 3 && !allVerticesDegreeTwo && (
-                            <Tooltip
+                            <EditorTooltip
                                 width={effectiveWidth}
                                 height={effectiveHeight}
                                 z={1}
@@ -509,10 +510,10 @@ export const Editor = ({
                                 bottom
                             >
                                 {t("editor.closePolygonToContinue")}
-                            </Tooltip>
+                            </EditorTooltip>
                         )}
                         {vertices.length > 0 && allVerticesDegreeTwo && (
-                            <Tooltip
+                            <EditorTooltip
                                 width={effectiveWidth}
                                 height={effectiveHeight}
                                 z={1}
@@ -520,7 +521,7 @@ export const Editor = ({
                                 bottom
                             >
                                 {t("editor.nextStepValidateSubmit")}
-                            </Tooltip>
+                            </EditorTooltip>
                         )}
                         <div
                             ref={stageWrapperRef}
