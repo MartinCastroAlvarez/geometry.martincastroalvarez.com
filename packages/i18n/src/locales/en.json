@@ -7,10 +7,10 @@
     },
     "steps": {
       "visibility_matrix": "Visibility Matrix",
-      "validate_polygons": "Validate Polygons",
-      "stitching": "Stitching",
+      "validate_polygons": "Polygon Validation",
+      "stitching": "Obstacle Stitching",
       "ear_clipping": "Ear Clipping",
-      "convex_component_optimization": "Convex Components",
+      "convex_component_optimization": "Convex Components Merge",
       "guard_placement": "Guard Placement",
       "art_gallery": "Art Gallery"
     },
@@ -122,6 +122,7 @@
     "requirementObstacleSimple": "Each obstacle must be simple (no self-intersection)",
     "requirementObstacleCw": "Each obstacle must be clockwise",
     "requirementObstacleContained": "Each obstacle must be fully inside the boundary",
-    "requirementObstacleNoOverlap": "No two obstacles may overlap"
+    "requirementObstacleNoOverlap": "No two obstacles may overlap",
+    "summaryDisclaimer": "These results are from quick checks in the browser and on the server. After you submit, more checks run in the background. This summary only indicates whether your input would be accepted for submission."
   }
 }

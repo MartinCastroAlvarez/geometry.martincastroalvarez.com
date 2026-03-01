@@ -7,10 +7,10 @@
     },
     "steps": {
       "visibility_matrix": "Matriz de visibilidad",
-      "validate_polygons": "Validar polígonos",
-      "stitching": "Unión",
+      "validate_polygons": "Validación de polígonos",
+      "stitching": "Unión de obstáculos",
       "ear_clipping": "Recorte de orejas",
-      "convex_component_optimization": "Componentes convexos",
+      "convex_component_optimization": "Fusión de componentes convexos",
       "guard_placement": "Colocación de guardias",
       "art_gallery": "Galería de arte"
     },
@@ -122,6 +122,7 @@
     "requirementObstacleSimple": "Cada obstáculo debe ser simple (sin autointersección)",
     "requirementObstacleCw": "Cada obstáculo debe ser en sentido horario",
     "requirementObstacleContained": "Cada obstáculo debe estar completamente dentro del borde",
-    "requirementObstacleNoOverlap": "Ningún obstáculo puede superponerse con otro"
+    "requirementObstacleNoOverlap": "Ningún obstáculo puede superponerse con otro",
+    "summaryDisclaimer": "Estos resultados provienen de comprobaciones rápidas en el navegador y en el servidor. Después de enviar, se ejecutan más comprobaciones en segundo plano. Este resumen solo indica si tu entrada sería aceptada para enviarla."
   }
 }

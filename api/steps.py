@@ -26,17 +26,15 @@ from abc import ABC
 from abc import abstractmethod
 from functools import cached_property
 from typing import Any
+from typing import Type
 
-from attributes import Email
 from attributes import Identifier
 from attributes import Signature
-from enums import Action
 from enums import Status
 from enums import StepName
 from exceptions import PolygonNotSimpleError
+from exceptions import StepNotHandledError
 from geometry import Polygon
-from messages import Message
-from messages import Queue
 from models import Job
 from models import User
 from repositories import JobsRepository
@@ -44,19 +42,19 @@ from repositories import JobsRepository
 
 class Step(ABC):
     """
-    Abstract pipeline step. Receives a Job and user_email; run() returns a dict
+    Abstract pipeline step. Receives a Job and user; run() returns a dict
     merged into job.stdout. Idempotent: given the same job and inputs, running
     multiple times must produce the same outcome and must not duplicate side effects.
     """
 
-    def __init__(self, job: Job, user_email: Email) -> None:
+    def __init__(self, job: Job, user: User) -> None:
         self.job: Job = job
-        self.user_email: Email = user_email
+        self.user: User = user
 
     @cached_property
     def repository(self) -> JobsRepository:
         """JobsRepository for the step's user. Cached for the lifetime of the step instance."""
-        return JobsRepository(user=User(email=self.user_email))
+        return JobsRepository(user=self.user)
 
     @cached_property
     def parent(self) -> Job | None:
@@ -64,6 +62,32 @@ class Step(ABC):
         if self.job.parent_id is None:
             return None
         return self.repository.get(self.job.parent_id)
+
+    @staticmethod
+    def of(step_name: StepName) -> Type[Step]:
+        """
+        Return the Step class for step_name. Raises StepNotHandledError if step name cannot be handled.
+
+        Examples:
+        >>> Step.of(StepName.ART_GALLERY) is ArtGalleryStep
+        True
+        >>> Step.of(StepName.EAR_CLIPPING) is EarClippingStep
+        True
+        >>> Step.of(StepName.VALIDATE_POLYGONS) is ValidationPolygonStep
+        True
+        """
+        step_class_by_name: dict[StepName, Type[Step]] = {
+            StepName.ART_GALLERY: ArtGalleryStep,
+            StepName.VALIDATE_POLYGONS: ValidationPolygonStep,
+            StepName.STITCHING: StitchingStep,
+            StepName.EAR_CLIPPING: EarClippingStep,
+            StepName.CONVEX_COMPONENT_OPTIMIZATION: ConvexComponentOptimizationStep,
+            StepName.GUARD_PLACEMENT: GuardPlacementStep,
+        }
+        cls: Type[Step] | None = step_class_by_name.get(step_name)
+        if cls is None:
+            raise StepNotHandledError(f"Step cannot be handled: {step_name.value}")
+        return cls
 
     @abstractmethod
     def run(self, **kwargs: Any) -> dict[str, Any]:
@@ -74,48 +98,39 @@ class Step(ABC):
         raise NotImplementedError
 
 
+class CoordinatorStep(Step):
+    """Step that coordinates children: StartTask.broadcast() will START the first child."""
+
+    @abstractmethod
+    def run(self, **kwargs: Any) -> dict[str, Any]:
+        raise NotImplementedError
+
+
 class SequenceStep(Step):
-    """
-    Step that participates in a linear sequence of child jobs. broadcast() sends
-    REPORT for the current job, optionally START for the next sibling or first child.
-    """
+    """Step in a linear sequence: StartTask.broadcast() will START next sibling or REPORT parent if last."""
 
-    def broadcast(self) -> None:
-        """
-        If this job has a parent, load it and find this job's index in parent.children_ids.
-        If not the last child, enqueue START for the next sibling.
-        Enqueue REPORT for self.job.id (so ReportTask aggregates into parent).
-        If this job has children, enqueue START for the first child.
-        """
-
-        queue: Queue = Queue()
-
-        # Start next sibling.
-        if self.parent is not None:
-            child_ids: list[Identifier] = list(self.parent.children_ids)
-            try:
-                idx: int = child_ids.index(self.job.id)
-            except ValueError:
-                idx = -1
-            if idx >= 0 and idx < len(child_ids) - 1:
-                next_id: Identifier = child_ids[idx + 1]
-                message: Message = Message(action=Action.START, job_id=next_id, user_email=self.user_email)
-                queue.put(message)
-
-        # Start first child.
-        message: Message = Message(action=Action.REPORT, job_id=self.job.id, user_email=self.user_email)
-        queue.put(message)
-        if self.job.children_ids:
-            first_child_id: Identifier = self.job.children_ids[0]
-            message = Message(action=Action.START, job_id=first_child_id, user_email=self.user_email)
-            queue.put(message)
-
-        # Report self
-        message: Message = Message(action=Action.REPORT, job_id=self.job.id, user_email=self.user_email)
-        queue.put(message)
+    @abstractmethod
+    def run(self, **kwargs: Any) -> dict[str, Any]:
+        raise NotImplementedError
 
 
-class ArtGalleryStep(SequenceStep):
+class MonitorStep(Step):
+    """Step that monitors children: StartTask.broadcast() will START all children in batches."""
+
+    @abstractmethod
+    def run(self, **kwargs: Any) -> dict[str, Any]:
+        raise NotImplementedError
+
+
+class ParallelStep(Step):
+    """Step that runs in parallel with siblings: StartTask.broadcast() will REPORT parent."""
+
+    @abstractmethod
+    def run(self, **kwargs: Any) -> dict[str, Any]:
+        raise NotImplementedError
+
+
+class ArtGalleryStep(CoordinatorStep):
     """
     Art gallery step: creates child jobs (validate_polygons, stitching, ear_clipping,
     convex_component_optimization, guard_placement) with deterministic ids. Children
@@ -154,7 +169,7 @@ class ArtGalleryStep(SequenceStep):
             child_ids.append(child_id)
 
             # NOTE: Do NOT index children.
-            # index: JobsPrivateIndex = JobsPrivateIndex(user_email=self.user_email)
+            # index: JobsPrivateIndex = JobsPrivateIndex(user_email=self.user.email)
             # index.save(
             #     Indexed(
             #         index_id=Identifier(Countdown.from_timestamp(child.created_at)),
@@ -171,7 +186,6 @@ class ArtGalleryStep(SequenceStep):
             stdout["boundary"] = self.job.stdin["boundary"]
         if "obstacles" in self.job.stdin:
             stdout["obstacles"] = self.job.stdin["obstacles"]
-        self.broadcast()
         return stdout
 
 
@@ -231,7 +245,6 @@ class ValidationPolygonStep(SequenceStep):
         # Do not try/except Exception here. Let validation failures raise; StartTask handles exceptions.
         boundary, obstacles = self.parse_boundary_and_obstacles(self.job.stdin)
         self.validate_polygons_geometry(boundary, obstacles)
-        self.broadcast()
         return {"step:validate_polygons": "success"}
 
 
@@ -243,7 +256,6 @@ class StitchingStep(SequenceStep):
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
         out: dict[str, Any] = {"step:stitching": "success"}
-        self.broadcast()
         return out
 
 
@@ -255,7 +267,6 @@ class EarClippingStep(SequenceStep):
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
         out: dict[str, Any] = {"step:ear_clipping": "success"}
-        self.broadcast()
         return out
 
 
@@ -267,7 +278,6 @@ class ConvexComponentOptimizationStep(SequenceStep):
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
         out: dict[str, Any] = {"step:convex_component_optimization": "success"}
-        self.broadcast()
         return out
 
 
@@ -279,5 +289,4 @@ class GuardPlacementStep(SequenceStep):
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
         out: dict[str, Any] = {"step:guard_placement": "success"}
-        self.broadcast()
         return out

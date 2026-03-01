@@ -4,7 +4,7 @@
  * When artGallery is passed, shows the form in a Container above the table.
  */
 import { useLocale } from "@geometry/i18n";
-import { Container, Scrollable, Bullet, Toolbar, Button, Problem, Inspector } from "@geometry/ui";
+import { Container, Scrollable, Bullet, Toolbar, Button, Problem, Inspector, Text } from "@geometry/ui";
 import type { ArtGallery, ArtGalleryDict, Summary } from "@geometry/domain";
 import { EditorReviewSkeleton } from "./EditorReview.skeleton";
 
@@ -114,22 +114,29 @@ const EditorSummaryTable = ({ summary }: EditorSummaryTableProps) => {
     };
 
     return (
-        <Scrollable padded spaced rounded left height={REVIEW_TABLE_CONTAINER_HEIGHT_PX}>
-            {deduped.map(({ status, note }) => (
-                <Container key={`${status}:${note}`}>
-                    <Bullet
-                        danger={status === "ERROR"}
-                        success={status === "SUCCESS"}
-                        sm
-                        left
-                        truncate
-                        spaced
-                    >
-                        {getLocalizedNote(note)}
-                    </Bullet>
-                </Container>
-            ))}
-        </Scrollable>
+        <div className="col-span-12 flex flex-col gap-2 w-full">
+            <Scrollable padded spaced rounded left height={REVIEW_TABLE_CONTAINER_HEIGHT_PX}>
+                {deduped.map(({ status, note }) => (
+                    <Container key={`${status}:${note}`}>
+                        <Bullet
+                            danger={status === "ERROR"}
+                            success={status === "SUCCESS"}
+                            sm
+                            left
+                            truncate
+                            spaced
+                        >
+                            {getLocalizedNote(note)}
+                        </Bullet>
+                    </Container>
+                ))}
+            </Scrollable>
+            <Container>
+                <Text sm muted left>
+                    {t("validation.summaryDisclaimer")}
+                </Text>
+            </Container>
+        </div>
     );
 };
 

@@ -3,11 +3,15 @@
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
+import pytest
+
 from attributes import Email
 from attributes import Identifier
 from enums import Status
 from enums import StepName
+from exceptions import StepNotHandledError
 from models import Job
+from steps import Step
 from tasks import ReportTask
 from tasks import StartTask
 from tasks import Task
@@ -25,7 +29,13 @@ class TestTaskResponse:
 class TestTaskHandler:
     """Test Task.handler default body."""
 
-    def test_handler_body_none_defaults_to_empty_dict(self):
+    @patch("tasks.JobsRepository")
+    def test_handler_body_none_defaults_to_empty_dict(self, mock_repo_cls):
+        mock_repo = MagicMock()
+        mock_repo_cls.return_value = mock_repo
+        mock_job = MagicMock()
+        mock_job.is_failed.return_value = False
+        mock_repo.get.return_value = mock_job
         with patch.object(StartTask, "validate", return_value={"job_id": Identifier("j1"), "user_email": Email("u@e.com")}) as mock_validate:
             with patch.object(StartTask, "execute", return_value={"status": Status.SUCCESS, "job_id": Identifier("j1")}) as mock_execute:
                 task = StartTask()
@@ -54,37 +64,33 @@ class TestStartTask:
         mock_repo.get.return_value = job
         task = StartTask()
         req = {"job_id": Identifier("j1"), "user_email": Email("u@e.com")}
-        result = task.execute(req)
+        result = task.handler(req)
         assert result["status"] == Status.FAILED
-        assert result["reason"] == "job_failed"
         mock_queue.put.assert_not_called()
 
-    @patch("tasks.queue")
     @patch("tasks.JobsRepository")
-    def test_execute_unknown_step_returns_failed(self, mock_repo_cls, mock_queue):
+    def test_execute_unknown_step_raises_step_not_handled(self, mock_repo_cls):
         mock_repo = MagicMock()
         mock_repo_cls.return_value = mock_repo
         job = MagicMock()
         job.is_failed.return_value = False
-        job.step_name = "unknown_step_name"
+        job.step_name = StepName.ART_GALLERY
         job.id = Identifier("j1")
         mock_repo.get.return_value = job
-        with patch.object(StartTask, "STEP_CLASS_BY_NAME", {}):
+        with patch.object(Step, "of", side_effect=StepNotHandledError("Step cannot be handled: art_gallery")):
             task = StartTask()
             req = {"job_id": Identifier("j1"), "user_email": Email("u@e.com")}
-            result = task.execute(req)
-        assert result["status"] == Status.FAILED
-        assert result["reason"] == "unknown_step"
+            with pytest.raises(StepNotHandledError):
+                task.handler(req)
 
-    @patch("steps.Queue")
+    @patch.object(StartTask, "broadcast")
     @patch("tasks.queue")
     @patch("tasks.JobsRepository")
     def test_execute_success_enqueues_report_for_non_art_gallery_step(
-        self, mock_repo_cls, mock_tasks_queue, mock_steps_queue_cls
+        self, mock_repo_cls, mock_tasks_queue, mock_broadcast
     ):
         mock_repo = MagicMock()
         mock_repo_cls.return_value = mock_repo
-        mock_steps_queue_cls.return_value = MagicMock()
         job = Job(
             id=Identifier("j1"),
             step_name=StepName.STITCHING,
@@ -95,8 +101,9 @@ class TestStartTask:
         mock_repo.get.return_value = job
         task = StartTask()
         req = {"job_id": Identifier("j1"), "user_email": Email("u@e.com")}
-        result = task.execute(req)
-        assert result["status"] == Status.SUCCESS
+        result = task.handler(req)
+        # Job stays PENDING until ReportTask runs; execute completed successfully and enqueued report.
+        assert result["status"] == Status.PENDING
         mock_tasks_queue.put.assert_called()
         mock_repo.save.assert_called_once()
 
@@ -122,9 +129,10 @@ class TestReportTask:
         mock_repo.get.return_value = job
         task = ReportTask()
         req = {"job_id": Identifier("j1"), "user_email": Email("u@e.com")}
-        result = task.execute(req)
+        result = task.handler(req)
         assert result["status"] == Status.FAILED
-        mock_queue.put.assert_called_once()
+        # Handler returns early when job is failed; execute() and broadcast() are not called.
+        mock_queue.put.assert_not_called()
 
     @patch("tasks.queue")
     @patch("tasks.JobsRepository")
@@ -147,7 +155,7 @@ class TestReportTask:
         mock_repo.get.side_effect = lambda id: parent if id == Identifier("p1") else child
         task = ReportTask()
         req = {"job_id": Identifier("p1"), "user_email": Email("u@e.com")}
-        result = task.execute(req)
+        result = task.handler(req)
         assert result["status"] == Status.SUCCESS
         assert parent.status == Status.SUCCESS
         mock_repo.save.assert_called_once()
@@ -174,6 +182,6 @@ class TestReportTask:
         mock_repo.get.side_effect = lambda rid: parent if str(rid) == "p1" else child
         task = ReportTask()
         req = {"job_id": Identifier("p1"), "user_email": Email("u@e.com")}
-        task.execute(req)
+        task.handler(req)
         assert parent.status == Status.FAILED
         assert parent.stderr == {"err": "failed"}

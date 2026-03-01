@@ -204,6 +204,17 @@ class InvalidActionError(GeometryException):
         super().__init__(message)
 
 
+class StepNotHandledError(GeometryException):
+    """
+    Raised when the job's step_name has no registered step class.
+    """
+
+    code: http.HTTPStatus = http.HTTPStatus.BAD_REQUEST
+
+    def __init__(self, message: str = "Step cannot be handled"):
+        super().__init__(message)
+
+
 class BoxInvalidEdgeError(GeometryException):
     """
     Raised when a box has invalid edges (e.g. non-vertical or non-horizontal).
@@ -433,4 +444,49 @@ class PolygonsDoNotShareEdgeError(ValidationError):
     """Polygons do not share an edge."""
 
     def __init__(self, message: str = "Polygons do not share an edge"):
+        super().__init__(message)
+
+
+class CoordinatorStepRequiresChildrenError(GeometryException):
+    """CoordinatorStep requires the job to have children."""
+
+    code: http.HTTPStatus = http.HTTPStatus.BAD_REQUEST
+
+    def __init__(self, message: str = "CoordinatorStep requires children"):
+        super().__init__(message)
+
+
+class SequenceStepRequiresParentError(GeometryException):
+    """SequenceStep requires the job to have a parent."""
+
+    code: http.HTTPStatus = http.HTTPStatus.BAD_REQUEST
+
+    def __init__(self, message: str = "SequenceStep requires parent"):
+        super().__init__(message)
+
+
+class SequenceStepJobNotInSiblingsError(GeometryException):
+    """Job is not part of parent's children (siblings)."""
+
+    code: http.HTTPStatus = http.HTTPStatus.BAD_REQUEST
+
+    def __init__(self, message: str = "Job not in siblings"):
+        super().__init__(message)
+
+
+class MonitorStepRequiresChildrenError(GeometryException):
+    """MonitorStep requires the job to have children."""
+
+    code: http.HTTPStatus = http.HTTPStatus.BAD_REQUEST
+
+    def __init__(self, message: str = "MonitorStep requires children"):
+        super().__init__(message)
+
+
+class ParallelStepRequiresParentError(GeometryException):
+    """ParallelStep requires the job to have a parent."""
+
+    code: http.HTTPStatus = http.HTTPStatus.BAD_REQUEST
+
+    def __init__(self, message: str = "ParallelStep requires parent"):
         super().__init__(message)

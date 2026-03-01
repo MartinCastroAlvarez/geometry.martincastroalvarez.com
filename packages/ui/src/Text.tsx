@@ -1,5 +1,6 @@
 /**
  * Body text: size (xs–xxxl), alignment (left/center/right), optional truncate and max width.
+ * When truncate is true and the content overflows, hovering shows the full text in a native tooltip.
  *
  * Context: Renders inside a center-aligned Container; applies text-primary or text-muted and size/alignment
  * classes. size prop sets maxWidth in px. Empty or whitespace-only children render null.
@@ -9,7 +10,7 @@
  *   <Text size={400} truncate>{description}</Text>
  */
 
-import React from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { Container } from "./Container";
 
 interface TextProps {
@@ -43,6 +44,16 @@ export const Text: React.FC<TextProps> = ({
     onClick = () => {},
 }) => {
     void _left;
+    const elRef = useRef<HTMLDivElement>(null);
+    const [titleWhenTruncated, setTitleWhenTruncated] = useState<string | undefined>(undefined);
+
+    useEffect(() => {
+        if (!truncate || !elRef.current) return;
+        const el = elRef.current;
+        const truncated = el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight;
+        setTitleWhenTruncated(truncated ? (el.textContent ?? "") : undefined);
+    }, [truncate, children]);
+
     if (children == null || (typeof children === "string" && children.trim() === "")) return null;
     const maxWidthStyle = size ? { maxWidth: `${size}px` } : undefined;
     let sizeClass = xs ? "text-xs" : sm ? "text-sm" : md ? "text-md" : lg ? "text-lg" : xl ? "text-xl" : xxl ? "text-2xl" : xxxl ? "text-3xl" : "text-base";
@@ -53,7 +64,13 @@ export const Text: React.FC<TextProps> = ({
 
     return (
         <Container center name="geometry-text">
-            <div onClick={onClick} style={maxWidthStyle} className={`display-block w-full mx-auto ${colorClass} font-normal ${leadingClass} ${sizeClass} ${alignmentClass} ${truncateClass}`}>
+            <div
+                ref={elRef}
+                onClick={onClick}
+                style={maxWidthStyle}
+                className={`display-block w-full mx-auto ${colorClass} font-normal ${leadingClass} ${sizeClass} ${alignmentClass} ${truncateClass}`}
+                title={truncate ? titleWhenTruncated : undefined}
+            >
                 {children}
             </div>
         </Container>
