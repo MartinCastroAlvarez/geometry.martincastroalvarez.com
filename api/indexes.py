@@ -13,10 +13,10 @@ search, and all; path is index/{NAME}/ or index/{NAME}/{email.slug}/.
 ArtGalleryPublicIndex lists galleries by reversed created_at. JobsPrivateIndex
 lists jobs per user. Indexed holds index_id (sort key) and real_id (record id).
 
-**Read-repair:** search() and all() load full records via repository.get_optional().
-If a record is missing (e.g. deleted but index not updated), the entry is skipped
-and the stale index key is deleted, so list responses never surface 404 for a
-single missing item.
+**Read-repair:** search() and all() load full records via repository.get().
+If a record is missing (RecordNotFoundError), the entry is skipped and the
+stale index key is deleted, so list responses never surface 404 for a single
+missing item.
 """
 
 from __future__ import annotations
@@ -39,12 +39,15 @@ from data import Page
 from exceptions import RecordNotFoundError
 from exceptions import ValidationError
 from interfaces import Serializable
+from models import ArtGallery
+from models import Job
 from repositories import ArtGalleryRepository
 from repositories import JobsRepository
+from repositories import Repository
 from serializers import Serialized
 from settings import DEFAULT_LIMIT
 
-bucket = Bucket()
+bucket: Bucket = Bucket()
 T = TypeVar("T")
 
 
@@ -94,7 +97,7 @@ class Index(Generic[T]):
     >>> gallery = index.get(records[0].id)
     """
 
-    REPOSITORY: ClassVar[type]
+    REPOSITORY: ClassVar[type[Repository[T]]]
     NAME: ClassVar[str]
 
     @property
@@ -103,11 +106,11 @@ class Index(Generic[T]):
         return f"index/{self.NAME}/"
 
     @cached_property
-    def repository(self) -> Any:
+    def repository(self) -> Repository[T]:
         """Repository instance used to load full records by real_id."""
         return self.REPOSITORY()
 
-    def get(self, identifier: Identifier) -> Any:
+    def get(self, identifier: Identifier) -> T:
         """
         Load the full record for an index entry by identifier.
 
@@ -168,12 +171,11 @@ class Index(Generic[T]):
         self,
         next_token: Offset | None = None,
         limit: Limit = Limit(DEFAULT_LIMIT),
-    ) -> tuple[list[Any], Offset | None]:
+    ) -> tuple[list[T], Offset | None]:
         """
         List index entries with pagination. Returns (records, next_token).
-        Read-repair: if the underlying record is missing (repository.get_optional
-        returns None), the index entry is deleted and the item is skipped so the
-        response is not 404.
+        Read-repair: if the underlying record is missing (RecordNotFoundError),
+        the index entry is deleted and the item is skipped so the response is not 404.
 
         For example, to list newest galleries:
         >>> records, next_token = index.search(limit=Limit(20))
@@ -185,25 +187,26 @@ class Index(Generic[T]):
             limit=limit,
             next_token=next_token,
         )
-        records: list[Any] = []
+        records: list[T] = []
         for key in page:
-            data = bucket.load(key)
+            data: Any = bucket.load(key)
             if data is None:
                 bucket.delete(key)
                 continue
-            indexed = Indexed.unserialize(data)
-            record = self.repository.get_optional(indexed.real_id)
-            if record is None:
+            indexed: Indexed = Indexed.unserialize(data)
+            try:
+                record: T = self.repository.get(indexed.real_id)
+            except RecordNotFoundError:
                 bucket.delete(key)
                 continue
             records.append(record)
         return (records, page.next_token)
 
-    def all(self) -> Iterator[Any]:
+    def all(self) -> Iterator[T]:
         """
         Iterate over all index entries (paginated internally). Read-repair: if the
-        underlying record is missing (repository.get_optional returns None), the
-        index entry is deleted and the item is skipped.
+        underlying record is missing (RecordNotFoundError), the index entry is
+        deleted and the item is skipped.
 
         For example, to iterate over every gallery in the index:
         >>> for gallery in index.all():
@@ -217,13 +220,14 @@ class Index(Generic[T]):
                 next_token=next_token,
             )
             for key in page:
-                data = bucket.load(key)
+                data: Any = bucket.load(key)
                 if data is None:
                     bucket.delete(key)
                     continue
-                indexed = Indexed.unserialize(data)
-                record = self.repository.get_optional(indexed.real_id)
-                if record is None:
+                indexed: Indexed = Indexed.unserialize(data)
+                try:
+                    record: T = self.repository.get(indexed.real_id)
+                except RecordNotFoundError:
                     bucket.delete(key)
                     continue
                 yield record
@@ -250,16 +254,16 @@ class PrivateIndex(Index[T]):
         return f"index/{self.NAME}/{self.user_email.slug}/"
 
     @cached_property
-    def repository(self) -> Any:
+    def repository(self) -> Repository[T]:
         """Repository instance for this user, used to load full records by real_id."""
         from models import User
 
-        user = User(email=self.user_email)
+        user: User = User(email=self.user_email)
         return self.REPOSITORY(user=user)
 
 
 @dataclass
-class ArtGalleryPublicIndex(Index[Any]):
+class ArtGalleryPublicIndex(Index[ArtGallery]):
     """
     Public index for art galleries. List returns galleries by reversed created_at.
 
@@ -268,12 +272,12 @@ class ArtGalleryPublicIndex(Index[Any]):
     >>> galleries, token = index.search(limit=Limit(10))
     """
 
-    REPOSITORY: ClassVar[type] = ArtGalleryRepository
+    REPOSITORY: ClassVar[type[Repository[ArtGallery]]] = ArtGalleryRepository
     NAME: ClassVar[str] = "galleries"
 
 
 @dataclass
-class JobsPrivateIndex(PrivateIndex[Any]):
+class JobsPrivateIndex(PrivateIndex[Job]):
     """
     Per-user index for jobs.
 
@@ -282,5 +286,5 @@ class JobsPrivateIndex(PrivateIndex[Any]):
     >>> jobs, token = index.search(limit=Limit(20))
     """
 
-    REPOSITORY: ClassVar[type] = JobsRepository
+    REPOSITORY: ClassVar[type[Repository[Job]]] = JobsRepository
     NAME: ClassVar[str] = "jobs"

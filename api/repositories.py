@@ -14,11 +14,10 @@ PrivateRepository (data/{email.slug}/jobs). Results holds paginated
 search results (records, next_token). Used by mutations, queries,
 indexes (to load full record by real_id), and worker tasks.
 
-**List responses and 404:** Use ``get_optional(identifier)`` when building
-list responses (e.g. from index entries). If the record is missing it returns
-None instead of raising RecordNotFoundError; callers can skip it and avoid
-surfacing 404 for a single missing item. Indexes use this and perform
-read-repair by deleting stale index entries when the underlying record is gone.
+**List responses and 404:** When building list responses (e.g. from index
+entries), callers that load records by id should catch RecordNotFoundError
+(or check for missing data) and skip the item, performing read-repair by
+deleting stale index entries when the underlying record is gone.
 
 Examples:
 >>> from repositories import ArtGalleryRepository, JobsRepository, Results
@@ -118,30 +117,11 @@ class Repository(Generic[T], ABC):
         """
         if not self.MODEL:
             raise ConfigurationError("MODEL is not set")
-        key = f"{self.path}/{identifier}.json"
+        key: str = f"{self.path}/{identifier}.json"
         data: Any = bucket.load(key)
         if data is None:
             logger.debug("Repository.get() | record not found path=%s id=%s", self.path, identifier)
             raise RecordNotFoundError(f"{identifier} not found in {self.path}")
-        if not isinstance(data, dict) or data.get("id") != identifier:
-            raise CorruptionError("ID mismatch in record")
-        return cast(T, self.MODEL.unserialize(data))
-
-    def get_optional(self, identifier: Identifier) -> T | None:
-        """
-        Load a record by identifier. Returns None if not found (does not raise).
-
-        Use when building list responses (e.g. index.search, index.all): skip
-        missing records instead of surfacing 404. Callers should delete the
-        corresponding index entry when None is returned (read-repair).
-        """
-        if not self.MODEL:
-            raise ConfigurationError("MODEL is not set")
-        key: str = f"{self.path}/{identifier}.json"
-        data: Any = bucket.load(key)
-        if data is None:
-            logger.debug("Repository.get_optional() | record not found path=%s id=%s", self.path, identifier)
-            return None
         if not isinstance(data, dict) or data.get("id") != identifier:
             raise CorruptionError("ID mismatch in record")
         return cast(T, self.MODEL.unserialize(data))

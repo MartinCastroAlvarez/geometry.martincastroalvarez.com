@@ -2,14 +2,6 @@
 
 Computational geometry project: art gallery algorithms, convex decomposition, and guard placement from first principles.
 
-## Documentation by area
-
-| Area | Description | Readme |
-|------|-------------|--------|
-| **Lab** | Python prototype, examples, and art gallery pipeline | [lab/README.md](lab/README.md) |
-| **API** | REST and worker backend (Lambda, S3, SQS, repositories, indexes) | [api/README.md](api/README.md) |
-| **Web** | React app and shared frontend packages (see project structure below) | [docs/3 methodology/4 FRONTEND.md](docs/3%20methodology/4%20FRONTEND.md) |
-
 ## Project structure
 
 | Path | Description |
