@@ -3,8 +3,7 @@
  *
  * Context: size 1–12 maps to col-span; 0 renders null. With nested Containers becomes grid;
  * with middle/bottom becomes flex. Supports padded, spaced, rounded, solid and left/center/right.
- * The height prop sets max-height only (not height), so content can shrink below that cap;
- * overflow scrolls on the y-axis when content exceeds it.
+ * For scrollable content with a max height, use Scrollable instead.
  * Forwards ref and common DOM events (click, keyboard, drag, touch, etc.).
  *
  * Do not add a className prop. For custom layout/sizing, wrap Container in a plain div
@@ -13,16 +12,18 @@
  * Example:
  *   <Container size={6} padded rounded><Content /></Container>
  *   <Container middle spaced left><Buttons>...</Buttons></Container>
- *   <Container height="50vh" padded><ScrollableContent /></Container>
+ *   // Different size per device (use useDevice from @geometry/ui):
+ *   const { isMobile, isTablet } = useDevice();
+ *   const size = isMobile ? 12 : isTablet ? 6 : 3;
+ *   <Container size={size}>...</Container>
  */
 
 import React, { forwardRef } from "react";
 
+/** Do not add further props (e.g. sizeMd, sizeLg). For responsive layout, use a wrapper div with Tailwind responsive classes. */
 export interface ContainerProps {
     name?: string;
     size?: number;
-    /** When set, sets max-height only (content can shrink below); overflow scrolls on the y-axis. Value in px number or CSS length (e.g. "200px", "50vh"). */
-    height?: number | string;
     padded?: boolean;
     spaced?: boolean;
     rounded?: boolean;
@@ -67,7 +68,6 @@ const colSpanClasses: Record<number, string> = {
 export const Container = forwardRef<HTMLDivElement, ContainerProps>(({
     name = "geometry-container",
     size = 12,
-    height,
     padded = false,
     spaced = false,
     rounded = false,
@@ -114,7 +114,7 @@ export const Container = forwardRef<HTMLDivElement, ContainerProps>(({
 
     classes.push(colSpanClasses[size]);
     if (padded) classes.push("p-2");
-    if (spaced) classes.push("gap-1");
+    if (spaced) classes.push("gap-2");
     if (rounded) classes.push("rounded-xl");
     if (solid) classes.push("bg-slate-900", "text-slate-100");
     if (left) classes.push("text-left");
@@ -122,18 +122,12 @@ export const Container = forwardRef<HTMLDivElement, ContainerProps>(({
     else if (center) classes.push("text-center");
 
     if (onClick) classes.push("cursor-pointer");
-    if (height != null) classes.push("overflow-y-auto");
     const finalClassName = classes.join(" ");
-
-    const style: React.CSSProperties | undefined = height != null
-        ? { maxHeight: typeof height === "number" ? `${height}px` : height }
-        : undefined;
 
     return (
         <div
             ref={ref}
             className={finalClassName}
-            style={style}
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
             onMouseMove={onMouseMove}

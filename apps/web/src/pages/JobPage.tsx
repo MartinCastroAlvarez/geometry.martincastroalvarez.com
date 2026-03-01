@@ -8,20 +8,22 @@
  *
  * The page displays the job id (truncated), status (success/failed) as a Badge, and an editable
  * title input. The title is initialized from job.meta.title and persisted on blur via useUpdateJob.
- * Publish and Unpublish buttons are only rendered when job.status === "success"; they call
+ * Publish and Unpublish buttons are only rendered when job.status === Status.SUCCESS; they call
  * usePublish and useUnpublish with the job id. A "Back to Jobs" link navigates to the jobs list.
- * If the id param is missing, a short message is shown. Analytics: JOB_VIEW is tracked when the
- * job has loaded, with the job id as the label.
+ * If the id param is missing, a short message is shown. If the job is not found (e.g. invalid id),
+ * the user is redirected to home (/). Analytics: JOB_VIEW is tracked when the job has loaded.
  */
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
-import { Container, Title, Text, Button, Input, Badge } from "@geometry/ui";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { Page, Container, Title, Text, Button, Input, Badge } from "@geometry/ui";
 import { useJob, usePublish, useUnpublish, useUpdateJob, useSession } from "@geometry/data";
+import { Status } from "@geometry/domain";
 import { useAnalytics, GoogleAnalyticsActions, GoogleAnalyticsCategories } from "@geometry/analytics";
-import { WithJobPageSkeleton } from "../skeletons";
+import { JobPageSkeleton } from "../skeletons";
 
 export const JobPage = () => {
     const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
     const { isLoading: sessionLoading } = useSession();
     const { job, isLoading: jobLoading } = useJob(id ?? null);
     const publish = usePublish();
@@ -42,25 +44,35 @@ export const JobPage = () => {
         }
     }, [id, jobLoading, job, track]);
 
-    if (!id) return <Container padded spaced><Text>Job ID required</Text></Container>;
+    useEffect(() => {
+        if (id && !sessionLoading && !jobLoading && !job) {
+            navigate("/", { replace: true });
+        }
+    }, [id, sessionLoading, jobLoading, job, navigate]);
 
-    const jobData = job!;
-    const loading = sessionLoading || jobLoading || !job;
+    if (!id) return <Page><Text>Job ID required</Text></Page>;
+
+    const loading = sessionLoading || jobLoading;
     const handlePublish = () => publish.mutate(id);
     const handleUnpublish = () => unpublish.mutate(id);
     const handleUpdateTitle = () => {
         if (title.trim() && id) updateJob.mutate({ jobId: id, meta: { title: title.trim() } });
     };
 
+    if (!loading && !job) {
+        return null;
+    }
+
+    if (loading) return <JobPageSkeleton />;
+
     return (
-        <WithJobPageSkeleton loading={loading}>
-            <Container padded spaced>
+        <Page>
             <Container center>
                 <Title xl center>
-                    Job {jobData.id.slice(0, 12)}...
+                    Job {job!.id.slice(0, 12)}...
                 </Title>
-                <Badge danger={jobData.status === "failed"} success={jobData.status === "success"}>
-                    {jobData.status}
+                <Badge danger={job!.status === Status.FAILED} success={job!.status === Status.SUCCESS}>
+                    {job!.status}
                 </Badge>
             </Container>
             <Container padded spaced>
@@ -74,7 +86,7 @@ export const JobPage = () => {
                 />
             </Container>
             <Container padded spaced>
-                {jobData.status === "success" && (
+                {job!.status === Status.SUCCESS && (
                     <>
                         <Button onClick={handlePublish} disabled={publish.isPending}>
                             {publish.isPending ? "Publishing..." : "Publish"}
@@ -90,7 +102,6 @@ export const JobPage = () => {
                     <Button>Back to Jobs</Button>
                 </Link>
             </Container>
-            </Container>
-        </WithJobPageSkeleton>
+        </Page>
     );
 };

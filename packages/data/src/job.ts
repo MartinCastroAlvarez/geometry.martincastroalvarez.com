@@ -114,7 +114,7 @@ export const useCreateJob = () => {
     const queryClient = useQueryClient();
     const token = useAuthentication();
     const mutation = useMutation({
-        mutationFn: ({
+        mutationFn: async ({
             boundary,
             obstacles,
             title,
@@ -122,7 +122,10 @@ export const useCreateJob = () => {
             boundary: Array<{ x: number; y: number }>;
             obstacles: Array<Array<{ x: number; y: number }>>;
             title?: string;
-        }) => new GeometryApiClient(GEOMETRY_API_URL, token).createJob(boundary, obstacles, title),
+        }) => {
+            const data = await new GeometryApiClient(GEOMETRY_API_URL, token).createJob(boundary, obstacles, title);
+            return toDomainJob(fromApiJob(data));
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: JOBS_QUERY_KEY });
         },

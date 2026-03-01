@@ -3,7 +3,6 @@
  * Matches EditorPage layout: centered title, editor (8 cols) | summary (4 cols) on desktop,
  * stacked on mobile; EditorSkeleton matches Editor (grid, pulse, polygon).
  */
-import type { ReactNode } from "react";
 import { Skeleton, Container, InputSkeleton, useDevice } from "@geometry/ui";
 import { EditorSkeleton, EditorReviewSkeleton } from "@geometry/editor";
 
@@ -36,6 +35,3 @@ export const EditorPageSkeleton = () => {
         </Skeleton>
     );
 };
-
-export const WithEditorPageSkeleton = ({ loading, children }: { loading: boolean; children: ReactNode }) =>
-    loading ? <EditorPageSkeleton /> : <>{children}</>;

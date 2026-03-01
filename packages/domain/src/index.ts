@@ -9,6 +9,7 @@
  *   const p = Point.fromDict({ x: 0, y: 0 });  const u = User.fromDict(dict);
  */
 export * from './Point';
+export * from './Status';
 export * from './User';
 export * from './Polygon';
 export * from './ArtGallery';

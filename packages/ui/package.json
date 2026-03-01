@@ -18,6 +18,8 @@
     "@geometry/i18n": "workspace:*",
     "@geometry/theme": "workspace:*",
     "lucide-react": "^0.562.0",
+    "react-json-view": "^1.21.3",
+    "react-masonry": "^1.0.7",
     "sonner": "^2.0.7"
   },
   "peerDependencies": {

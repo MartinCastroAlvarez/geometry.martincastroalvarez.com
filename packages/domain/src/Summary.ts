@@ -2,23 +2,33 @@
  * Summary: validation output from polygon validation API.
  *
  * Context: Flat record of check keys (e.g. "polygon.convex", "obstacles.0.contained")
- * with string values (status for check keys, message for "*.note" keys).
- * The API always returns "status" (overall: "success" | "failed" | "pending") and
- * "status.note". Used by EditorPage and SummaryTable to display validation results
- * and to gate the Submit button (only when status === "success").
+ * with string values for sub-checks; the overall "status" key is Status (PENDING/SUCCESS/FAILED).
+ * The API returns string values; use parseSummaryFromApi() to build Summary from the response.
+ * Used by EditorPage and EditorReview to display validation results and to gate the Submit button.
  *
  * Example:
- *   const summary: Summary = { "status": "success", "status.note": "All validations passed.", "polygon.convex": "success" };
+ *   const summary: Summary = parseSummaryFromApi(await response.json());
+ *   isValidationSuccess(summary) // true when summary.status === Status.SUCCESS
  */
+import { parseStatus, Status } from "./Status";
 
-export type Summary = Record<string, string>;
-
-/** Key for overall validation status; value is "success" | "failed" | "pending". */
 export const SUMMARY_STATUS_KEY = "status" as const;
 
+/** Overall validation status is Status; other keys are string (e.g. "status.note", "polygon.convex"). */
+export interface Summary {
+    [SUMMARY_STATUS_KEY]: Status;
+    [key: string]: string | Status | undefined;
+}
+
 /**
- * Returns true only when the validation response has overall status "success"
- * (all sub-validations passed). Use to show the Submit button.
+ * Build Summary from API response (parses "status" string into Status).
+ */
+export function parseSummaryFromApi(raw: Record<string, string>): Summary {
+    return { ...raw, [SUMMARY_STATUS_KEY]: parseStatus(raw[SUMMARY_STATUS_KEY]) };
+}
+
+/**
+ * Returns true only when the validation response has overall status SUCCESS (all sub-validations passed).
  */
 export const isValidationSuccess = (summary: Summary): boolean =>
-    summary[SUMMARY_STATUS_KEY] === "success";
+    summary.status === Status.SUCCESS;

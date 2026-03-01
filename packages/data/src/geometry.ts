@@ -11,7 +11,7 @@
  *   const jobs = await client.getJobs({ limit: 10 });
  */
 
-import type { Summary } from "@geometry/domain";
+import { parseSummaryFromApi, type Summary } from "@geometry/domain";
 import { GEOMETRY_API_URL } from "./constants";
 import { toJobPayloadWire, toPolygonPayloadWire } from "./adapters";
 import type {
@@ -147,7 +147,8 @@ export class GeometryApiClient {
             method: "POST",
             body: JSON.stringify(body),
         });
-        return response.json() as Promise<Summary>;
+        const raw = (await response.json()) as Record<string, string>;
+        return parseSummaryFromApi(raw);
     }
 
     async getArtGalleries(params?: { nextToken?: string; limit?: number }): Promise<ListResponse<GeometryApiArtGallery>> {

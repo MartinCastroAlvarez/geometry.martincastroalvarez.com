@@ -12,10 +12,10 @@
  */
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { Container, Title, Text } from "@geometry/ui";
+import { Page, Container, Title, Text } from "@geometry/ui";
 import { useArtGallery } from "@geometry/data";
 import { useAnalytics, GoogleAnalyticsActions, GoogleAnalyticsCategories } from "@geometry/analytics";
-import { WithGalleryPageSkeleton } from "../skeletons";
+import { GalleryPageSkeleton } from "../skeletons";
 
 export const GalleryPage = () => {
     const { id } = useParams<{ id: string }>();
@@ -33,18 +33,18 @@ export const GalleryPage = () => {
         }
     }, [id, isLoading, gallery, track]);
 
-    if (!id) return <Container padded spaced><Text>Gallery ID required</Text></Container>;
+    if (!id) return <Page><Text>Gallery ID required</Text></Page>;
+
+    if (loading) return <GalleryPageSkeleton />;
 
     return (
-        <WithGalleryPageSkeleton loading={loading}>
-            <Container padded spaced>
+        <Page>
             <Container center>
                 <Title xl center>
                     {gallery!.title ?? "Untitled Art Gallery"}
                 </Title>
                 <Text center>ID: {gallery!.id}</Text>
             </Container>
-            </Container>
-        </WithGalleryPageSkeleton>
+        </Page>
     );
 };

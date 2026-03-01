@@ -9,15 +9,13 @@
  * minimal and can be extended later with marketing copy, featured galleries, or a dashboard.
  */
 import { useSession } from "@geometry/data";
-import { Container } from "@geometry/ui";
-import { WithHomePageSkeleton } from "../skeletons";
+import { Page } from "@geometry/ui";
+import { HomePageSkeleton } from "../skeletons";
 
 export const HomePage = () => {
     const { isLoading: sessionLoading } = useSession();
 
-    return (
-        <WithHomePageSkeleton loading={sessionLoading}>
-            <Container padded spaced />
-        </WithHomePageSkeleton>
-    );
+    if (sessionLoading) return <HomePageSkeleton />;
+
+    return <Page />;
 };

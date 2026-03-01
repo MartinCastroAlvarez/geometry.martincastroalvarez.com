@@ -6,13 +6,18 @@
  * (e.g. ArtGallery, Polygon, Point) and stays independent of API field names.
  * polygonToApiFormat converts domain Polygon to the wire format for validatePolygon and createJob.
  *
+ * When a job has valid boundary and obstacles in its stdin (from list, getJob, or createJob
+ * response), we attach an ArtGallery to the job. For simplicity, the gallery is identified
+ * by the job id (i.e. we do not assign a separate gallery id; use job.id when referring to
+ * the job's gallery).
+ *
  * Example:
  *   const apiJob = await geometryApiClient.getJob(id);
- *   const job = toDomainJob(fromApiJob(apiJob));  // Job with typed meta, stdout, etc.
+ *   const job = toDomainJob(fromApiJob(apiJob));  // Job with typed meta, stdout, artGallery if valid stdin
  *   polygonToApiFormat(domainPolygon);  // [{ x, y }, ...] for API
  */
 
-import { ArtGallery, Point, Polygon } from "@geometry/domain";
+import { ArtGallery, Point, Polygon, parseStatus } from "@geometry/domain";
 import type { Job, Gallery } from "@geometry/domain";
 import type { ApiUser, ApiJob, ApiArtGallery, ApiPolygon } from "./types";
 
@@ -24,13 +29,75 @@ export const toDomainUser = (api: ApiUser): { email: string | null; name: string
     };
 };
 
+/** Normalize a point from stdin: either [x, y] or { x, y }. */
+function parsePoint(p: unknown): { x: number; y: number } | null {
+    if (Array.isArray(p) && p.length >= 2 && typeof p[0] === "number" && typeof p[1] === "number") {
+        return { x: p[0], y: p[1] };
+    }
+    if (p != null && typeof p === "object" && "x" in p && "y" in p) {
+        const o = p as { x: unknown; y: unknown };
+        if (typeof o.x === "number" && typeof o.y === "number") return { x: o.x, y: o.y };
+    }
+    return null;
+}
+
+/** Parse boundary from stdin: array of points ( [x,y] or {x,y} ). Must have at least 3 points. */
+function parseBoundary(stdin: Record<string, unknown>): Polygon | null {
+    const raw = stdin.boundary;
+    if (!Array.isArray(raw) || raw.length < 3) return null;
+    const points: Point[] = [];
+    for (const p of raw) {
+        const pt = parsePoint(p);
+        if (!pt) return null;
+        points.push(new Point(pt.x, pt.y));
+    }
+    return new Polygon(points);
+}
+
+/** Parse obstacles from stdin: array of polygons. */
+function parseObstacles(stdin: Record<string, unknown>): Polygon[] {
+    const raw = stdin.obstacles;
+    if (!Array.isArray(raw)) return [];
+    const obstacles: Polygon[] = [];
+    for (const poly of raw) {
+        if (!Array.isArray(poly) || poly.length < 3) continue;
+        const points: Point[] = [];
+        let ok = true;
+        for (const p of poly) {
+            const pt = parsePoint(p);
+            if (!pt) {
+                ok = false;
+                break;
+            }
+            points.push(new Point(pt.x, pt.y));
+        }
+        if (ok && points.length >= 3) obstacles.push(new Polygon(points));
+    }
+    return obstacles;
+}
+
+/**
+ * Build an ArtGallery from a job's stdin when it contains valid boundary and obstacles.
+ * Used when reading job list, single job, or createJob response. The gallery is conceptually
+ * identified by the job id (see module doc); we do not set a separate id on ArtGallery.
+ */
+export function artGalleryFromJobStdin(jobId: string, stdin: Record<string, unknown>): ArtGallery | undefined {
+    const boundary = parseBoundary(stdin);
+    if (!boundary) return undefined;
+    const obstacles = parseObstacles(stdin);
+    return new ArtGallery(boundary, obstacles, []);
+}
+
 export const toDomainJob = (api: ApiJob): Job => {
+    const stdin = api.stdin ?? {};
+    const artGallery = artGalleryFromJobStdin(api.id, stdin);
     return {
         id: api.id,
-        status: api.status,
+        status: parseStatus(api.status),
         stage: api.stage,
         meta: api.meta ?? {},
         stdout: api.stdout ?? {},
+        ...(artGallery != null ? { artGallery } : {}),
     };
 };
 

@@ -4,12 +4,15 @@
  * When artGallery is passed, shows the form in a Container above the table.
  */
 import { useLocale } from "@geometry/i18n";
-import { Container, Bullet, Toolbar, Button, Problem, Inspector } from "@geometry/ui";
+import { Container, Scrollable, Bullet, Toolbar, Button, Problem, Inspector } from "@geometry/ui";
 import type { ArtGallery, Summary } from "@geometry/domain";
 import { EditorReviewSkeleton } from "./EditorReview.skeleton";
 
-/** Shared height for the three review tables (info, summary, inspector); content scrolls when larger. */
+/** Shared height for the three review tables (info, summary); content scrolls when larger. */
 const REVIEW_TABLE_CONTAINER_HEIGHT_PX = 500;
+
+/** Max height of the Inspector (JSON view) in pixels. */
+const INSPECTOR_SIZE_PX = 300;
 
 const REQUIREMENT_KEYS = [
     "validation.requirementBoundaryConvex",
@@ -29,7 +32,7 @@ const EditorInfoTable = ({ excludeRequirements }: EditorInfoTableProps = {}) => 
         ? REQUIREMENT_KEYS.filter((k) => !excludeRequirements.includes(k))
         : [...REQUIREMENT_KEYS];
     return (
-        <Container padded spaced rounded left height={REVIEW_TABLE_CONTAINER_HEIGHT_PX}>
+        <Scrollable padded spaced rounded left height={REVIEW_TABLE_CONTAINER_HEIGHT_PX}>
             {keys.map((key) => (
                 <Container key={key}>
                     <Bullet sm left>
@@ -37,7 +40,7 @@ const EditorInfoTable = ({ excludeRequirements }: EditorInfoTableProps = {}) => 
                     </Bullet>
                 </Container>
             ))}
-        </Container>
+        </Scrollable>
     );
 };
 
@@ -67,9 +70,10 @@ const summaryRows = (summary: Summary): { key: string; status: string; note: str
     return statusKeys
         .sort()
         .map((key) => {
-            const status = summary[key] ?? "pending";
+            const val = summary[key];
+            const statusStr = val == null ? "pending" : (typeof val === "string" ? val : val);
             const note = summary[`${key}.note`] ?? "";
-            return { key, status: status === "failed" ? "ERROR" : status.toUpperCase(), note };
+            return { key, status: statusStr === "failed" ? "ERROR" : statusStr.toUpperCase(), note };
         });
 };
 
@@ -101,7 +105,7 @@ const EditorSummaryTable = ({ summary }: EditorSummaryTableProps) => {
     };
 
     return (
-        <Container padded spaced rounded left height={REVIEW_TABLE_CONTAINER_HEIGHT_PX}>
+        <Scrollable padded spaced rounded left height={REVIEW_TABLE_CONTAINER_HEIGHT_PX}>
             {sorted.map(({ key, status, note }) => (
                 <Container key={key}>
                     <Bullet
@@ -116,7 +120,7 @@ const EditorSummaryTable = ({ summary }: EditorSummaryTableProps) => {
                     </Bullet>
                 </Container>
             ))}
-        </Container>
+        </Scrollable>
     );
 };
 
@@ -125,9 +129,9 @@ type EditorInspectorTableProps = { artGallery: ArtGallery | null };
 const EditorInspectorTable = ({ artGallery }: EditorInspectorTableProps) => {
     if (artGallery == null) return null;
     return (
-        <Container name="geometry-inspector-scroll" height={REVIEW_TABLE_CONTAINER_HEIGHT_PX}>
-            <Inspector data={artGallery.toDict()} size={REVIEW_TABLE_CONTAINER_HEIGHT_PX - 24} />
-        </Container>
+        <Scrollable name="geometry-inspector-scroll" height={INSPECTOR_SIZE_PX}>
+            <Inspector data={artGallery.toDict()} size={INSPECTOR_SIZE_PX} />
+        </Scrollable>
     );
 };
 

@@ -1,8 +1,6 @@
 /**
  * Skeleton for public Gallery view. Reuses @geometry/ui skeletons.
- * WithGalleryPageSkeleton shows skeleton when loading, otherwise renders children.
  */
-import type { ReactNode } from "react";
 import { Skeleton, Container, TitleSkeleton, TextSkeleton } from "@geometry/ui";
 
 export const GalleryPageSkeleton = () => (
@@ -15,6 +13,3 @@ export const GalleryPageSkeleton = () => (
         </Container>
     </Skeleton>
 );
-
-export const WithGalleryPageSkeleton = ({ loading, children }: { loading: boolean; children: ReactNode }) =>
-    loading ? <GalleryPageSkeleton /> : <>{children}</>;

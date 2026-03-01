@@ -21,7 +21,6 @@ Computational geometry project: art gallery algorithms, convex decomposition, an
 | **packages/editor** | Polygon editor: Konva-based Editor, Toolbar, vertex/edge interaction; adapters to/from domain polygons. |
 | **packages/i18n** | Localization: Language enum, LocaleProvider, useLocale, persisted locale, JSON translations (EN/ES). |
 | **packages/ui** | Design system: layout (Body, Container, Nav), typography (Title, Text), Button, Toggle, Toaster, etc.; Tailwind. |
-| **packages/config/typescript** | Shared TypeScript config (base tsconfig). |
 | **api/** | Backend: REST handlers, S3/SQS, repositories, indexes, worker Lambda; see [api/README.md](api/README.md). |
 | **lab/** | Python prototype and example scripts for art gallery pipeline; see [lab/README.md](lab/README.md). |
 | **tests/** | API tests (pytest); run with `pnpm run build:api:pytest` or `pnpm run build:api:coverage`. |

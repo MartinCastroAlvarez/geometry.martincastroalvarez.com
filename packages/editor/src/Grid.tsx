@@ -21,7 +21,7 @@ const DEFAULT_CELL = 18;
 
 export const Grid = ({ width, height, cell = DEFAULT_CELL }: GridProps) => (
     <div
-        className="bg-slate-200 dark:bg-slate-900 absolute inset-0 pointer-events-none z-0 opacity-40"
+        className="bg-slate-200 dark:bg-slate-900 absolute inset-0 pointer-events-none z-0 opacity-30"
         style={{
             backgroundImage: GRID_LINES,
             backgroundSize: `${cell}px ${cell}px`,

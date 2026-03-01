@@ -21,8 +21,8 @@ import { useCallback, useEffect, useRef, useState, startTransition } from "react
 import { useNavigate } from "react-router-dom";
 import { ArtGallery, Polygon } from "@geometry/domain";
 import { Editor, EditorReview } from "@geometry/editor";
-import { Container, Input, useDevice } from "@geometry/ui";
-import { WithEditorPageSkeleton } from "../skeletons";
+import { Page, Container, Input, useDevice } from "@geometry/ui";
+import { EditorPageSkeleton } from "../skeletons";
 import { useSession, useValidateJob, useCreateJob, validateJob } from "@geometry/data";
 import { useLocale } from "@geometry/i18n";
 import { useAnalytics, GoogleAnalyticsActions, GoogleAnalyticsCategories } from "@geometry/analytics";
@@ -132,55 +132,55 @@ export const EditorPage = () => {
         [validateJobMutation, createJob]
     );
 
+    if (sessionLoading) return <EditorPageSkeleton />;
+
     return (
-        <WithEditorPageSkeleton loading={sessionLoading}>
-            <Container padded spaced>
-                <Container>
-                    <Container {...(!isMobile && { size: EDITOR_COL_DESKTOP })}>
-                        <Container middle center>
-                            <Input
-                                type="text"
-                                value={galleryTitle}
-                                onChange={(e) => setGalleryTitle(e.target.value)}
-                                placeholder={t("editor.untitledGallery")}
-                                aria-label={t("editor.untitledGallery")}
-                                className="max-w-md w-full"
-                                lg
-                                transparent
-                            />
-                        </Container>
-                        <Container>
-                        <div
-                            ref={editorRef}
-                            style={{ display: "grid", width: "100%", minHeight: EDITOR_INITIAL_HEIGHT }}
-                        >
-                            <Editor
-                                width={editorSize.width}
-                                height={editorSize.height}
-                                gallery={gallery}
-                                onChange={handleChange}
-                            />
-                        </div>
-                        </Container>
+        <Page>
+            <Container>
+                <Container {...(!isMobile && { size: EDITOR_COL_DESKTOP })}>
+                    <Container middle center>
+                        <Input
+                            type="text"
+                            value={galleryTitle}
+                            onChange={(e) => setGalleryTitle(e.target.value)}
+                            placeholder={t("editor.untitledGallery")}
+                            aria-label={t("editor.untitledGallery")}
+                            className="max-w-md w-full"
+                            lg
+                            transparent
+                        />
                     </Container>
-                    <Container padded spaced left {...(!isMobile && { size: SUMMARY_COL_DESKTOP })}>
-                        <Container size={isMobile ? 0 : 12}>
-                            <br />
-                        </Container>
-                        <div className="col-span-12 w-full min-w-0">
-                            <EditorReview
-                                summary={validationResult ?? undefined}
-                                artGallery={validGallery}
-                                errorMessage={errorMessage}
-                                isLoading={validateJobMutation.isPending}
-                                onValidate={handleValidate}
-                                onSubmit={handleSubmit}
-                                disabled={validateJobMutation.isPending || createJob.isPending}
-                            />
-                        </div>
+                    <Container>
+                    <div
+                        ref={editorRef}
+                        style={{ display: "grid", width: "100%", minHeight: EDITOR_INITIAL_HEIGHT }}
+                    >
+                        <Editor
+                            width={editorSize.width}
+                            height={editorSize.height}
+                            gallery={gallery}
+                            onChange={handleChange}
+                        />
+                    </div>
                     </Container>
                 </Container>
+                <Container padded spaced left {...(!isMobile && { size: SUMMARY_COL_DESKTOP })}>
+                    <Container size={isMobile ? 0 : 12}>
+                        <br />
+                    </Container>
+                    <div className="col-span-12 w-full min-w-0">
+                        <EditorReview
+                            summary={validationResult ?? undefined}
+                            artGallery={validGallery}
+                            errorMessage={errorMessage}
+                            isLoading={validateJobMutation.isPending}
+                            onValidate={handleValidate}
+                            onSubmit={handleSubmit}
+                            disabled={validateJobMutation.isPending || createJob.isPending}
+                        />
+                    </div>
+                </Container>
             </Container>
-        </WithEditorPageSkeleton>
+        </Page>
     );
 };

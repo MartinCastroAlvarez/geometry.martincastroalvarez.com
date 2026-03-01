@@ -2,7 +2,7 @@
  * Status badges: danger (red), success (green), or default (neutral).
  *
  * Context: Renders a small pill-style span with variant styles. danger and success set
- * background and border; default uses bg-slate-800, text-primary, border-slate-600 (unified palette).
+ * background; default uses a light neutral (bg-slate-200, text-slate-700). No border.
  *
  * Example:
  *   <Badge>Draft</Badge>
@@ -22,10 +22,10 @@ const baseClasses = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs
 
 export const Badge: React.FC<BadgeProps> = ({ children, danger = false, success = false }) => {
     const variantClasses = danger
-        ? "bg-danger-10 text-danger border border-danger"
+        ? "bg-danger-10 text-danger"
         : success
-          ? "bg-success-10 text-success border border-success"
-          : "bg-slate-800 text-slate-100 border border-slate-600";
+          ? "bg-success-10 text-success"
+          : "bg-slate-200 text-slate-700";
 
     return (
         <span className={`geometry-badge ${baseClasses} ${variantClasses}`.trim()}>

@@ -66,45 +66,11 @@ body {
   border: none !important;
 }
 
-/* Scrollable Container: visible scrollbar in dark mode (default theme) */
-.geometry-container.overflow-y-auto {
-  scrollbar-width: thin;
-  scrollbar-color: rgb(100 116 139) rgb(30 41 59);
-}
-.geometry-container.overflow-y-auto::-webkit-scrollbar {
-  width: 8px;
-}
-.geometry-container.overflow-y-auto::-webkit-scrollbar-track {
-  background: rgb(30 41 59);
-}
-.geometry-container.overflow-y-auto::-webkit-scrollbar-thumb {
-  background: rgb(100 116 139);
-  border-radius: 4px;
-}
-.geometry-container.overflow-y-auto::-webkit-scrollbar-thumb:hover {
-  background: rgb(148 163 184);
-}
-
-[data-theme="light"] .geometry-container.overflow-y-auto {
-  scrollbar-color: rgb(148 163 184) rgb(226 232 240);
-}
-[data-theme="light"] .geometry-container.overflow-y-auto::-webkit-scrollbar-track {
-  background: rgb(226 232 240);
-}
-[data-theme="light"] .geometry-container.overflow-y-auto::-webkit-scrollbar-thumb {
-  background: rgb(148 163 184);
-}
-[data-theme="light"] .geometry-container.overflow-y-auto::-webkit-scrollbar-thumb:hover {
-  background: rgb(100 116 139);
-}
-
-/* Editor page inspector: scrollable but scrollbar hidden (outer and inner Container) */
-.geometry-inspector-scroll,
-.geometry-inspector-scroll .geometry-container.overflow-y-auto {
+/* Hide scrollbar but keep scroll functionality (e.g. Scrollable) */
+.scroll-no {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-.geometry-inspector-scroll::-webkit-scrollbar,
-.geometry-inspector-scroll .geometry-container.overflow-y-auto::-webkit-scrollbar {
+.scroll-no::-webkit-scrollbar {
   display: none;
 }
