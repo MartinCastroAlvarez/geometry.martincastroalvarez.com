@@ -221,6 +221,13 @@ class JobMutation(PrivateControllerMixin, Mutation):
         if email is None:
             raise UserNotAuthenticatedError("User must be authenticated")
         queue.put(Message(action=Action.START, job_id=job.id, user_email=email))
+        index = JobsPrivateIndex(user_email=email)
+        index.save(
+            Indexed(
+                index_id=Identifier(Countdown.from_timestamp(job.created_at)),
+                real_id=job.id,
+            )
+        )
         logger.info("JobMutation.mutate() | created job_id=%s user=%s", job.id, email)
         return job.serialize()
 

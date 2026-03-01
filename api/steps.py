@@ -26,12 +26,15 @@ from abc import ABC
 from abc import abstractmethod
 from typing import Any
 
+from attributes import Countdown
 from attributes import Email
 from attributes import Identifier
 from attributes import Signature
 from enums import Action
 from enums import Status
 from enums import StepName
+from indexes import Indexed
+from indexes import JobsPrivateIndex
 from messages import Message
 from messages import Queue
 from models import Job
@@ -42,7 +45,8 @@ from repositories import JobsRepository
 class Step(ABC):
     """
     Abstract pipeline step. Receives a Job and user_email; run() returns a dict
-    merged into job.stdout. Steps are idempotent: same job + inputs => same result.
+    merged into job.stdout. Idempotent: given the same job and inputs, running
+    multiple times must produce the same outcome and must not duplicate side effects.
     """
 
     def __init__(self, job: Job, user_email: Email) -> None:
@@ -64,12 +68,15 @@ class ArtGalleryStep(Step):
     (visibility_matrix, stitching, ear_clipping, convex_component_optimization,
     guard_placement) with deterministic ids. Children are created with status
     SUCCESS momentarily so the parent's REPORT does not block waiting for them.
+    Idempotent: same job and inputs yield the same children and one REPORT;
+    retries do not duplicate child jobs or side effects.
     """
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
         queue: Queue = Queue()
         user: User = User(email=self.user_email)
         repo: JobsRepository = JobsRepository(user=user)
+        index: JobsPrivateIndex = JobsPrivateIndex(user_email=self.user_email)
 
         child_step_names: list[StepName] = [
             StepName.VISIBILITY_MATRIX,
@@ -93,6 +100,13 @@ class ArtGalleryStep(Step):
                 stdin=dict(self.job.stdin),
             )
             repo.save(child)
+            # Indexing may fail (e.g. duplicate key); task is idempotent so retries are safe.
+            index.save(
+                Indexed(
+                    index_id=Identifier(Countdown.from_timestamp(child.created_at)),
+                    real_id=child.id,
+                )
+            )
             child_ids.append(child_id)
 
         self.job.children_ids = child_ids
@@ -109,35 +123,50 @@ class ArtGalleryStep(Step):
 
 
 class VisibilityMatrixStep(Step):
-    """Visibility matrix step. Idempotent: same job => same output."""
+    """
+    Visibility matrix step. Idempotent: given the same job and inputs, running
+    multiple times produces the same outcome.
+    """
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
         return {"step:visibility_matrix": "success"}
 
 
 class StitchingStep(Step):
-    """Stitching step. Idempotent: same job => same output."""
+    """
+    Stitching step. Idempotent: given the same job and inputs, running
+    multiple times produces the same outcome.
+    """
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
         return {"step:stitching": "success"}
 
 
 class EarClippingStep(Step):
-    """Ear clipping step. Idempotent: same job => same output."""
+    """
+    Ear clipping step. Idempotent: given the same job and inputs, running
+    multiple times produces the same outcome.
+    """
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
         return {"step:ear_clipping": "success"}
 
 
 class ConvexComponentOptimizationStep(Step):
-    """Convex component optimization step. Idempotent: same job => same output."""
+    """
+    Convex component optimization step. Idempotent: given the same job and
+    inputs, running multiple times produces the same outcome.
+    """
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
         return {"step:convex_component_optimization": "success"}
 
 
 class GuardPlacementStep(Step):
-    """Guard placement step. Idempotent: same job => same output."""
+    """
+    Guard placement step. Idempotent: given the same job and inputs, running
+    multiple times produces the same outcome.
+    """
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
         return {"step:guard_placement": "success"}
