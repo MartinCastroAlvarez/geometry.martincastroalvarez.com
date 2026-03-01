@@ -25,9 +25,15 @@ export const useSession = () => {
     const query = useQuery({
         queryKey: [...SESSION_QUERY_KEY, token ?? ""],
         queryFn: async () => {
+            console.log("[data] useSession request", { token: token ?? null });
             const data = await new AuthApiClient(SESSION_API_URL, token!).getSession();
-            if (data === null) return null;
-            return User.fromDict(toDomainUser(data));
+            if (data === null) {
+                console.log("[data] useSession response", null);
+                return null;
+            }
+            const out = User.fromDict(toDomainUser(data));
+            console.log("[data] useSession response", out);
+            return out;
         },
         enabled: !!token,
         staleTime: STALE_TIME_SESSION_MS,

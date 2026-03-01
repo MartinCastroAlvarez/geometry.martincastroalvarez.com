@@ -10,10 +10,10 @@ import api  # noqa: F401
 from attributes import Email
 from attributes import Identifier
 
+from exceptions import JobStdoutMissingGeometryError
 from exceptions import UnauthorizedError
 from exceptions import ValidationError
 from models import User
-from mutations import ArtGalleryHideMutation
 from mutations import ArtGalleryPublishMutation
 from mutations import gallery_id_from_job_and_user
 from mutations import JobMutation
@@ -221,40 +221,20 @@ class TestArtGalleryPublishMutation:
         with pytest.raises(ValidationError, match="Job must be successfully finished"):
             handler.execute({"job_id": Identifier("j1")})
 
-
-class TestArtGalleryHideMutation:
-    """Test ArtGalleryHideMutation validate and execute."""
-
-    def test_validate_success(self):
-        user = User.test()
-        handler = ArtGalleryHideMutation(user=user)
-        req = handler.validate({"id": "job-123"})
-        assert str(req["job_id"]) == "job-123"
-
-    @patch("mutations.ArtGalleryPublicIndex")
-    @patch("mutations.ArtGalleryRepository")
     @patch("mutations.JobsRepository")
-    @patch("mutations.Countdown")
-    def test_execute_hides_gallery(self, mock_countdown_cls, mock_job_repo_cls, mock_gallery_repo_cls, mock_index_cls):
-        from attributes import Timestamp
-
+    def test_execute_stdout_empty_boundary_raises(self, mock_job_repo_cls):
         user = User.test()
         mock_job_repo = MagicMock()
         mock_job_repo_cls.return_value = mock_job_repo
-        mock_job_repo.get.return_value = MagicMock()
-        mock_gallery_repo = MagicMock()
-        mock_gallery_repo_cls.return_value = mock_gallery_repo
-        gallery = MagicMock()
-        gallery.id = gallery_id_from_job_and_user(Identifier("j1"), user.email)
-        gallery.created_at = Timestamp.now()
-        mock_gallery_repo.get.return_value = gallery
-        mock_index = MagicMock()
-        mock_index_cls.return_value = mock_index
-        mock_index.exists.return_value = True
-        mock_countdown_cls.from_timestamp.return_value = "20240101120000"
-        handler = ArtGalleryHideMutation(user=user)
-        result = handler.execute({"job_id": Identifier("j1")})
-        assert result["deleted"] is True
-        assert "id" in result
-        mock_index.delete.assert_called_once()
-        mock_gallery_repo.delete.assert_called_once()
+        job = MagicMock()
+        job.is_finished.return_value = True
+        job.stdout = {"boundary": [], "obstacles": {}}
+        job.meta = {}
+        job.created_at = "2024-01-01T12:00:00"
+        job.updated_at = "2024-01-01T12:00:00"
+        mock_job_repo.get.return_value = job
+        handler = ArtGalleryPublishMutation(user=user)
+        with pytest.raises(JobStdoutMissingGeometryError, match="no boundary or obstacles"):
+            handler.execute({"job_id": Identifier("j1")})
+
+

@@ -16,20 +16,62 @@ import { Edge } from "./Edge";
 import { Grid } from "./Grid";
 import { Vertex } from "./Vertex";
 
+const FIT_PADDING = 16;
+
 export interface ViewerProps {
     /** Art gallery to display; when null or undefined, grid is shown with no polygon. */
     artGallery?: ArtGallery | null;
     /** Height of the canvas in pixels. Width is 100% of the container. */
     height: number;
+    /** When true, disables pan and interaction (e.g. for list thumbnails). Default false. */
+    readonly?: boolean;
+    /** When true, scales and centers the polygon so it fits in the viewer with padding. Default false. */
+    fitToView?: boolean;
 }
 
-export const Viewer = ({ artGallery, height }: ViewerProps) => {
-    return <ViewerInner artGallery={artGallery} height={height} />;
+export const Viewer = ({ artGallery, height, readonly = false, fitToView = false }: ViewerProps) => {
+    return <ViewerInner artGallery={artGallery} height={height} readonly={readonly} fitToView={fitToView} />;
 };
 
 const EMPTY_STATE: { vertices: EditorVertex[]; edges: [number, number][] } = { vertices: [], edges: [] };
 
-const ViewerInner = ({ artGallery, height }: { artGallery?: ArtGallery | null; height: number }) => {
+function computeFitTransform(
+    vertices: EditorVertex[],
+    stageWidth: number,
+    stageHeight: number
+): { scale: number; x: number; y: number } | null {
+    if (vertices.length === 0 || stageWidth <= 0 || stageHeight <= 0) return null;
+    let minX = Infinity,
+        minY = Infinity,
+        maxX = -Infinity,
+        maxY = -Infinity;
+    for (const v of vertices) {
+        minX = Math.min(minX, v.x);
+        minY = Math.min(minY, v.y);
+        maxX = Math.max(maxX, v.x);
+        maxY = Math.max(maxY, v.y);
+    }
+    const contentW = maxX - minX || 1;
+    const contentH = maxY - minY || 1;
+    const usableW = Math.max(stageWidth - 2 * FIT_PADDING, 1);
+    const usableH = Math.max(stageHeight - 2 * FIT_PADDING, 1);
+    const scale = Math.min(usableW / contentW, usableH / contentH, 20);
+    const x = stageWidth / 2 - ((minX + maxX) / 2) * scale;
+    const y = stageHeight / 2 - ((minY + maxY) / 2) * scale;
+    return { scale, x, y };
+}
+
+const ViewerInner = ({
+    artGallery,
+    height,
+    readonly = false,
+    fitToView = false,
+}: {
+    artGallery?: ArtGallery | null;
+    height: number;
+    readonly?: boolean;
+    fitToView?: boolean;
+}) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const stageWrapperRef = useRef<HTMLDivElement>(null);
     const [containerSize, setContainerSize] = useState({ width: 0, height });
@@ -71,6 +113,15 @@ const ViewerInner = ({ artGallery, height }: { artGallery?: ArtGallery | null; h
         [vertices, edges]
     );
 
+    const fitTransform = useMemo(
+        () => (fitToView && vertices.length > 0 ? computeFitTransform(vertices, stageWidth, stageHeight) : null),
+        [fitToView, vertices, stageWidth, stageHeight]
+    );
+
+    const layerScale = fitTransform ? fitTransform.scale : 1;
+    const layerX = fitTransform ? fitTransform.x : pan.x;
+    const layerY = fitTransform ? fitTransform.y : pan.y;
+
     const dragBounds = useMemo(
         () => ({ width: stageWidth, height: stageHeight }),
         [stageWidth, stageHeight]
@@ -78,6 +129,7 @@ const ViewerInner = ({ artGallery, height }: { artGallery?: ArtGallery | null; h
 
     const handleStageMouseDown = useCallback(
         (e: { target: { getStage: () => unknown }; evt?: MouseEvent }) => {
+            if (readonly) return;
             const stage = e.target.getStage();
             if (!stage || e.target !== stage) return;
             const evt = e.evt;
@@ -91,7 +143,7 @@ const ViewerInner = ({ artGallery, height }: { artGallery?: ArtGallery | null; h
             };
             setIsPanning(true);
         },
-        [pan.x, pan.y]
+        [readonly, pan.x, pan.y]
     );
 
     useEffect(() => {
@@ -163,7 +215,7 @@ const ViewerInner = ({ artGallery, height }: { artGallery?: ArtGallery | null; h
                             transform: `scale(${scale})`,
                             transformOrigin: "0 0",
                             zIndex: 2,
-                            cursor: isPanning ? "grabbing" : "grab",
+                            cursor: readonly ? "default" : isPanning ? "grabbing" : "grab",
                         }}
                     >
                         <Stage
@@ -172,14 +224,19 @@ const ViewerInner = ({ artGallery, height }: { artGallery?: ArtGallery | null; h
                             onMouseDown={handleStageMouseDown}
                             style={{ position: "relative", borderRadius: 10 }}
                         >
-                            <Layer x={pan.x} y={pan.y}>
+                            <Layer
+                                x={layerX}
+                                y={layerY}
+                                scaleX={layerScale}
+                                scaleY={layerScale}
+                            >
                                 {allEdges.map(({ start, end }, i) => (
                                     <Edge
                                         key={`edge-${i}`}
                                         start={start}
                                         end={end}
                                         edgeIndex={i}
-                                        scale={scale}
+                                        scale={scale * layerScale}
                                     />
                                 ))}
                                 {vertices.map((v, i) => (
@@ -189,7 +246,7 @@ const ViewerInner = ({ artGallery, height }: { artGallery?: ArtGallery | null; h
                                         index={i}
                                         draggable={false}
                                         dragBounds={dragBounds}
-                                        scale={scale}
+                                        scale={scale * layerScale}
                                     />
                                 ))}
                             </Layer>

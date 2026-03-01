@@ -7,7 +7,7 @@
 import { useNavigate } from "react-router-dom";
 import { Clock } from "lucide-react";
 import { Theme, useTheme } from "@geometry/theme";
-import { Nav, Button, Toggle, Card } from "@geometry/ui";
+import { Nav, Button, Toggle, Card, useDevice } from "@geometry/ui";
 import { NavSkeleton } from "./skeletons";
 import { useSession, useLogout, useJobs } from "@geometry/data";
 import { useLocale, Language } from "@geometry/i18n";
@@ -21,6 +21,7 @@ export const AppNav = () => {
     const { t, language, setLanguage } = useLocale();
     const { theme, setTheme } = useTheme();
     const { track } = useAnalytics();
+    const { isMobile } = useDevice();
 
     const goHome = () => {
         track({ action: GoogleAnalyticsActions.NAV_HOME, category: GoogleAnalyticsCategories.NAVIGATION });
@@ -54,9 +55,12 @@ export const AppNav = () => {
                     {t("nav.history")}
                 </Button>
             )}
+            {isMobile ? <span className="w-full basis-full block" /> : null}
             <Toggle value={language} options={Object.values(Language)} onChange={(v) => setLanguage(v as Language)} sm />
             <Toggle value={theme} options={Object.values(Theme)} onChange={(v) => setTheme(v as Theme)} formatLabel={(v) => t(`theme.${v}`)} sm />
-            {user && <Card user={user} sm right rounded />}
+            {isMobile ? <span className="w-full basis-full block" /> : null}
+            {user && <Card user={user} sm right={!isMobile} rounded />}
+            {isMobile ? <span className="w-full basis-full block" /> : null}
             {user ? (
                 <Button onClick={handleLogout} sm aria-label={t("nav.logout")}>
                     {t("nav.logout")}

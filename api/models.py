@@ -11,7 +11,7 @@ This module defines the domain models: Model (base), ArtGallery, Job, User.
 All implement Serializable[dict] for S3 persistence and JSON API transport.
 Model has id, created_at, updated_at; subclasses add fields and implement
 serialize/unserialize. ArtGallery holds boundary, obstacles, ears, convex
-components, guards, visibility, owner_email, owner_job_id. Job holds
+components, guards, visibility, owner_job_id. Job holds
 status, stage, stdin, stdout, meta, stderr, parent/children. User holds
 email, name, avatar_url and is used for auth and private repos. Used by
 repositories, indexes, mutations, and queries.
@@ -328,7 +328,7 @@ class Job(Model):
 class ArtGallery(Model):
     """
     Art gallery with boundary, obstacles, and computed attributes (ears, convex_components, guards, visibility).
-    owner_email and owner_job_id link to the job and user that created it.
+    owner_job_id links to the job that created it.
 
     For example, to load a gallery from job stdout or repository:
     >>> gallery = ArtGallery.unserialize(data)
@@ -338,10 +338,8 @@ class ArtGallery(Model):
 
     id: Identifier
     boundary: Polygon
-    owner_email: Email
     owner_job_id: Identifier
     title: Title
-    owner_image_url: Url | None = None
     created_at: Timestamp = field(default_factory=Timestamp.now)
     updated_at: Timestamp = field(default_factory=Timestamp.now)
     obstacles: Table[Polygon] = field(default_factory=Table)
@@ -354,7 +352,7 @@ class ArtGallery(Model):
         return f"ArtGallery(id={self.id})"
 
     def __repr__(self) -> str:
-        return f"ArtGallery(id={self.id!r}, owner_email={self.owner_email!r}, owner_job_id={self.owner_job_id!r})"
+        return f"ArtGallery(id={self.id!r}, owner_job_id={self.owner_job_id!r})"
 
     @classmethod
     def unserialize(cls, data: Any) -> ArtGallery:
@@ -362,19 +360,15 @@ class ArtGallery(Model):
         Build ArtGallery from dict. Unserializes boundary, obstacles, ears, guards, visibility.
 
         For example, to build a gallery from publish response:
-        >>> gallery = ArtGallery.unserialize({"id": "g1", "boundary": [...], "owner_email": "u@e.com", ...})
+        >>> gallery = ArtGallery.unserialize({"id": "g1", "boundary": [...], "owner_job_id": "j1", ...})
         >>> gallery.boundary
         Polygon(...)
         """
-        raw_owner_image_url = data.get("owner_image_url")
-        owner_image_url = Url(raw_owner_image_url) if raw_owner_image_url else None
         return cls(
             id=Identifier(data.get("id")),
             boundary=Polygon.unserialize(data.get("boundary") or []),
             obstacles=Table.unserialize([Polygon.unserialize(v) for v in data.get("obstacles", {}).values()]),
-            owner_email=Email(data.get("owner_email")),
             owner_job_id=Identifier(data.get("owner_job_id")),
-            owner_image_url=owner_image_url,
             title=Title(data.get("title", "Untitled Art Gallery")),
             created_at=Timestamp(data.get("created_at")),
             updated_at=Timestamp(data.get("updated_at")),
@@ -389,9 +383,7 @@ class ArtGallery(Model):
             "id": str(self.id),
             "boundary": self.boundary.serialize(),
             "obstacles": self.obstacles.serialize(),
-            "owner_email": str(self.owner_email),
             "owner_job_id": str(self.owner_job_id),
-            "owner_image_url": str(self.owner_image_url) if self.owner_image_url is not None else None,
             "title": str(self.title),
             "created_at": str(self.created_at),
             "updated_at": str(self.updated_at),

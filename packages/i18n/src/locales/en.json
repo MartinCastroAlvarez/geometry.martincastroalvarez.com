@@ -1,4 +1,21 @@
 {
+  "jobs": {
+    "status": {
+      "pending": "Pending",
+      "success": "Success",
+      "failed": "Failed"
+    },
+    "job": {
+      "input": "Input",
+      "output": "Output",
+      "error": "Error",
+      "metadata": "Metadata",
+      "created": "Created",
+      "updated": "Updated",
+      "publish": "Publish",
+      "publishConfirm": "This will publish the art gallery to the public gallery. Continue?"
+    }
+  },
   "errors": {
     "failedToFetch": "Connection error",
     "serviceUnavailable": "Service temporarily unavailable"

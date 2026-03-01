@@ -1,8 +1,8 @@
 /**
- * Geometry API client: jobs and art galleries (CRUD, publish/unpublish).
+ * Geometry API client: jobs and art galleries (CRUD, publish).
  *
  * Context: Constructor accepts optional jwtToken. When set, protected methods (getJobs,
- * getJob, publish, unpublish, updateJob, createJob) send it in X-Auth and throw if token
+ * getJob, publish, updateJob, createJob) send it in X-Auth and throw if token
  * is null/undefined. getArtGalleries and getArtGallery do not require token (public).
  * No interceptor; token is passed explicitly. Used by job.ts and gallery.ts hooks.
  *
@@ -97,14 +97,6 @@ export class GeometryApiClient {
         if (this.jwtToken == null || this.jwtToken === "") requireToken("publish");
         const response = await requestOrThrow(`${this.baseUrl}/v1/jobs/${jobId}`, this.jwtToken, {
             method: "POST",
-        });
-        return response.json();
-    }
-
-    async unpublish(jobId: string): Promise<{ deleted: boolean; id: string }> {
-        if (this.jwtToken == null || this.jwtToken === "") requireToken("unpublish");
-        const response = await requestOrThrow(`${this.baseUrl}/v1/jobs/${jobId}`, this.jwtToken, {
-            method: "DELETE",
         });
         return response.json();
     }

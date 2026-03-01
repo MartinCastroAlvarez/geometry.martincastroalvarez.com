@@ -47,7 +47,6 @@ export interface ApiArtGallery {
     id: string;
     boundary: ApiPolygon;
     obstacles: Record<string, ApiPolygon>;
-    owner_email: string;
     owner_job_id: string;
     title?: string;
     ears?: Record<string, unknown>;
@@ -93,7 +92,6 @@ export interface GeometryApiArtGallery {
     id: string;
     boundary: { points: Array<{ x: number; y: number }> };
     obstacles: Record<string, unknown>;
-    owner_email: string;
     owner_job_id: string;
     title: string;
     ears?: Record<string, unknown>;

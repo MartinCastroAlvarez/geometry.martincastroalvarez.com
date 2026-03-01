@@ -21,18 +21,20 @@ export const Scrollable: React.FC<ScrollableProps> = ({
     height,
     children,
     ...containerProps
-}) => {
-    const style: React.CSSProperties = {
-        maxHeight: typeof height === "number" ? `${height}px` : height,
-        overflowY: "auto",
-    };
-    return (
-        <Container {...containerProps}>
-            <div style={style} className="scroll-no">
-                {children}
-            </div>
-        </Container>
-    );
-};
+}) => (
+    <Container {...containerProps}>
+        <div
+            className="scroll-no md:max-h-[var(--scroll-h)] md:overflow-y-auto"
+            style={
+                {
+                    "--scroll-h":
+                        typeof height === "number" ? `${height}px` : height,
+                } as React.CSSProperties
+            }
+        >
+            {children}
+        </div>
+    </Container>
+);
 
 Scrollable.displayName = "Scrollable";

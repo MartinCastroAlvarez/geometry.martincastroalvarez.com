@@ -1,25 +1,43 @@
 /**
- * Skeleton for Jobs list page. Grid 2×4 of EditorSkeleton (same as HomePage).
+ * Skeleton for Jobs list page. Matches JobsPage layout: Page > grid of cells (title + badge + viewer).
+ * Each cell mirrors Cell: Container (padded, spaced, rounded) with TitleSkeleton (8 cols),
+ * BadgeSkeleton (4 cols), ViewerSkeleton (height 250). Responsive grid: 12/6/4 cols per cell.
  */
-import { Skeleton, Container } from "@geometry/ui";
-import { EditorSkeleton } from "@geometry/editor";
+import { Skeleton, Page, Container, TitleSkeleton, BadgeSkeleton, useDevice } from "@geometry/ui";
+import { ViewerSkeleton } from "@geometry/editor";
 
-const ROWS = 4;
-const COLS = 2;
-const CELLS = ROWS * COLS;
-/** Height of each editor skeleton (px). Width is 100%. */
-const EDITOR_SKELETON_HEIGHT = 220;
+const VIEWER_HEIGHT = 250;
+const CELL_COUNT = 6;
 
-export const JobsPageSkeleton = () => (
-    <Skeleton>
-        <Container padded spaced>
-            <Container name="geometry-jobs-skeleton-grid">
-                {Array.from({ length: CELLS }, (_, i) => (
-                    <Container key={i} size={12 / COLS}>
-                        <EditorSkeleton size={EDITOR_SKELETON_HEIGHT} />
-                    </Container>
-                ))}
-            </Container>
+const CellSkeleton = () => (
+    <Container padded spaced rounded left>
+        <Container size={8} left>
+            <TitleSkeleton width="70%" />
         </Container>
-    </Skeleton>
+        <Container size={4} right>
+            <BadgeSkeleton />
+        </Container>
+        <Container size={12}>
+            <ViewerSkeleton height={VIEWER_HEIGHT} />
+        </Container>
+    </Container>
 );
+
+export const JobsPageSkeleton = () => {
+    const { isMobile, isTablet } = useDevice();
+    const size = isMobile ? 12 : isTablet ? 6 : 4;
+
+    return (
+        <Skeleton>
+            <Page>
+                <Container spaced>
+                    {Array.from({ length: CELL_COUNT }, (_, i) => (
+                        <Container key={i} size={size}>
+                            <CellSkeleton />
+                        </Container>
+                    ))}
+                </Container>
+            </Page>
+        </Skeleton>
+    );
+};

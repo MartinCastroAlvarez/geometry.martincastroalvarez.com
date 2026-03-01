@@ -373,6 +373,13 @@ class JobNotFinishedToPublishError(ValidationError):
         super().__init__(message)
 
 
+class JobStdoutMissingGeometryError(ValidationError):
+    """Job stdout has no boundary or obstacles; cannot publish gallery."""
+
+    def __init__(self, message: str = "Job stdout has no boundary or obstacles; cannot publish gallery"):
+        super().__init__(message)
+
+
 class UserNotAuthenticatedError(UnauthorizedError):
     """User must be authenticated."""
 

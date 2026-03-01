@@ -21,7 +21,7 @@ export interface InspectorProps {
 
 export const Inspector: React.FC<InspectorProps> = ({ data, size = 300 }) => {
     return (
-        <Scrollable maxHeight={size} left>
+        <Scrollable height={size} left>
             <ReactJson
                 src={data}
                 name={false}
@@ -30,7 +30,7 @@ export const Inspector: React.FC<InspectorProps> = ({ data, size = 300 }) => {
                 enableClipboard
                 displayDataTypes
                 collapsed={false}
-                collapseStringsAfterLength={10}
+                collapseStringsAfterLength={50}
                 style={{
                     margin: 0,
                     background: "none",

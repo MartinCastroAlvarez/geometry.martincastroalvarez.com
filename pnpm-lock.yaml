@@ -77,6 +77,9 @@ importers:
       d3-zoom:
         specifier: ^3.0.0
         version: 3.0.0
+      date-fns:
+        specifier: ^4.1.0
+        version: 4.1.0
       earcut:
         specifier: ^2.2.4
         version: 2.2.4
@@ -287,7 +290,7 @@ importers:
         version: 18.3.1(react@18.3.1)
       react-json-view:
         specifier: ^1.21.3
-        version: 1.21.3(@types/react@18.3.28)
+        version: 1.21.3(@types/react@18.3.28)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react-masonry:
         specifier: ^1.0.7
         version: 1.0.7
@@ -967,6 +970,9 @@ packages:
   d3-zoom@3.0.0:
     resolution: {integrity: sha512-b8AmV3kfQaqWAuacbPuNbL6vahnOJflOhexLzMMNLga62+/nh0JzvJ0aO/5a5MVgUFGS7Hu1P9P03o3fJkDCyw==}
     engines: {node: '>=12'}
+
+  date-fns@4.1.0:
+    resolution: {integrity: sha512-Ukq0owbQXxa/U3EGtsdVBkR1w7KOQ5gIBqdH2hkvknzZPYvBxb/aa6E8L7tmjFtkwZBu3UXBbjIgPo/Ez4xaNg==}
 
   debug@4.4.3:
     resolution: {integrity: sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==}
@@ -2012,6 +2018,8 @@ snapshots:
       d3-selection: 3.0.0
       d3-transition: 3.0.1(d3-selection@3.0.0)
 
+  date-fns@4.1.0: {}
+
   debug@4.4.3:
     dependencies:
       ms: 2.1.3
@@ -2075,10 +2083,11 @@ snapshots:
     transitivePeerDependencies:
       - encoding
 
-  flux@4.0.4:
+  flux@4.0.4(react@18.3.1):
     dependencies:
       fbemitter: 3.0.0
       fbjs: 3.0.5
+      react: 18.3.1
     transitivePeerDependencies:
       - encoding
 
@@ -2241,12 +2250,14 @@ snapshots:
       react: 18.3.1
       scheduler: 0.23.2
 
-  react-json-view@1.21.3(@types/react@18.3.28):
+  react-json-view@1.21.3(@types/react@18.3.28)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
-      flux: 4.0.4
+      flux: 4.0.4(react@18.3.1)
+      react: 18.3.1
       react-base16-styling: 0.6.0
+      react-dom: 18.3.1(react@18.3.1)
       react-lifecycles-compat: 3.0.4
-      react-textarea-autosize: 8.5.9(@types/react@18.3.28)
+      react-textarea-autosize: 8.5.9(@types/react@18.3.28)(react@18.3.1)
     transitivePeerDependencies:
       - '@types/react'
       - encoding
@@ -2289,11 +2300,12 @@ snapshots:
       '@remix-run/router': 1.23.2
       react: 18.3.1
 
-  react-textarea-autosize@8.5.9(@types/react@18.3.28):
+  react-textarea-autosize@8.5.9(@types/react@18.3.28)(react@18.3.1):
     dependencies:
       '@babel/runtime': 7.28.6
-      use-composed-ref: 1.4.0(@types/react@18.3.28)
-      use-latest: 1.3.0(@types/react@18.3.28)
+      react: 18.3.1
+      use-composed-ref: 1.4.0(@types/react@18.3.28)(react@18.3.1)
+      use-latest: 1.3.0(@types/react@18.3.28)(react@18.3.1)
     transitivePeerDependencies:
       - '@types/react'
 
@@ -2431,17 +2443,22 @@ snapshots:
       escalade: 3.2.0
       picocolors: 1.1.1
 
-  use-composed-ref@1.4.0(@types/react@18.3.28):
-    optionalDependencies:
-      '@types/react': 18.3.28
-
-  use-isomorphic-layout-effect@1.2.1(@types/react@18.3.28):
-    optionalDependencies:
-      '@types/react': 18.3.28
-
-  use-latest@1.3.0(@types/react@18.3.28):
+  use-composed-ref@1.4.0(@types/react@18.3.28)(react@18.3.1):
     dependencies:
-      use-isomorphic-layout-effect: 1.2.1(@types/react@18.3.28)
+      react: 18.3.1
+    optionalDependencies:
+      '@types/react': 18.3.28
+
+  use-isomorphic-layout-effect@1.2.1(@types/react@18.3.28)(react@18.3.1):
+    dependencies:
+      react: 18.3.1
+    optionalDependencies:
+      '@types/react': 18.3.28
+
+  use-latest@1.3.0(@types/react@18.3.28)(react@18.3.1):
+    dependencies:
+      react: 18.3.1
+      use-isomorphic-layout-effect: 1.2.1(@types/react@18.3.28)(react@18.3.1)
     optionalDependencies:
       '@types/react': 18.3.28
 

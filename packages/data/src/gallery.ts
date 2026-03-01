@@ -29,11 +29,14 @@ export const useArtGalleries = (params?: { nextToken?: string; limit?: number })
     const query = useQuery({
         queryKey: [...GALLERIES_QUERY_KEY, params?.nextToken ?? "", params?.limit ?? 20],
         queryFn: async () => {
+            console.log("[data] useArtGalleries request", { params, token: token ?? null });
             const res = await new GeometryApiClient(GEOMETRY_API_URL, token).getArtGalleries(params);
-            return {
+            const out = {
                 data: res.data.map((r) => toDomainArtGallery(fromApiArtGallery(r))),
                 next_token: res.next_token,
             };
+            console.log("[data] useArtGalleries response", out);
+            return out;
         },
         staleTime: STALE_TIME_GALLERIES_LIST_MS,
     });
@@ -47,8 +50,11 @@ export const useArtGallery = (galleryId: string | null) => {
         queryKey: GALLERY_QUERY_KEY(galleryId ?? ""),
         queryFn: async () => {
             if (!galleryId) throw new Error("galleryId required");
+            console.log("[data] useArtGallery request", { galleryId, token: token ?? null });
             const data = await new GeometryApiClient(GEOMETRY_API_URL, token).getArtGallery(galleryId);
-            return toDomainArtGallery(fromApiArtGallery(data));
+            const out = toDomainArtGallery(fromApiArtGallery(data));
+            console.log("[data] useArtGallery response", out);
+            return out;
         },
         enabled: !!galleryId,
         staleTime: STALE_TIME_GALLERY_MS,

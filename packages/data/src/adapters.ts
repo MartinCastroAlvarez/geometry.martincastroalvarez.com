@@ -29,14 +29,28 @@ export const toDomainUser = (api: ApiUser): { email: string | null; name: string
     };
 };
 
-/** Normalize a point from stdin: either [x, y] or { x, y }. */
+/** Coerce a value to number if it's a numeric string or number; otherwise NaN. */
+function toNumber(v: unknown): number {
+    if (typeof v === "number" && !Number.isNaN(v)) return v;
+    if (typeof v === "string") {
+        const n = Number(v);
+        return Number.isNaN(n) ? Number.NaN : n;
+    }
+    return Number.NaN;
+}
+
+/** Normalize a point from stdin: either [x, y] or { x, y }; coordinates may be numbers or numeric strings. */
 function parsePoint(p: unknown): { x: number; y: number } | null {
-    if (Array.isArray(p) && p.length >= 2 && typeof p[0] === "number" && typeof p[1] === "number") {
-        return { x: p[0], y: p[1] };
+    if (Array.isArray(p) && p.length >= 2) {
+        const x = toNumber(p[0]);
+        const y = toNumber(p[1]);
+        if (!Number.isNaN(x) && !Number.isNaN(y)) return { x, y };
     }
     if (p != null && typeof p === "object" && "x" in p && "y" in p) {
         const o = p as { x: unknown; y: unknown };
-        if (typeof o.x === "number" && typeof o.y === "number") return { x: o.x, y: o.y };
+        const x = toNumber(o.x);
+        const y = toNumber(o.y);
+        if (!Number.isNaN(x) && !Number.isNaN(y)) return { x, y };
     }
     return null;
 }
@@ -77,26 +91,34 @@ function parseObstacles(stdin: Record<string, unknown>): Polygon[] {
 }
 
 /**
- * Build an ArtGallery from a job's stdin when it contains valid boundary and obstacles.
+ * Build an ArtGallery from a record (stdin or stdout) when it contains valid boundary and obstacles.
  * Used when reading job list, single job, or createJob response. The gallery is conceptually
  * identified by the job id (see module doc); we do not set a separate id on ArtGallery.
  */
-export function artGalleryFromJobStdin(jobId: string, stdin: Record<string, unknown>): ArtGallery | undefined {
-    const boundary = parseBoundary(stdin);
+export function artGalleryFromPolygonData(_jobId: string, data: Record<string, unknown>): ArtGallery | undefined {
+    const boundary = parseBoundary(data);
     if (!boundary) return undefined;
-    const obstacles = parseObstacles(stdin);
+    const obstacles = parseObstacles(data);
     return new ArtGallery(boundary, obstacles, []);
 }
 
 export const toDomainJob = (api: ApiJob): Job => {
     const stdin = api.stdin ?? {};
-    const artGallery = artGalleryFromJobStdin(api.id, stdin);
+    const stdout = api.stdout ?? {};
+    const hasStdout = Object.keys(stdout).length > 0;
+    const artGallery =
+        (hasStdout ? artGalleryFromPolygonData(api.id, stdout) : undefined) ??
+        artGalleryFromPolygonData(api.id, stdin);
     return {
         id: api.id,
         status: parseStatus(api.status),
         stage: api.stage,
         meta: api.meta ?? {},
+        stdin: api.stdin ?? {},
         stdout: api.stdout ?? {},
+        stderr: api.stderr ?? {},
+        created_at: api.created_at ?? undefined,
+        updated_at: api.updated_at ?? undefined,
         ...(artGallery != null ? { artGallery } : {}),
     };
 };
@@ -192,7 +214,6 @@ export const fromApiArtGallery = (raw: unknown): ApiArtGallery => {
         id: String(d.id ?? ""),
         boundary: Array.isArray(boundary.points) ? boundary : { points: [] },
         obstacles: typeof obstacles === "object" ? obstacles : {},
-        owner_email: String(d.owner_email ?? ""),
         owner_job_id: String(d.owner_job_id ?? ""),
         title: d.title != null ? String(d.title) : undefined,
         ears: (d.ears as Record<string, unknown>) ?? {},

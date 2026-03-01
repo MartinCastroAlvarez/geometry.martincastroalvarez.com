@@ -9,7 +9,7 @@ Context
 -------
 This module exports write-side handlers: JobMutation (create job),
 JobUpdateMutation (update job meta, sync title to gallery), ArtGalleryPublishMutation
-(publish gallery from finished job), ArtGalleryHideMutation (remove gallery).
+(publish gallery from finished job).
 All gallery and job mutations that require auth use PrivateControllerMixin
 with Mutation and receive request.user. Mutations validate body, mutate state (repo, index,
 queue), and return a response dict. Registered in api.api (ROUTES) by path and method.
@@ -37,6 +37,7 @@ from controllers import PrivateControllerMixin
 from enums import Action
 from exceptions import BoundaryRequiredError
 from exceptions import JobNotFinishedToPublishError
+from exceptions import JobStdoutMissingGeometryError
 from exceptions import MetaKeysMustBeStringsError
 from exceptions import MetaMustBeDictError
 from exceptions import MetaRequiredError
@@ -75,12 +76,6 @@ class ArtGalleryPublishMutationRequest(MutationRequest):
     job_id: Identifier
 
 
-class ArtGalleryHideMutationRequest(MutationRequest):
-    """Hide: job_id required; gallery id derived from job id + hash(user email)."""
-
-    job_id: Identifier
-
-
 class JobMutationRequest(MutationRequest):
     """Create job: boundary and obstacles; id is hash (idempotent). Optional title (default: Untitled Gallery)."""
 
@@ -110,20 +105,12 @@ class ArtGalleryPublishMutationResponse(MutationResponse):
     updated_at: str
     boundary: list[Any]
     obstacles: dict[str, Any]
-    owner_email: str
     owner_job_id: str
     title: str
     ears: dict[str, Any]
     convex_components: dict[str, Any]
     guards: dict[str, Any]
     visibility: dict[str, Any]
-
-
-class ArtGalleryHideMutationResponse(MutationResponse):
-    """Response: deleted flag and gallery id."""
-
-    deleted: bool
-    id: str
 
 
 class JobMutationResponse(MutationResponse):
@@ -307,14 +294,15 @@ class ArtGalleryPublishMutation(PrivateControllerMixin, Mutation):
         job = repo_job.get(job_id)
         if not job.is_finished():
             raise JobNotFinishedToPublishError("Job must be successfully finished to publish")
+        boundary = job.stdout.get("boundary")
+        if not boundary or not isinstance(boundary, list) or len(boundary) == 0:
+            raise JobStdoutMissingGeometryError("Job stdout has no boundary or obstacles; cannot publish gallery")
         gallery_id = gallery_id_from_job_and_user(job_id, self.user.email)
         title: str = job.meta.get("title", "Untitled Art Gallery") if isinstance(job.meta.get("title"), str) else "Untitled Art Gallery"
         data: dict[str, Any] = {
             **job.stdout,
             "id": str(gallery_id),
-            "owner_email": str(self.user.email),
             "owner_job_id": str(job_id),
-            "owner_image_url": str(self.user.avatar_url) if self.user.avatar_url is not None else None,
             "title": title,
             "created_at": str(job.created_at),
             "updated_at": str(job.updated_at),
@@ -330,33 +318,3 @@ class ArtGalleryPublishMutation(PrivateControllerMixin, Mutation):
             )
         )
         return gallery.serialize()
-
-
-class ArtGalleryHideMutation(PrivateControllerMixin, Mutation):
-    """
-    Remove gallery from repo and public index; user must own the job.
-
-    For example, to hide/unpublish a gallery:
-    >>> handler = ArtGalleryHideMutation(user=request.user)
-    >>> result = handler.handler({"id": "job-123"})
-    >>> result["deleted"]
-    True
-    """
-
-    def validate(self, body: dict[str, Any]) -> ArtGalleryHideMutationRequest:
-        super().validate(body)
-        return ArtGalleryHideMutationRequest(job_id=Identifier(body.get("id")))
-
-    def execute(self, validated_input: ArtGalleryHideMutationRequest) -> ArtGalleryHideMutationResponse:
-        job_id = validated_input["job_id"]
-        repo_job = JobsRepository(user=self.user)
-        repo_job.get(job_id)
-        gallery_id = gallery_id_from_job_and_user(job_id, self.user.email)
-        gallery_repo = ArtGalleryRepository()
-        gallery = gallery_repo.get(gallery_id)
-        index = ArtGalleryPublicIndex()
-        index_id = Identifier(Countdown.from_timestamp(gallery.created_at))
-        if index.exists(index_id):
-            index.delete(index_id)
-        gallery_repo.delete(gallery_id)
-        return {"deleted": True, "id": str(gallery_id)}

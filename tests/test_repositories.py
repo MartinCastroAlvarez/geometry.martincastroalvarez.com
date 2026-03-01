@@ -74,7 +74,6 @@ class TestRepositories:
             "obstacles": {},
             "created_at": "",
             "updated_at": "",
-            "owner_email": "u@e.com",
             "owner_job_id": "job1",
             "title": "T",
         }

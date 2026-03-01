@@ -16,7 +16,12 @@ export interface Job {
     status: Status;
     stage: string;
     meta: Record<string, unknown>;
+    stdin?: Record<string, unknown>;
     stdout: Record<string, unknown>;
+    stderr?: Record<string, unknown>;
+    /** ISO date strings from API (created_at, updated_at). */
+    created_at?: string;
+    updated_at?: string;
     /** When present, the job input had valid boundary and obstacles; see data adapters. */
     artGallery?: ArtGallery;
 }

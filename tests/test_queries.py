@@ -86,7 +86,6 @@ class TestArtGalleryDetailsQuery:
         gallery = ArtGallery.unserialize({
             "id": "g1",
             "boundary": [[0, 0], [1, 0], [1, 1], [0, 1]],
-            "owner_email": "u@e.com",
             "owner_job_id": "j1",
             "title": "Test",
         })

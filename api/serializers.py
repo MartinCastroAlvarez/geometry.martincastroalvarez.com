@@ -58,9 +58,7 @@ class ArtGalleryDict(ModelDict):
 
     boundary: list[Any]
     obstacles: dict[str, Any]
-    owner_email: str
     owner_job_id: str
-    owner_image_url: str | None
     title: str
     ears: dict[str, Any]
     convex_components: dict[str, Any]

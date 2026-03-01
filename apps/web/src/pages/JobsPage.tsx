@@ -42,11 +42,11 @@ const Cell = ({ job }: CellProps) => {
             </Container>
             <Container size={4} right>
                 <Badge danger={job.status === Status.FAILED} success={job.status === Status.SUCCESS}>
-                    {job.status}
+                    {t(`jobs.status.${job.status}`)}
                 </Badge>
             </Container>
             <Container size={12}>
-                <Viewer artGallery={job.artGallery ?? undefined} height={VIEWER_HEIGHT} />
+                <Viewer artGallery={job.artGallery ?? undefined} height={VIEWER_HEIGHT} readonly fitToView />
             </Container>
         </Container>
     );

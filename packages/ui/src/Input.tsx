@@ -20,6 +20,8 @@ const sizeClass = (lg?: boolean, xl?: boolean): string => {
     return "text-base";
 };
 
+const strongFontClasses = "font-semibold font-title leading-relaxed tracking-normal";
+
 export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "className"> {
     className?: string;
     /** When true, uses bg-none (transparent background) instead of bg-slate-800 */
@@ -28,14 +30,17 @@ export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElem
     lg?: boolean;
     /** Extra-large font (text-xl) */
     xl?: boolean;
+    /** When true, uses same font as Title (font-semibold font-title) */
+    strong?: boolean;
 }
 
-export const Input: React.FC<InputProps> = ({ className = "", transparent = false, lg, xl, ...props }) => {
+export const Input: React.FC<InputProps> = ({ className = "", transparent = false, lg, xl, strong = false, ...props }) => {
     const bgClass = transparent ? "bg-none" : "bg-slate-200 dark:bg-slate-800";
+    const fontClass = strong ? strongFontClasses : "";
     return (
         <input
             {...props}
-            className={`geometry-input ${bgClass} ${baseClasses} ${sizeClass(lg, xl)} ${className}`.trim()}
+            className={`geometry-input ${bgClass} ${baseClasses} ${fontClass} ${sizeClass(lg, xl)} ${className}`.trim()}
         />
     );
 };

@@ -148,6 +148,7 @@ export const EditorPage = () => {
                             className="max-w-md w-full"
                             lg
                             transparent
+                            strong
                         />
                     </Container>
                     <Container>
