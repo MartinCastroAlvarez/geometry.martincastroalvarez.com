@@ -69,7 +69,7 @@ class TestStartTask:
         job.step_name = "unknown_step_name"
         job.id = Identifier("j1")
         mock_repo.get.return_value = job
-        with patch("tasks.STEP_CLASS_BY_NAME", {}):
+        with patch.object(StartTask, "STEP_CLASS_BY_NAME", {}):
             task = StartTask()
             req = {"job_id": Identifier("j1"), "user_email": Email("u@e.com")}
             result = task.execute(req)
@@ -90,7 +90,7 @@ class TestStartTask:
         step_instance = MagicMock()
         step_instance.run.return_value = {"step:visibility_matrix": "success"}
         step_instance.job = job
-        with patch.dict("tasks.STEP_CLASS_BY_NAME", {StepName.VISIBILITY_MATRIX: lambda **kw: step_instance}):
+        with patch.object(StartTask, "STEP_CLASS_BY_NAME", {StepName.VISIBILITY_MATRIX: lambda **kw: step_instance}):
             task = StartTask()
             req = {"job_id": Identifier("j1"), "user_email": Email("u@e.com")}
             result = task.execute(req)
