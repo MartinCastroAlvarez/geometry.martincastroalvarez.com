@@ -1,20 +1,20 @@
-"""Tests for validations package."""
+"""Tests for validators package."""
 
 from enums import Status
 from exceptions import ValidationError
 from geometry import Polygon
 from structs import Table
-from validations import PolygonValidation
-from validations import PolygonValidationRequest
-from validations import PolygonValidationResponse
-from validations import ValidationResult
+from validators import PolygonValidator
+from validators import PolygonValidatorRequest
+from validators import PolygonValidatorResponse
+from validators import ValidatorResult
 
 
-class TestValidationResult:
-    """Test ValidationResult type and normalization."""
+class TestValidatorResult:
+    """Test ValidatorResult type and normalization."""
 
     def test_validation_result_can_hold_status_and_str(self):
-        r: ValidationResult = {
+        r: ValidatorResult = {
             "polygon.ccw": Status.SUCCESS,
             "polygon.ccw.note": "Polygon is counter-clockwise.",
         }
@@ -22,11 +22,11 @@ class TestValidationResult:
         assert r["polygon.ccw.note"] == "Polygon is counter-clockwise."
 
 
-class TestPolygonValidationValidate:
-    """Test PolygonValidation.validate() (shallow validation)."""
+class TestPolygonValidatorValidate:
+    """Test PolygonValidator.validate() (shallow validation)."""
 
     def test_validate_requires_boundary(self):
-        v = PolygonValidation()
+        v = PolygonValidator()
         try:
             v.validate({"obstacles": []})
             assert False, "expected ValidationError"
@@ -34,7 +34,7 @@ class TestPolygonValidationValidate:
             assert "boundary" in str(e).lower()
 
     def test_validate_accepts_list_boundary(self):
-        v = PolygonValidation()
+        v = PolygonValidator()
         body = {"boundary": [[0, 0], [10, 0], [10, 10], [0, 10]], "obstacles": []}
         req = v.validate(body)
         assert isinstance(req, dict)
@@ -43,14 +43,14 @@ class TestPolygonValidationValidate:
         assert isinstance(req["obstacles"], Table)
 
     def test_validate_accepts_points_object_boundary(self):
-        v = PolygonValidation()
+        v = PolygonValidator()
         body = {"boundary": {"points": [[0, 0], [1, 0], [1, 1], [0, 1]]}, "obstacles": []}
         req = v.validate(body)
         assert "boundary" in req
         assert len(list(req["boundary"])) == 4
 
     def test_validate_rejects_non_list_obstacles(self):
-        v = PolygonValidation()
+        v = PolygonValidator()
         try:
             v.validate({"boundary": [[0, 0], [1, 0], [1, 1]], "obstacles": "not-a-list"})
             assert False, "expected ValidationError"
@@ -58,39 +58,39 @@ class TestPolygonValidationValidate:
             assert "obstacles" in str(e).lower()
 
 
-class TestPolygonValidationValidateMethods:
-    """Test individual validate_* methods return ValidationResult."""
+class TestPolygonValidatorValidateMethods:
+    """Test individual validate_* methods return ValidatorResult."""
 
     def test_validate_boundary_ccw_returns_validation_result(self):
-        v = PolygonValidation()
+        v = PolygonValidator()
         boundary = Polygon.unserialize([[0, 0], [10, 0], [10, 10], [0, 10]])
         result = v.validate_boundary_ccw(boundary)
         assert "polygon.ccw" in result
         assert "polygon.ccw.note" in result
 
     def test_validate_boundary_simplicity_returns_validation_result(self):
-        v = PolygonValidation()
+        v = PolygonValidator()
         boundary = Polygon.unserialize([[0, 0], [10, 0], [10, 10], [0, 10]])
         result = v.validate_boundary_simplicity(boundary)
         assert "polygon.simplicity" in result
         assert "polygon.simplicity.note" in result
 
     def test_validate_obstacles_simplicity_returns_validation_result(self):
-        v = PolygonValidation()
+        v = PolygonValidator()
         obstacles = Table.unserialize([Polygon.unserialize([[1, 1], [2, 1], [2, 2], [1, 2]])])
         result = v.validate_obstacles_simplicity(obstacles)
         assert "obstacles.0.simplicity" in result
         assert "obstacles.0.simplicity.note" in result
 
     def test_validate_obstacles_cw_returns_validation_result(self):
-        v = PolygonValidation()
+        v = PolygonValidator()
         obstacles = Table.unserialize([Polygon.unserialize([[1, 1], [1, 2], [2, 2], [2, 1]])])
         result = v.validate_obstacles_cw(obstacles)
         assert "obstacles.0.cw" in result
         assert "obstacles.0.cw.note" in result
 
     def test_validate_obstacles_contained_returns_validation_result(self):
-        v = PolygonValidation()
+        v = PolygonValidator()
         boundary = Polygon.unserialize([[0, 0], [10, 0], [10, 10], [0, 10]])
         obstacles = Table.unserialize([Polygon.unserialize([[1, 1], [2, 1], [2, 2], [1, 2]])])
         result = v.validate_obstacles_contained(boundary, obstacles)
@@ -98,7 +98,7 @@ class TestPolygonValidationValidateMethods:
         assert "obstacles.0.contained.note" in result
 
     def test_validate_obstacles_overlaps_returns_validation_result(self):
-        v = PolygonValidation()
+        v = PolygonValidator()
         obstacles = Table.unserialize(
             [
                 Polygon.unserialize([[1, 1], [2, 1], [2, 2], [1, 2]]),
@@ -111,7 +111,7 @@ class TestPolygonValidationValidateMethods:
 
     def test_validate_boundary_ccw_exception_returns_pending(self):
         """When boundary.is_ccw() raises, result is PENDING."""
-        v = PolygonValidation()
+        v = PolygonValidator()
         boundary = Polygon.unserialize([[0, 0], [10, 0], [10, 10], [0, 10]])
 
         def raise_err():
@@ -122,8 +122,8 @@ class TestPolygonValidationValidateMethods:
         assert result["polygon.ccw"] == Status.PENDING
 
     def test_validate_obstacles_contained_exception_returns_pending(self):
-        """When boundary.contains(obs) raises, result is PENDING for that obstacle."""
-        v = PolygonValidation()
+        """When boundary.contains(obstacle) raises, result is PENDING for that obstacle."""
+        v = PolygonValidator()
         boundary = Polygon.unserialize([[0, 0], [10, 0], [10, 10], [0, 10]])
         obstacles = Table.unserialize([Polygon.unserialize([[1, 1], [2, 1], [2, 2], [1, 2]])])
 
@@ -135,13 +135,13 @@ class TestPolygonValidationValidateMethods:
         assert result["obstacles.0.contained"] == Status.PENDING
 
 
-class TestPolygonValidationExecute:
-    """Test PolygonValidation.execute() merges validate_* results."""
+class TestPolygonValidatorExecute:
+    """Test PolygonValidator.execute() merges validate_* results."""
 
     def test_execute_returns_dict_str_str(self):
-        v = PolygonValidation()
+        v = PolygonValidator()
         body = {"boundary": [[0, 0], [10, 0], [10, 10], [0, 10]], "obstacles": []}
-        req: PolygonValidationRequest = v.validate(body)
+        req: PolygonValidatorRequest = v.validate(body)
         response = v.execute(req)
         assert isinstance(response, dict)
         for k, val in response.items():
@@ -149,22 +149,22 @@ class TestPolygonValidationExecute:
             assert isinstance(val, str), f"expected str for {k!r}, got {type(val)}"
 
     def test_execute_includes_boundary_ccw_check(self):
-        v = PolygonValidation()
+        v = PolygonValidator()
         body = {"boundary": [[0, 0], [10, 0], [10, 10], [0, 10]], "obstacles": []}
-        result: PolygonValidationResponse = v.handler(body)
+        result: PolygonValidatorResponse = v.handler(body)
         assert "polygon.ccw" in result
         assert result["polygon.ccw"] in ("success", "failed", "pending")
         assert "polygon.ccw.note" in result
 
     def test_execute_ccw_boundary_is_success(self):
-        v = PolygonValidation()
+        v = PolygonValidator()
         body = {"boundary": [[0, 0], [10, 0], [10, 10], [0, 10]], "obstacles": []}
         result = v.handler(body)
         assert result["polygon.ccw"] == "success"
         assert "counter-clockwise" in result["polygon.ccw.note"].lower() or "ccw" in result["polygon.ccw.note"].lower()
 
     def test_execute_includes_obstacle_cw_checks_when_obstacles_present(self):
-        v = PolygonValidation()
+        v = PolygonValidator()
         body = {
             "boundary": [[0, 0], [10, 0], [10, 10], [0, 10]],
             "obstacles": [[[1, 1], [2, 1], [2, 2], [1, 2]]],
@@ -174,8 +174,8 @@ class TestPolygonValidationExecute:
         assert all(isinstance(result[k], str) for k in result)
 
     def test_execute_includes_status_and_status_note(self):
-        """Response always has top-level 'status' and 'status.note' from sub-validations."""
-        v = PolygonValidation()
+        """Response always has top-level 'status' and 'status.note' from sub-validators."""
+        v = PolygonValidator()
         body = {"boundary": [[0, 0], [10, 0], [10, 10], [0, 10]], "obstacles": []}
         result = v.handler(body)
         assert "status" in result
@@ -184,14 +184,14 @@ class TestPolygonValidationExecute:
         assert isinstance(result["status.note"], str)
 
     def test_execute_status_success_when_all_checks_pass(self):
-        v = PolygonValidation()
+        v = PolygonValidator()
         body = {"boundary": [[0, 0], [10, 0], [10, 10], [0, 10]], "obstacles": []}
         result = v.handler(body)
         assert result["status"] == "success"
         assert "passed" in result["status.note"].lower() or "all" in result["status.note"].lower()
 
     def test_execute_status_failed_when_any_check_fails(self):
-        v = PolygonValidation()
+        v = PolygonValidator()
         # Clockwise rectangle -> ccw check fails
         body = {"boundary": [[0, 0], [0, 10], [10, 10], [10, 0]], "obstacles": []}
         result = v.handler(body)
@@ -200,11 +200,11 @@ class TestPolygonValidationExecute:
         assert result["polygon.ccw"] == "failed"
 
 
-class TestPolygonValidationHandler:
+class TestPolygonValidatorHandler:
     """Test full handler flow."""
 
     def test_handler_validate_then_execute(self):
-        v = PolygonValidation()
+        v = PolygonValidator()
         body = {"boundary": [[0, 0], [10, 0], [10, 10], [0, 10]], "obstacles": []}
         result = v.handler(body)
         assert isinstance(result, dict)
@@ -212,7 +212,7 @@ class TestPolygonValidationHandler:
         assert result["polygon.ccw"] == "success"
 
     def test_handler_raises_on_invalid_body(self):
-        v = PolygonValidation()
+        v = PolygonValidator()
         try:
             v.handler({})
             assert False, "expected ValidationError"

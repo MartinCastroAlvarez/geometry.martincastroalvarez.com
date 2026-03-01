@@ -29,14 +29,14 @@ api/
 ├── logger.py            # get_logger, log_extra
 ├── messages.py          # Message, Queue
 ├── models.py            # Model, User, Job, ArtGallery
-├── mutations.py         # Mutation base; mutations/galleries.py, mutations/jobs.py
+├── mutations.py         # Mutation base; JobMutation, JobUpdateMutation, ArtGalleryPublishMutation, JobDeleteMutation
 ├── queries.py           # Query base; queries/galleries.py, queries/jobs.py
 ├── repositories.py      # Repository, ArtGalleryRepository, JobsRepository
 ├── serializers.py       # Serialized (parent), ModelDict, UserDict, JobDict, ArtGalleryDict
 ├── settings.py          # Env config: DATA_BUCKET_NAME, QUEUE_NAME, JWT_*, etc.
 ├── structs.py           # Sequence, Table
 ├── tasks.py             # Task base; tasks/start.py, tasks/report.py
-├── validations.py       # Validation, PolygonValidation
+├── validators.py        # Validator, PolygonValidator
 ├── geometry/            # 2D geometry: Point, Segment, Polygon, Box, Ear, ConvexComponent, Walk
 │   ├── __init__.py
 │   ├── box.py
@@ -50,8 +50,7 @@ api/
 ├── models/
 │   └── user.py          # User model (auth); also defined in models.py
 ├── mutations/
-│   ├── galleries.py      # ArtGalleryPublishMutation, ArtGalleryHideMutation
-│   └── jobs.py          # JobMutation, JobUpdateMutation
+│   └── jobs.py          # Job mutation helpers (see mutations.py for main handlers)
 ├── queries/
 │   ├── galleries.py     # ArtGalleryListQuery, ArtGalleryDetailsQuery
 │   └── jobs.py          # JobListQuery, JobDetailsQuery
@@ -74,7 +73,7 @@ api/
 | **api** (package) | `__init__.py` exports `handler`; Lambda entry for API Gateway. |
 | **api.py** | `ApiRequest`, `ApiResponse`, `ROUTES` (`dict[Path, dict[Method, Controller]]`), `private` decorator (X-Auth/JWT), `interceptor` decorator (event→ApiRequest, response dict), `handler` (match path to ROUTES, instantiate controller, call `controller.handler(body)`). |
 | **workers.py** | `ROUTES` (Action → Task), `WorkerRequest`, `WorkerResponse`, `handler`: SQS event → dispatch by Action to StartTask/ReportTask, commit each message; returns `WorkerResponse`. |
-| **controllers.py** | **Controller** (abstract), **ControllerRequest**, **ControllerResponse**, **PrivateControllerMixin**. `validate(body) -> ControllerRequest`, `execute(ControllerRequest) -> ControllerResponse`, `handler(body) -> ControllerResponse`. Queries, mutations, validations, and tasks extend Controller. |
+| **controllers.py** | **Controller** (abstract), **ControllerRequest**, **ControllerResponse**, **PrivateControllerMixin**. `validate(body) -> ControllerRequest`, `execute(ControllerRequest) -> ControllerResponse`, `handler(body) -> ControllerResponse`. **PrivateControllerMixin** enforces auth in `validate()` (user must be authenticated), so `execute()` need not re-check. Queries, mutations, validators, and tasks extend Controller. |
 | **exceptions.py** | `GeometryException`, `ValidationError`, `RecordNotFoundError`, `UnauthorizedError`, `ForbiddenError`, `InvalidActionError`, `PathMissingResourceIdError`, etc. |
 | **messages.py** | `Message` (Serializable; action as `Action`). `Queue` (put, receive, delete, commit). |
 | **data.py** | `Bucket` (exists, load, save, delete, search), `Page`, `Secret`. Bucket and secret names from `settings`. |
@@ -89,8 +88,8 @@ api/
 | **repositories.py** | `Repository[T]`, `Results[T]`, `PrivateRepository[T]`, `ArtGalleryRepository`, `JobsRepository`. |
 | **indexes.py** | `Indexed`, `Index[T]`, `PrivateIndex`, `ArtGalleryPublicIndex`, `JobsPrivateIndex`. |
 | **queries.py** | `Query`, `ListQuery`, `DetailsQuery`; **queries/galleries.py**: `ArtGalleryListQuery`, `ArtGalleryDetailsQuery`; **queries/jobs.py**: `JobListQuery`, `JobDetailsQuery`. Registered in api.api ROUTES. |
-| **mutations.py** | `Mutation`; **mutations/galleries.py**: `ArtGalleryPublishMutation`, `ArtGalleryHideMutation`; **mutations/jobs.py**: `JobMutation`, `JobUpdateMutation`. Registered in api.api ROUTES. |
-| **validations.py** | `Validation`, `PolygonValidation`. Registered in api.api ROUTES. |
+| **mutations.py** | `Mutation` (base); `JobMutation`, `JobUpdateMutation`, `ArtGalleryPublishMutation`, `JobDeleteMutation`. **mutations/jobs.py**: job mutation helpers. Registered in api.api ROUTES. |
+| **validators.py** | `Validator`, `PolygonValidator`. Registered in api.api ROUTES. |
 | **tasks.py** | `Task` base; **tasks/start.py**: `StartTask`; **tasks/report.py**: `ReportTask`. Used by workers.py ROUTES. |
 | **geometry/** | `Point`, `Segment`, `Polygon`, `Box`, `Interval`, `Walk`, `Ear`, `ConvexComponent`. Spatial, Bounded, Measurable, Volume, Serializable. Used by models.ArtGallery and pipeline (ear clipping, visibility, guards). |
 

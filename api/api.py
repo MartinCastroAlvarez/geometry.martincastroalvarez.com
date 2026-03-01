@@ -25,6 +25,7 @@ import http
 import json
 import secrets
 import time
+import traceback
 from functools import wraps
 from typing import Any
 from typing import Callable
@@ -48,6 +49,7 @@ from exceptions import PathMissingResourceIdError
 from exceptions import TokenExpiredError
 from exceptions import TokenMissingEmailClaimError
 from interfaces import Serializable
+from logger import configure_logging
 from logger import get_logger
 from logger import log_extra
 from models import User
@@ -59,11 +61,15 @@ from queries import ArtGalleryDetailsQuery
 from queries import ArtGalleryListQuery
 from queries import JobDetailsQuery
 from queries import JobListQuery
+from settings import EXPOSE_TRACEBACK
 from settings import JWT_ALGORITHM
 from settings import JWT_SECRET_NAME
 from settings import JWT_TEST_NAME
 from settings import X_AUTH_HEADER
-from validations import PolygonValidation
+from validators import PolygonValidator
+
+# Ensure root logger level is set from LOG_LEVEL at cold start so CloudWatch shows all levels.
+configure_logging()
 
 logger = get_logger(__name__)
 
@@ -161,7 +167,7 @@ class ApiResponse(Serializable[dict[str, Any]]):
 ROUTES: dict[Path, dict[Method, Type[Controller]]] = {
     Path("v1/galleries/"): {Method.GET: ArtGalleryDetailsQuery},
     Path("v1/galleries"): {Method.GET: ArtGalleryListQuery},
-    Path("v1/polygon"): {Method.POST: PolygonValidation},
+    Path("v1/polygon"): {Method.POST: PolygonValidator},
     Path("v1/jobs/"): {
         Method.GET: JobDetailsQuery,
         Method.POST: ArtGalleryPublishMutation,
@@ -288,6 +294,7 @@ def interceptor(
 
         except Exception as e:
             elapsed_ms: float = (time.perf_counter() - start) * 1000
+            tb_str: str = traceback.format_exc()
             logger.exception(
                 "Interceptor.wrapper() | request failed path=%s method=%s error=%s elapsed_ms=%.2f",
                 path,
@@ -296,9 +303,23 @@ def interceptor(
                 elapsed_ms,
                 extra={**extra, "elapsed_ms": elapsed_ms},
             )
+            logger.error("Interceptor.wrapper() | traceback:\n%s", tb_str, extra=extra)
             origin = _request_origin(event)
-            # Do not leak internal details (S3, SQS, stack traces); return generic error.
-            response = ApiResponse.unserialize(InternalServerError("An error occurred"))
+            # Do not leak internal details (S3, SQS, stack traces) unless EXPOSE_TRACEBACK is set.
+            if EXPOSE_TRACEBACK:
+                body = json.dumps(
+                    {
+                        "error": {
+                            "code": 500,
+                            "type": "InternalServerError",
+                            "message": str(e) or "An error occurred",
+                            "traceback": tb_str.strip().split("\n"),
+                        },
+                    }
+                )
+                response = ApiResponse(http.HTTPStatus.INTERNAL_SERVER_ERROR, body)
+            else:
+                response = ApiResponse.unserialize(InternalServerError("An error occurred"))
             response.origin = origin
             return response.serialize()
 

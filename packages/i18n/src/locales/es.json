@@ -1,8 +1,11 @@
 {
+  "home": {
+    "emptyGalleries": "Aún no hay galerías publicadas."
+  },
   "jobs": {
     "status": {
-      "pending": "Pendiente",
-      "success": "Éxito",
+      "pending": "Procesando",
+      "success": "Finalizado",
       "failed": "Fallido"
     },
     "steps": {
@@ -30,7 +33,9 @@
   },
   "errors": {
     "failedToFetch": "Error de conexión",
-    "serviceUnavailable": "Servicio no disponible temporalmente"
+    "serviceUnavailable": "Servicio no disponible temporalmente",
+    "publishFailed": "No se pudo publicar la galería. Inténtalo de nuevo.",
+    "deleteFailed": "No se pudo eliminar el trabajo. Inténtalo de nuevo."
   },
   "nav": {
     "login": "Acceder",
@@ -59,6 +64,7 @@
     "submit": "Enviar",
     "optimize": "Optimizar",
     "untitledGallery": "Galería Sin Título",
+    "copyOf": "Copia de ",
     "tips": {
       "clickToAdd": "Hacé click en el canvas para agregar un punto; hacé click en otro lugar para conectar puntos y formar una figura.",
       "doubleClickHole": "Hacé doble click en el canvas para empezar una nueva figura (ej. un agujero) sin conectar con el punto anterior.",

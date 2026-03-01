@@ -74,6 +74,7 @@ class TestStartTask:
         mock_repo_cls.return_value = mock_repo
         job = MagicMock()
         job.is_failed.return_value = False
+        job.is_finished.return_value = False  # not already processed, so execute runs step
         job.step_name = StepName.ART_GALLERY
         job.id = Identifier("j1")
         mock_repo.get.return_value = job

@@ -66,7 +66,8 @@ def log_extra(
 def configure_logging() -> None:
     """
     Configure root logger for Lambda. Call at Lambda cold start if needed.
-    CloudWatch captures stdout; log level from settings.LOG_LEVEL (LogLevel enum).
+    CloudWatch captures stdout; log level from settings.LOG_LEVEL (derived from
+    DEBUG env when set, otherwise from LOG_LEVEL env).
 
     For example, to set log level from LOG_LEVEL env at cold start:
     >>> configure_logging()

@@ -7,6 +7,7 @@ import pytest
 from attributes import Identifier
 from enums import Action
 from enums import Status
+from exceptions import ValidationError
 from workers import WorkerRequest
 from workers import WorkerResponse
 from workers import handler
@@ -112,10 +113,8 @@ class TestHandler:
                 }
             ]
         }
-        resp = handler(event, None)
-        assert len(resp.results) == 1
-        assert resp.results[0]["status"] == Status.FAILED
-        assert "error" in resp.results[0]
+        with pytest.raises(ValidationError, match="Identifier must be a non-empty string"):
+            handler(event, None)
 
     @patch("workers.Queue")
     def test_handler_unknown_action_appends_failed_result(self, mock_queue_cls):
@@ -129,11 +128,11 @@ class TestHandler:
             ]
         }
         with patch("workers.ROUTES", {Action.REPORT: type("ReportTask", (), {})()}):
-            # Only REPORT in ROUTES, so START returns None
+            # Only REPORT in ROUTES, so START raises KeyError
             resp = handler(event, None)
         assert len(resp.results) == 1
         assert resp.results[0]["status"] == Status.FAILED
-        assert "Unknown action" in resp.results[0]["error"]
+        assert "error" in resp.results[0]
 
     @patch("workers.Queue")
     def test_handler_start_dispatches_and_commits(self, mock_queue_cls):
@@ -160,7 +159,10 @@ class TestHandler:
         mock_queue = MagicMock()
         mock_queue.commit.side_effect = Exception("commit failed")
         mock_queue_cls.return_value = mock_queue
-        event = {"action": "start", "job_id": "j1", "user_email": "u@e.com", "receipt_handle": "rh1"}
-        resp = handler(event, None)
-        assert len(resp.results) == 1
+        mock_task = MagicMock()
+        mock_task.handler.return_value = {"status": Status.SUCCESS, "job_id": Identifier("j1")}
+        with patch.dict("workers.ROUTES", {Action.START: lambda: mock_task}):
+            event = {"action": "start", "job_id": "j1", "user_email": "u@e.com", "receipt_handle": "rh1"}
+            with pytest.raises(Exception, match="commit failed"):
+                handler(event, None)
         mock_queue.commit.assert_called_once()

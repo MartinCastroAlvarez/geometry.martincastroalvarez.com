@@ -49,13 +49,13 @@ class TestJobMutation:
     def test_validate_boundary_not_list_raises(self):
         user = User.test()
         handler = JobMutation(user=user)
-        with pytest.raises(ValidationError, match="boundary"):
+        with pytest.raises(ValidationError, match="list"):
             handler.validate({"boundary": "not a list"})
 
     def test_validate_obstacles_not_list_raises(self):
         user = User.test()
         handler = JobMutation(user=user)
-        with pytest.raises(ValidationError, match="obstacles"):
+        with pytest.raises(ValidationError, match="list"):
             handler.validate({"boundary": [[0, 0], [1, 0], [0, 1]], "obstacles": "x"})
 
     def test_validate_success(self):
@@ -146,22 +146,34 @@ class TestJobUpdateMutation:
         mock_job_repo.save.assert_called_once()
         mock_gallery_repo_cls.return_value.exists.assert_not_called()
 
+    @patch("mutations.ArtGalleryPublicIndex")
     @patch("mutations.ArtGalleryRepository")
     @patch("mutations.JobsRepository")
-    def test_execute_updates_job_and_gallery_title(self, mock_job_repo_cls, mock_gallery_repo_cls):
+    @patch("mutations.Countdown")
+    def test_execute_updates_job_and_gallery_title(
+        self, mock_countdown_cls, mock_job_repo_cls, mock_gallery_repo_cls, mock_index_cls
+    ):
         user = User.test()
         mock_job_repo = MagicMock()
         mock_job_repo_cls.return_value = mock_job_repo
         job = MagicMock()
         job.id = Identifier("j1")
         job.meta = {}
+        job.is_finished.return_value = True
+        job.stdout = {
+            "boundary": [[0, 0], [1, 0], [1, 1], [0, 1]],
+            "obstacles": {},
+            "guards": {},
+        }
+        job.created_at = "2024-01-01T12:00:00"
+        job.updated_at = "2024-01-01T12:00:00"
         mock_job_repo.get.return_value = job
+        mock_countdown_cls.from_timestamp.return_value = "20240101120000"
         mock_gallery_repo = MagicMock()
         mock_gallery_repo_cls.return_value = mock_gallery_repo
         mock_gallery_repo.exists.return_value = True
-        gallery = MagicMock()
-        gallery.title = "Old"
-        mock_gallery_repo.get.return_value = gallery
+        mock_index = MagicMock()
+        mock_index_cls.return_value = mock_index
         handler = JobUpdateMutation(user=user)
         result = handler.execute({"job_id": Identifier("j1"), "meta": {"title": "New Title"}})
         assert result is not None
@@ -206,7 +218,7 @@ class TestArtGalleryPublishMutation:
         result = handler.execute({"job_id": Identifier("j1")})
         assert "id" in result
         mock_gallery_repo.save.assert_called_once()
-        mock_index.save.assert_called_once()
+        mock_index.index.assert_called_once()
 
     @patch("mutations.JobsRepository")
     def test_execute_job_not_finished_raises(self, mock_job_repo_cls):
@@ -226,6 +238,7 @@ class TestArtGalleryPublishMutation:
         mock_job_repo = MagicMock()
         mock_job_repo_cls.return_value = mock_job_repo
         job = MagicMock()
+        job.id = Identifier("j1")
         job.is_finished.return_value = True
         job.stdout = {"boundary": [], "obstacles": {}}
         job.meta = {}

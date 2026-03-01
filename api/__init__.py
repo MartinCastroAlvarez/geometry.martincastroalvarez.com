@@ -14,3 +14,7 @@ For example, to invoke the API handler from Lambda:
 >>> from api import handler
 >>> response = handler(event, context)  # event = API Gateway proxy event
 """
+
+from .api import handler
+
+__all__ = ["handler"]

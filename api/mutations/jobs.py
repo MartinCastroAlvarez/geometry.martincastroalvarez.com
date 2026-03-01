@@ -34,9 +34,7 @@ from enums import Action
 from exceptions import PolygonValidationError
 from exceptions import UnauthorizedError
 from exceptions import ValidationError
-from geometry import Polygon
-from indexes.indexed import Indexed
-from indexes.jobs import JobsPrivateIndex
+from indexes import JobsPrivateIndex
 from logger import get_logger
 from messages import Message
 from messages import Queue
@@ -50,7 +48,9 @@ from mutations.utils import gallery_id_from_job_and_user
 from repositories import ArtGalleryRepository
 from repositories import JobsRepository
 from structs import Table
-from validations.polygon import PolygonValidation
+from validators import PolygonValidator
+
+from geometry import Polygon
 
 queue: Queue = Queue()
 logger: logging.Logger = get_logger(__name__)
@@ -69,15 +69,15 @@ class JobMutation(PrivateControllerMixin, Mutation):
             raise ValidationError("obstacles must be a list of obstacle polygons")
         return JobMutationRequest(
             boundary=Polygon.unserialize(boundary),
-            obstacles=Table.unserialize([Polygon.unserialize(obs) for obs in (obstacles or []) if isinstance(obs, list)]),
+            obstacles=Table.unserialize([Polygon.unserialize(obstacle) for obstacle in (obstacles or []) if isinstance(obstacle, list)]),
         )
 
     def execute(self, validated_input: JobMutationRequest) -> JobMutationResponse:
         boundary: Polygon = validated_input["boundary"]
         obstacles: Table[Polygon] = validated_input["obstacles"]
         # Fail fast: run polygon validation and raise if any check fails.
-        validation: PolygonValidation = PolygonValidation()
-        validation_result: dict[str, Any] = validation.execute({"boundary": boundary, "obstacles": obstacles})
+        validator: PolygonValidator = PolygonValidator()
+        validation_result: dict[str, Any] = validator.execute({"boundary": boundary, "obstacles": obstacles})
         failed: list[str] = [k for k, v in validation_result.items() if not k.endswith(".note") and v == "failed"]
         if failed:
             raise PolygonValidationError("Polygon validation failed: " + ", ".join(failed))
@@ -96,12 +96,9 @@ class JobMutation(PrivateControllerMixin, Mutation):
             raise UnauthorizedError("User must be authenticated")
         message: Message = Message(action=Action.START, job_id=job.id, user_email=email)
         queue.put(message)
-        index: JobsPrivateIndex = JobsPrivateIndex(user_email=email)
-        index.save(
-            Indexed(
-                index_id=Identifier(Countdown.from_timestamp(job.created_at)),
-                real_id=job.id,
-            )
+        JobsPrivateIndex(user_email=email).index(
+            index_id=Identifier(Countdown.from_timestamp(job.created_at)),
+            real_id=job.id,
         )
         logger.info("JobMutation.mutate() | created job_id=%s user=%s", job.id, email)
         return job.serialize()

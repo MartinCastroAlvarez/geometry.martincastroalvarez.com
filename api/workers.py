@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import json
 import logging
-import traceback
 from typing import Any
 from typing import Iterator
 from typing import Type
@@ -34,8 +33,6 @@ from attributes import Identifier
 from attributes import ReceiptHandle
 from enums import Action
 from enums import Status
-from exceptions import InvalidActionError
-from exceptions import ValidationError
 from interfaces import Serializable
 from logger import get_logger
 from messages import Message
@@ -185,31 +182,17 @@ def handler(event: dict[str, Any], context: Any) -> WorkerResponse:
                 action.value,
                 request.job_id,
             )
-        except (ValidationError, InvalidActionError) as err:
-            logger.warning("handler.handler() | invalid request error=%s", err)
-            results.append({"status": Status.FAILED, "error": str(err)})
-            continue
-
-        task_class = ROUTES.get(action)
-        if task_class is None:
-            results.append({"status": Status.FAILED, "error": f"Unknown action: {action.value}"})
-        else:
-            try:
-                out: TaskResponse = task_class().handler(body=body)
-                results.append(out)
-            except Exception as err:
-                logger.exception("handler.handler() | task failed error=%s", err)
-                results.append(
-                    {
-                        "status": Status.FAILED,
-                        "error": f"{type(err).__name__}: {err}",
-                        "traceback": traceback.format_exception(type(err), err, err.__traceback__),
-                    }
-                )
-
-        try:
-            queue.commit(request.message)
+            out: TaskResponse = ROUTES[action]().handler(body=body)
         except Exception as err:
-            logger.exception("handler.handler() | failed to commit message error=%s", err)
+            logger.exception("handler.handler() | processing request failed error=%s", err)
+            out = {"status": Status.FAILED, "error": str(err)}
+        finally:
+            logger.info(
+                "handler.handler() | processing request completed action=%s job_id=%s",
+                action.value,
+                request.job_id,
+            )
+            results.append(out)
+            queue.commit(request.message)
 
     return WorkerResponse(results=results)

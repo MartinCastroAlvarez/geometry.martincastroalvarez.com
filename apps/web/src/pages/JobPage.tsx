@@ -9,12 +9,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
+import { enUS, es } from "date-fns/locale";
 import { Page, Container, Title, Text, Badge, Badges, Inspector, Input, Toolbar, Button, Problem, Confirm, Milestones, Milestone, MilestonesSkeleton, useDevice, useDebounce } from "@geometry/ui";
 import { Viewer } from "@geometry/editor";
 import { useJob, useJobChildren, useUpdateJob, usePublish, useDeleteJob, useSession } from "@geometry/data";
 import { Status } from "@geometry/domain";
 import { useAnalytics, GoogleAnalyticsActions, GoogleAnalyticsCategories } from "@geometry/analytics";
-import { useLocale } from "@geometry/i18n";
+import { Language, useLocale } from "@geometry/i18n";
 import { Trash2 } from "lucide-react";
 import { JobPageSkeleton } from "../skeletons";
 
@@ -24,7 +25,7 @@ const VIEWER_HEIGHT = 520;
 export const JobPage = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { t } = useLocale();
+    const { t, language } = useLocale();
     const { isMobile } = useDevice();
     const { isLoading: sessionLoading } = useSession();
     const { job, isLoading: jobLoading } = useJob(id ?? null);
@@ -39,6 +40,7 @@ export const JobPage = () => {
     const [showPublishConfirm, setShowPublishConfirm] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [publishError, setPublishError] = useState<string | undefined>(undefined);
+    const [deleteError, setDeleteError] = useState<string | undefined>(undefined);
 
     const loading = sessionLoading || jobLoading;
 
@@ -100,9 +102,10 @@ export const JobPage = () => {
         setShowPublishConfirm(false);
         if (!id) return;
         publishMutation.mutate(id, {
-            onError: (err) => setPublishError(err instanceof Error ? err.message : String(err)),
+            onSuccess: () => navigate("/"),
+            onError: () => setPublishError(t("errors.publishFailed")),
         });
-    }, [id, publishMutation]);
+    }, [id, publishMutation, navigate, t]);
 
     const handleTitleChange = useCallback(
         (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -114,10 +117,16 @@ export const JobPage = () => {
     );
 
     const handleEditClick = useCallback(() => {
+        const copyOfPrefix = t("editor.copyOf");
+        const trimmed = (localTitle ?? "").trimStart();
+        const alreadyCopyOf =
+            copyOfPrefix.length > 0 &&
+            trimmed.toLowerCase().startsWith(copyOfPrefix.trim().toLowerCase());
+        const titleForEditor = alreadyCopyOf ? localTitle : copyOfPrefix + (localTitle ?? "").trim();
         navigate("/design", {
-            state: { artGallery: job?.artGallery, title: localTitle },
+            state: { artGallery: job?.artGallery, title: titleForEditor },
         });
-    }, [navigate, job, localTitle]);
+    }, [navigate, job, localTitle, t]);
 
     const handlePublishClick = useCallback(() => {
         setPublishError(undefined);
@@ -126,15 +135,19 @@ export const JobPage = () => {
 
     const handlePublishConfirmCancel = useCallback(() => setShowPublishConfirm(false), []);
 
-    const handleDeleteClick = useCallback(() => setShowDeleteConfirm(true), []);
+    const handleDeleteClick = useCallback(() => {
+        setDeleteError(undefined);
+        setShowDeleteConfirm(true);
+    }, []);
     const handleDeleteConfirmCancel = useCallback(() => setShowDeleteConfirm(false), []);
     const handleDeleteConfirm = useCallback(() => {
         setShowDeleteConfirm(false);
         if (!id) return;
         deleteJobMutation.mutate(id, {
             onSuccess: () => navigate("/jobs"),
+            onError: () => setDeleteError(t("errors.deleteFailed")),
         });
-    }, [id, deleteJobMutation, navigate]);
+    }, [id, deleteJobMutation, navigate, t]);
 
     if (!id) {
         return (
@@ -158,9 +171,10 @@ export const JobPage = () => {
         return null;
     }
 
+    const dateFnsLocale = language === Language.ES ? es : enUS;
     const updatedLabel =
         job!.updated_at && !Number.isNaN(Date.parse(job!.updated_at))
-            ? formatDistanceToNow(new Date(job!.updated_at), { addSuffix: true })
+            ? formatDistanceToNow(new Date(job!.updated_at), { addSuffix: true, locale: dateFnsLocale })
             : t("jobs.job.updated");
 
     const hasError = Object.keys(job!.stderr ?? {}).length > 0;
@@ -179,11 +193,6 @@ export const JobPage = () => {
                 onConfirm={handleDeleteConfirm}
                 onCancel={handleDeleteConfirmCancel}
             />
-            {publishError && (
-                <Container padded spaced>
-                    <Problem align="center">{publishError}</Problem>
-                </Container>
-            )}
             <Container padded spaced>
                 <Viewer artGallery={job!.artGallery} height={VIEWER_HEIGHT} readonly fitToView />
             </Container>
@@ -228,6 +237,11 @@ export const JobPage = () => {
                             {t("jobs.job.delete")}
                         </Button>
                     </Toolbar>
+                    {(publishError || deleteError) && (
+                        <Problem align={isMobile ? "center" : ("right" as const)} className="mt-2">
+                            {publishError ?? deleteError}
+                        </Problem>
+                    )}
                 </Container>
             </Container>
             <Container padded spaced>

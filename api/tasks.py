@@ -174,6 +174,12 @@ class StartTask(Task):
     """
 
     def execute(self, validated_input: TaskRequest) -> StartTaskResponse:
+        # If the job is already processed (SUCCESS), enqueue REPORT and return without re-running the step.
+        if self.job.is_finished():
+            logger.info("Task skipped: job already processed job_id=%s", self.job.id)
+            self.report()
+            return {"status": Status.SUCCESS, "job_id": self.job.id}
+
         meta: dict[str, Any] = validated_input.get("meta") or {}
         step: Step = Step.of(self.job.step_name)(job=self.job, user=self.user)
         try:

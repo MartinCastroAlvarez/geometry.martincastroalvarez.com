@@ -27,10 +27,27 @@ export interface ViewerProps {
     readonly?: boolean;
     /** When true, scales and centers the polygon so it fits in the viewer with padding. Default false. */
     fitToView?: boolean;
+    /** When true, vertices (dots) are shown; when false, only edges are shown. Defaults to !readonly. */
+    showVertices?: boolean;
 }
 
-export const Viewer = ({ artGallery, height, readonly = false, fitToView = false }: ViewerProps) => {
-    return <ViewerInner artGallery={artGallery} height={height} readonly={readonly} fitToView={fitToView} />;
+export const Viewer = ({
+    artGallery,
+    height,
+    readonly = false,
+    fitToView = false,
+    showVertices: showVerticesProp,
+}: ViewerProps) => {
+    const showVertices = showVerticesProp ?? !readonly;
+    return (
+        <ViewerInner
+            artGallery={artGallery}
+            height={height}
+            readonly={readonly}
+            fitToView={fitToView}
+            showVertices={showVertices}
+        />
+    );
 };
 
 const EMPTY_STATE: { vertices: EditorVertex[]; edges: [number, number][] } = { vertices: [], edges: [] };
@@ -66,11 +83,13 @@ const ViewerInner = ({
     height,
     readonly = false,
     fitToView = false,
+    showVertices = true,
 }: {
     artGallery?: ArtGallery | null;
     height: number;
     readonly?: boolean;
     fitToView?: boolean;
+    showVertices?: boolean;
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const stageWrapperRef = useRef<HTMLDivElement>(null);
@@ -239,16 +258,17 @@ const ViewerInner = ({
                                         scale={scale * layerScale}
                                     />
                                 ))}
-                                {vertices.map((v, i) => (
-                                    <Vertex
-                                        key={v.id}
-                                        vertex={v}
-                                        index={i}
-                                        draggable={false}
-                                        dragBounds={dragBounds}
-                                        scale={scale * layerScale}
-                                    />
-                                ))}
+                                {showVertices &&
+                                    vertices.map((v, i) => (
+                                        <Vertex
+                                            key={v.id}
+                                            vertex={v}
+                                            index={i}
+                                            draggable={false}
+                                            dragBounds={dragBounds}
+                                            scale={scale * layerScale}
+                                        />
+                                    ))}
                             </Layer>
                         </Stage>
                     </div>

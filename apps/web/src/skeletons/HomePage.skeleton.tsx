@@ -1,25 +1,39 @@
 /**
- * Skeleton for Home (galleries list). Grid 2×4 of EditorSkeleton.
+ * Skeleton for Home (galleries list). Matches HomePage layout: grid of cells with ViewerSkeleton
+ * and TitleSkeleton. Responsive grid: 12/6/4 cols per cell.
  */
-import { Skeleton, Container } from "@geometry/ui";
-import { EditorSkeleton } from "@geometry/editor";
+import { Skeleton, Page, Container, TitleSkeleton, useDevice } from "@geometry/ui";
+import { ViewerSkeleton } from "@geometry/editor";
 
-const ROWS = 4;
-const COLS = 2;
-const CELLS = ROWS * COLS;
-/** Height of each editor skeleton (px). Width is 100%. */
-const EDITOR_SKELETON_HEIGHT = 220;
+const VIEWER_HEIGHT = 250;
+const CELL_COUNT = 6;
 
-export const HomePageSkeleton = () => (
-    <Skeleton>
-        <Container padded spaced>
-            <Container name="geometry-home-skeleton-grid">
-                {Array.from({ length: CELLS }, (_, i) => (
-                    <Container key={i} size={12 / COLS}>
-                        <EditorSkeleton size={EDITOR_SKELETON_HEIGHT} />
-                    </Container>
-                ))}
-            </Container>
+const CellSkeleton = () => (
+    <Container padded spaced rounded left>
+        <Container size={12}>
+            <ViewerSkeleton height={VIEWER_HEIGHT} />
         </Container>
-    </Skeleton>
+        <Container size={12} left>
+            <TitleSkeleton width="70%" />
+        </Container>
+    </Container>
 );
+
+export const HomePageSkeleton = () => {
+    const { isMobile, isTablet } = useDevice();
+    const size = isMobile ? 12 : isTablet ? 6 : 4;
+
+    return (
+        <Skeleton>
+            <Page>
+                <Container spaced>
+                    {Array.from({ length: CELL_COUNT }, (_, i) => (
+                        <Container key={i} size={size}>
+                            <CellSkeleton />
+                        </Container>
+                    ))}
+                </Container>
+            </Page>
+        </Skeleton>
+    );
+};

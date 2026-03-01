@@ -1,8 +1,11 @@
 {
+  "home": {
+    "emptyGalleries": "No published galleries yet."
+  },
   "jobs": {
     "status": {
-      "pending": "Pending",
-      "success": "Success",
+      "pending": "Processing",
+      "success": "Finished",
       "failed": "Failed"
     },
     "steps": {
@@ -30,7 +33,9 @@
   },
   "errors": {
     "failedToFetch": "Connection error",
-    "serviceUnavailable": "Service temporarily unavailable"
+    "serviceUnavailable": "Service temporarily unavailable",
+    "publishFailed": "Failed to publish the gallery. Please try again.",
+    "deleteFailed": "Failed to delete the job. Please try again."
   },
   "nav": {
     "login": "Login",
@@ -59,6 +64,7 @@
     "submit": "Submit",
     "optimize": "Optimize",
     "untitledGallery": "Untitled Gallery",
+    "copyOf": "Copy of ",
     "tips": {
       "clickToAdd": "Click on the canvas to add a point; click elsewhere to connect points and form a shape.",
       "doubleClickHole": "Double-click on the canvas to start a new shape (e.g. a hole) without connecting to the previous point.",

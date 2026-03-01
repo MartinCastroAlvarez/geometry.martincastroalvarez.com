@@ -52,6 +52,7 @@ export const EditorTooltip: React.FC<EditorTooltipProps> = ({
             aria-hidden
             style={{
                 position: "absolute",
+                opacity: 0.3,
                 top: overlayTop,
                 left: overlayLeft,
                 width,

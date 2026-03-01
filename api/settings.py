@@ -27,7 +27,11 @@ DATA_BUCKET_NAME: str | None = os.getenv("DATA_BUCKET_NAME")
 SECRETS_BUCKET_NAME: str | None = os.getenv("SECRETS_BUCKET_NAME")
 QUEUE_NAME: str | None = os.getenv("QUEUE_NAME")
 
-LOG_LEVEL: LogLevel = LogLevel.parse(os.getenv("LOG_LEVEL", "INFO") or "INFO")
+DEBUG: bool = os.getenv("DEBUG", "").lower() in ("1", "true", "yes")
+LOG_LEVEL: LogLevel = LogLevel.DEBUG if DEBUG else LogLevel.parse(os.getenv("LOG_LEVEL", "INFO") or "INFO")
+
+# When True, 500 error responses include a "traceback" field (for debugging only).
+EXPOSE_TRACEBACK: bool = os.getenv("EXPOSE_TRACEBACK", "").lower() in ("1", "true", "yes")
 
 JWT_SECRET_NAME: str = "JWT_SECRET"
 JWT_TEST_NAME: str = "JWT_TEST"
@@ -41,6 +45,9 @@ MAX_LIMIT: int = int(os.getenv("MAX_LIMIT", "1000"))
 
 # Title length (User name, gallery title, etc.)
 DEFAULT_TITLE_MAX_LENGTH: int = int(os.getenv("DEFAULT_TITLE_MAX_LENGTH", "200"))
+
+# Default gallery title when none is provided
+UNTITLED_ART_GALLERY_NAME: str = "Untitled Art Gallery"
 
 # SQS receive (SQS API: MaxNumberOfMessages 1–10, WaitTimeSeconds 0–20)
 QUEUE_WAIT_TIME_SECONDS: int = int(os.getenv("QUEUE_WAIT_TIME_SECONDS", "20"))

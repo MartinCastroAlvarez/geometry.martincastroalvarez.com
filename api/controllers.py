@@ -11,7 +11,7 @@ Controller is the abstract base for all API operations. validate(body)
 returns ControllerRequest; execute(validated_input: ControllerRequest)
 returns ControllerResponse; handler(body) runs validate then execute.
 ControllerRequest and ControllerResponse are base TypedDicts extended by
-mutations, queries, validations, and tasks. PrivateControllerMixin
+mutations, queries, validators, and tasks. PrivateControllerMixin
 enforces authentication and sets self.user. Used by api.api handler to
 dispatch and by api.api (ROUTES) for typing.
 
@@ -32,13 +32,13 @@ from models import User
 
 
 class ControllerRequest(TypedDict, total=False):
-    """Base TypedDict for controller request (validated input). Extended by mutations, queries, validations, tasks."""
+    """Base TypedDict for controller request (validated input). Extended by mutations, queries, validators, tasks."""
 
     pass
 
 
 class ControllerResponse(TypedDict, total=False):
-    """Base TypedDict for controller response. Extended by mutations, queries, validations, tasks."""
+    """Base TypedDict for controller response. Extended by mutations, queries, validators, tasks."""
 
     pass
 
@@ -79,7 +79,7 @@ class Controller(ABC):
 class PrivateControllerMixin:
     """
     Mixin that requires an authenticated user. Add as first base with
-    Mutation, Query, Validation, or Task; pass user= to __init__.
+    Mutation, Query, Validator, or Task; pass user= to __init__.
 
     For example, to create an authenticated mutation:
     >>> class MyMutation(PrivateControllerMixin, Mutation):

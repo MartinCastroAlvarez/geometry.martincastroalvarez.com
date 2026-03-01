@@ -40,9 +40,6 @@ from attributes import Url
 from enums import Status
 from enums import StepName
 from exceptions import ValidationError
-from geometry import ConvexComponent
-from geometry import Ear
-from geometry import Polygon
 from interfaces import Serializable
 from serializers import ArtGalleryDict
 from serializers import JobDict
@@ -55,8 +52,13 @@ from settings import DEFAULT_TITLE_MAX_LENGTH
 from settings import TEST_AVATAR_URL
 from settings import TEST_EMAIL
 from settings import TEST_NAME
+from settings import UNTITLED_ART_GALLERY_NAME
 from structs import Sequence
 from structs import Table
+
+from geometry import ConvexComponent
+from geometry import Ear
+from geometry import Polygon
 
 
 class Model(Serializable[Serialized]):
@@ -364,18 +366,24 @@ class ArtGallery(Model):
         >>> gallery.boundary
         Polygon(...)
         """
+        boundary = data.get("boundary") or data.get("boundaries") or []
+        obstacles = data.get("obstacles") or data.get("holes") or []
+        ears = data.get("ears") or []
+        convex_components = data.get("convex_components") or []
+        guards = data.get("guards") or []
+        visibility = data.get("visibility") or []
         return cls(
             id=Identifier(data.get("id")),
-            boundary=Polygon.unserialize(data.get("boundary") or []),
-            obstacles=Table.unserialize([Polygon.unserialize(v) for v in data.get("obstacles", {}).values()]),
+            boundary=Polygon.unserialize(boundary),
+            obstacles=Table.unserialize([Polygon.unserialize(obstacle) for obstacle in obstacles]),
             owner_job_id=Identifier(data.get("owner_job_id")),
-            title=Title(data.get("title", "Untitled Art Gallery")),
+            title=Title(data.get("title", UNTITLED_ART_GALLERY_NAME)),
             created_at=Timestamp(data.get("created_at")),
             updated_at=Timestamp(data.get("updated_at")),
-            ears=Table.unserialize([Ear.unserialize(v) for v in data.get("ears", {}).values()]),
-            convex_components=Table.unserialize([ConvexComponent.unserialize(v) for v in data.get("convex_components", {}).values()]),
-            guards=Table.unserialize([Point.unserialize(v) for v in data.get("guards", {}).values()]),
-            visibility=Table.unserialize([Sequence([Point.unserialize(p) for p in points]) for points in data.get("visibility", {}).values()]),
+            ears=Table.unserialize([Ear.unserialize(ear) for ear in ears]),
+            convex_components=Table.unserialize([ConvexComponent.unserialize(convex_component) for convex_component in convex_components]),
+            guards=Table.unserialize([Point.unserialize(guard) for guard in guards]),
+            visibility=Table.unserialize([Sequence([Point.unserialize(point) for point in points]) for points in visibility]),
         )
 
     def serialize(self) -> ArtGalleryDict:

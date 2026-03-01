@@ -39,13 +39,14 @@ from exceptions import StepNotHandledError
 from exceptions import StitchWinnerSubsequenceError
 from exceptions import ValidationBoundaryNotCCWError
 from exceptions import ValidationObstacleNotCWError
-from geometry import Point
-from geometry import Polygon
 from geometry.segment import Segment
 from geometry.walk import Walk
 from models import Job
 from models import User
 from repositories import JobsRepository
+
+from geometry import Point
+from geometry import Polygon
 
 logger = logging.getLogger(__name__)
 
@@ -144,7 +145,7 @@ class ArtGalleryStep(CoordinatorStep):
     """
     Art gallery step: creates child jobs (validate_polygons, stitching, ear_clipping,
     convex_component_optimization, guard_placement) with deterministic ids. Children
-    are created with status SUCCESS momentarily so the parent's REPORT does not block.
+    are created in PENDING status.
     Idempotent: same job and inputs yield the same children. run() ends with broadcast().
     """
 
@@ -171,7 +172,7 @@ class ArtGalleryStep(CoordinatorStep):
             child: Job = Job(
                 id=child_id,
                 parent_id=self.job.id,
-                status=Status.SUCCESS,
+                status=Status.PENDING,
                 step_name=step_name,
                 stdin=dict(self.job.stdin),
             )

@@ -136,6 +136,15 @@ class Index(Generic[T]):
         """
         return self.get(identifier).serialize()
 
+    def index(self, index_id: Identifier, real_id: Identifier) -> None:
+        """
+        Build an Indexed entry from index_id and real_id and persist it under this index.
+
+        For example, to add a gallery to the public index:
+        >>> ArtGalleryPublicIndex().index(index_id=Identifier(countdown), real_id=gallery.id)
+        """
+        self.save(Indexed(index_id=index_id, real_id=real_id))
+
     def save(self, record: Indexed) -> None:
         """
         Persist an index entry under this index path.
@@ -149,7 +158,8 @@ class Index(Generic[T]):
 
     def delete(self, identifier: Identifier) -> bool:
         """
-        Remove an index entry by identifier. Returns True if a key was deleted.
+        Remove an index entry by identifier. Returns True if a key was deleted,
+        False if the entry did not exist. Does not raise when the entry is missing (idempotent).
 
         For example, to remove a gallery from the public index:
         >>> index.delete(Identifier("20240101120000"))

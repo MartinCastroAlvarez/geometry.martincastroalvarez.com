@@ -1,20 +1,20 @@
 """
-Validations: polygon geometry validation and base classes.
+Validators: polygon geometry validation and base classes.
 
 Title
 -----
-Validations Module
+Validators Module
 
 Context
 -------
-Validations extend Controller for read-only validation operations.
-PolygonValidation validates that the boundary is CCW and obstacles are CW; returns a status/note dict. Used by
+Validators extend Controller for read-only validation operations.
+PolygonValidator validates that the boundary is CCW and obstacles are CW; returns a status/note dict. Used by
 POST v1/polygon and by JobMutation for fail-fast validation.
 
 Examples:
->>> from validations import PolygonValidation
->>> v = PolygonValidation()
->>> result = v.handler(body={"boundary": [...], "obstacles": [...]})
+>>> from validators import PolygonValidator
+>>> v = PolygonValidator()
+>>> result = v.handler(body={"boundary": [...], "obstacles": []})
 """
 
 from __future__ import annotations
@@ -33,42 +33,43 @@ from enums import Status
 from exceptions import ValidationBoundaryMustBeListError
 from exceptions import ValidationBoundaryRequiredError
 from exceptions import ValidationObstaclesMustBeListError
-from geometry import Polygon
 from structs import Table
+
+from geometry import Polygon
 
 logger = logging.getLogger(__name__)
 
 
-class ValidationRequest(ControllerRequest):
-    """Base for validation requests."""
+class ValidatorRequest(ControllerRequest):
+    """Base for validator requests."""
 
     pass
 
 
-class PolygonValidationRequest(ValidationRequest):
+class PolygonValidatorRequest(ValidatorRequest):
     """Validate polygon: boundary and obstacles (same shape as job create)."""
 
     boundary: Polygon
     obstacles: Table[Polygon]
 
 
-class ValidationResponse(ControllerResponse):
-    """Base for validation responses."""
+class ValidatorResponse(ControllerResponse):
+    """Base for validator responses."""
 
     pass
 
 
-# PolygonValidation returns a dict: keys like "polygon.ccw", "obstacles.0.cw";
+# PolygonValidator returns a dict: keys like "polygon.ccw", "obstacles.0.cw";
 # values are str (status.value for status keys, message for *.note keys) for JSON serialization.
-PolygonValidationResponse = dict[str, str]
+PolygonValidatorResponse = dict[str, str]
 
 
 # Internal result from each validate_* method: keys are check names, values are Status or note string.
-ValidationResult = dict[str, str | Status]
+ValidatorResult = dict[str, str | Status]
 
 
-def _normalize_result(result: ValidationResult) -> dict[str, str]:
-    """Convert ValidationResult to PolygonValidationResponse (Status -> status.value)."""
+def _normalize_result(result: ValidatorResult) -> dict[str, str]:
+    """Convert ValidatorResult to PolygonValidatorResponse (Status -> status.value)."""
     out: dict[str, str] = {}
     for k, v in result.items():
         out[k] = v.value if isinstance(v, Status) else v
@@ -103,7 +104,7 @@ def _points_have_degree_gt2(points: list[Any]) -> bool:
     return any(c > 1 for c in counts.values())
 
 
-def _status_values(merged: ValidationResult) -> list[Status]:
+def _status_values(merged: ValidatorResult) -> list[Status]:
     """Extract status values from merged (status keys only; values may be Status or str)."""
     out: list[Status] = []
     for k, v in merged.items():
@@ -116,7 +117,7 @@ def _status_values(merged: ValidationResult) -> list[Status]:
     return out
 
 
-def _overall_status(merged: ValidationResult) -> Status:
+def _overall_status(merged: ValidatorResult) -> Status:
     """
     Compute overall status from all status keys in merged result.
     Uses only keys whose value is a Status or status string (not *.note string keys).
@@ -132,41 +133,41 @@ def _overall_status(merged: ValidationResult) -> Status:
     return Status.FAILED
 
 
-class Validation(Controller):
+class Validator(Controller):
     """
-    Base validation: validate (shallow), execute (deep validations), handler from Controller.
+    Base validator: validate (shallow), execute (deep validations), handler from Controller.
 
     For example, to run polygon validation:
-    >>> v = PolygonValidation()
+    >>> v = PolygonValidator()
     >>> result = v.handler({"boundary": [...], "obstacles": []})
     >>> "polygon.ccw" in result
     True
     """
 
     @abstractmethod
-    def validate(self, body: dict[str, Any]) -> ValidationRequest:
+    def validate(self, body: dict[str, Any]) -> ValidatorRequest:
         """Validate input shape and types; return typed request. Raises on invalid."""
         pass
 
     @abstractmethod
-    def execute(self, validated_input: ValidationRequest) -> ValidationResponse:
+    def execute(self, validated_input: ValidatorRequest) -> ValidatorResponse:
         """Run deep validations and return result dict (e.g. status + notes per check)."""
         pass
 
 
-class PolygonValidation(Validation):
+class PolygonValidator(Validator):
     """
     Validates boundary polygon and obstacles: boundary must be CCW, each obstacle must be CW.
     Returns dict of status and note keys.
 
     For example, to validate boundary and obstacles before creating a job:
-    >>> v = PolygonValidation()
+    >>> v = PolygonValidator()
     >>> result = v.handler({"boundary": [[0,0],[10,0],[10,10],[0,10]], "obstacles": []})
     >>> result["polygon.ccw"]
     'success'
     """
 
-    def validate(self, body: dict[str, Any]) -> PolygonValidationRequest:
+    def validate(self, body: dict[str, Any]) -> PolygonValidatorRequest:
         """Shallow validation: require boundary and obstacles; accept list or { points: list }; unserialize to Polygon and Table."""
         boundary: Any = body.get("boundary")
         obstacles: Any = body.get("obstacles")
@@ -180,21 +181,21 @@ class PolygonValidation(Validation):
             raise ValidationObstaclesMustBeListError("obstacles must be a list of obstacle polygons")
         obstacle_list: list[Any] = obstacles or []
         obstacle_polys: list[Polygon] = []
-        for obs in obstacle_list:
-            if isinstance(obs, dict) and "points" in obs:
-                obs = obs["points"]
-            if isinstance(obs, list):
-                obstacle_polys.append(Polygon.unserialize(obs))
+        for obstacle in obstacle_list:
+            if isinstance(obstacle, dict) and "points" in obstacle:
+                obstacle = obstacle["points"]
+            if isinstance(obstacle, list):
+                obstacle_polys.append(Polygon.unserialize(obstacle))
         boundary_poly: Polygon = Polygon.unserialize(boundary)
         obstacles_table: Table[Polygon] = Table.unserialize(obstacle_polys)
-        return PolygonValidationRequest(boundary=boundary_poly, obstacles=obstacles_table)
+        return PolygonValidatorRequest(boundary=boundary_poly, obstacles=obstacles_table)
 
-    def validate_vertex_degree_raw(self, body: dict[str, Any]) -> ValidationResult:
+    def validate_vertex_degree_raw(self, body: dict[str, Any]) -> ValidatorResult:
         """
         Check boundary and obstacles for repeated vertices (degree > 2).
         Runs on raw body so we can report this before Polygon construction would raise.
         """
-        result: ValidationResult = {}
+        result: ValidatorResult = {}
         boundary: Any = body.get("boundary")
         obstacles: Any = body.get("obstacles")
         if boundary is not None:
@@ -208,9 +209,9 @@ class PolygonValidation(Validation):
                     PolygonValidationCode.POLYGON_VERTEX_DEGREE_GT2.value if has_repeated else PolygonValidationCode.POLYGON_VERTEX_DEGREE_OK.value
                 )
         obstacle_list: list[Any] = obstacles if isinstance(obstacles, list) else []
-        for idx, obs in enumerate(obstacle_list):
+        for idx, obstacle in enumerate(obstacle_list):
             prefix: str = f"obstacles.{idx}"
-            points: Any = obs["points"] if isinstance(obs, dict) and "points" in obs else obs
+            points: Any = obstacle["points"] if isinstance(obstacle, dict) and "points" in obstacle else obstacle
             if not isinstance(points, list):
                 result[f"{prefix}.vertex_degree"] = Status.PENDING
                 result[f"{prefix}.vertex_degree.note"] = PolygonValidationCode.CHECK_SKIPPED.value
@@ -223,17 +224,17 @@ class PolygonValidation(Validation):
             )
         return result
 
-    def handler(self, body: dict[str, Any]) -> ValidationResponse:
+    def handler(self, body: dict[str, Any]) -> ValidatorResponse:
         """Run vertex-degree check first (on raw body), then validate + execute; merge results."""
-        degree_result: ValidationResult = self.validate_vertex_degree_raw(body)
+        degree_result: ValidatorResult = self.validate_vertex_degree_raw(body)
         degree_failed = any(v == Status.FAILED for k, v in degree_result.items() if not k.endswith(".note") and isinstance(v, Status))
         if degree_failed:
-            merged: ValidationResult = dict(degree_result)
+            merged: ValidatorResult = dict(degree_result)
             merged["status"] = Status.FAILED
             merged["status.note"] = PolygonValidationCode.VALIDATIONS_FAILED_OR_PENDING.value
-            return cast(ValidationResponse, _normalize_result(merged))
+            return cast(ValidatorResponse, _normalize_result(merged))
         validated_input = self.validate(body)
-        exec_result: ValidationResult = dict(self.execute(validated_input))
+        exec_result: ValidatorResult = dict(self.execute(validated_input))
         for k, v in degree_result.items():
             exec_result[k] = v
         overall = _overall_status(exec_result)
@@ -243,25 +244,25 @@ class PolygonValidation(Validation):
             if overall == Status.SUCCESS
             else PolygonValidationCode.VALIDATIONS_FAILED_OR_PENDING.value
         )
-        return cast(ValidationResponse, _normalize_result(exec_result))
+        return cast(ValidatorResponse, _normalize_result(exec_result))
 
-    def validate_boundary_ccw(self, boundary: Polygon) -> ValidationResult:
+    def validate_boundary_ccw(self, boundary: Polygon) -> ValidatorResult:
         """Check boundary is counter-clockwise. Returns status and note keys."""
-        result: ValidationResult = {}
+        result: ValidatorResult = {}
         try:
             ccw: bool = boundary.is_ccw()
             status: Status = Status.SUCCESS if ccw else Status.FAILED
             result["polygon.ccw"] = status
             result["polygon.ccw.note"] = PolygonValidationCode.POLYGON_CCW_OK.value if ccw else PolygonValidationCode.POLYGON_NOT_CCW.value
         except Exception as e:
-            logger.debug("PolygonValidation.execute() | polygon.ccw error: %s", e)
+            logger.debug("PolygonValidator.execute() | polygon.ccw error: %s", e)
             result["polygon.ccw"] = Status.PENDING
             result["polygon.ccw.note"] = PolygonValidationCode.CHECK_SKIPPED.value
         return result
 
-    def validate_boundary_simplicity(self, boundary: Polygon) -> ValidationResult:
+    def validate_boundary_simplicity(self, boundary: Polygon) -> ValidatorResult:
         """Check boundary is simple (no self-intersection). Returns status and note keys."""
-        result: ValidationResult = {}
+        result: ValidatorResult = {}
         try:
             simple: bool = boundary.is_simple()
             status: Status = Status.SUCCESS if simple else Status.FAILED
@@ -270,96 +271,96 @@ class PolygonValidation(Validation):
                 PolygonValidationCode.POLYGON_SIMPLE_OK.value if simple else PolygonValidationCode.POLYGON_NOT_SIMPLE.value
             )
         except Exception as e:
-            logger.debug("PolygonValidation.execute() | polygon.simplicity error: %s", e)
+            logger.debug("PolygonValidator.execute() | polygon.simplicity error: %s", e)
             result["polygon.simplicity"] = Status.PENDING
             result["polygon.simplicity.note"] = PolygonValidationCode.CHECK_SKIPPED.value
         return result
 
-    def validate_obstacles_simplicity(self, obstacles: Table[Polygon]) -> ValidationResult:
+    def validate_obstacles_simplicity(self, obstacles: Table[Polygon]) -> ValidatorResult:
         """Check each obstacle is simple (no self-intersection). Returns status and note keys per obstacle."""
-        result: ValidationResult = {}
+        result: ValidatorResult = {}
         obstacles_list: list[Polygon] = list(obstacles)
-        for idx, obs in enumerate(obstacles_list):
+        for idx, obstacle in enumerate(obstacles_list):
             prefix: str = f"obstacles.{idx}"
             try:
-                simple: bool = obs.is_simple()
+                simple: bool = obstacle.is_simple()
                 status: Status = Status.SUCCESS if simple else Status.FAILED
                 result[f"{prefix}.simplicity"] = status
                 result[f"{prefix}.simplicity.note"] = (
                     PolygonValidationCode.OBSTACLE_SIMPLE_OK.value if simple else PolygonValidationCode.OBSTACLE_NOT_SIMPLE.value
                 )
             except Exception as e:
-                logger.debug("PolygonValidation.execute() | %s.simplicity error: %s", prefix, e)
+                logger.debug("PolygonValidator.execute() | %s.simplicity error: %s", prefix, e)
                 result[f"{prefix}.simplicity"] = Status.PENDING
                 result[f"{prefix}.simplicity.note"] = PolygonValidationCode.CHECK_SKIPPED.value
         return result
 
-    def validate_obstacles_cw(self, obstacles: Table[Polygon]) -> ValidationResult:
+    def validate_obstacles_cw(self, obstacles: Table[Polygon]) -> ValidatorResult:
         """Check each obstacle is clockwise. Returns status and note keys per obstacle."""
-        result: ValidationResult = {}
+        result: ValidatorResult = {}
         obstacles_list: list[Polygon] = list(obstacles)
-        for idx, obs in enumerate(obstacles_list):
+        for idx, obstacle in enumerate(obstacles_list):
             prefix: str = f"obstacles.{idx}"
             try:
-                cw: bool = obs.is_cw()
+                cw: bool = obstacle.is_cw()
                 status: Status = Status.SUCCESS if cw else Status.FAILED
                 result[f"{prefix}.cw"] = status
                 result[f"{prefix}.cw.note"] = PolygonValidationCode.OBSTACLE_CW_OK.value if cw else PolygonValidationCode.OBSTACLE_NOT_CW.value
             except Exception as e:
-                logger.debug("PolygonValidation.execute() | %s.cw error: %s", prefix, e)
+                logger.debug("PolygonValidator.execute() | %s.cw error: %s", prefix, e)
                 result[f"{prefix}.cw"] = Status.PENDING
                 result[f"{prefix}.cw.note"] = PolygonValidationCode.CHECK_SKIPPED.value
         return result
 
-    def validate_obstacles_contained(self, boundary: Polygon, obstacles: Table[Polygon]) -> ValidationResult:
+    def validate_obstacles_contained(self, boundary: Polygon, obstacles: Table[Polygon]) -> ValidatorResult:
         """Check each obstacle is fully inside the boundary. Returns status and note keys per obstacle."""
-        result: ValidationResult = {}
+        result: ValidatorResult = {}
         obstacles_list: list[Polygon] = list(obstacles)
-        for idx, obs in enumerate(obstacles_list):
+        for idx, obstacle in enumerate(obstacles_list):
             prefix: str = f"obstacles.{idx}"
             try:
-                contained: bool = boundary.contains(obs)
+                contained: bool = boundary.contains(obstacle)
                 status: Status = Status.SUCCESS if contained else Status.FAILED
                 result[f"{prefix}.contained"] = status
                 result[f"{prefix}.contained.note"] = (
                     PolygonValidationCode.OBSTACLE_CONTAINED_OK.value if contained else PolygonValidationCode.OBSTACLE_NOT_CONTAINED.value
                 )
             except Exception as e:
-                logger.debug("PolygonValidation.execute() | %s.contained error: %s", prefix, e)
+                logger.debug("PolygonValidator.execute() | %s.contained error: %s", prefix, e)
                 result[f"{prefix}.contained"] = Status.PENDING
                 result[f"{prefix}.contained.note"] = PolygonValidationCode.CHECK_SKIPPED.value
         return result
 
-    def validate_obstacles_overlaps(self, obstacles: Table[Polygon]) -> ValidationResult:
+    def validate_obstacles_overlaps(self, obstacles: Table[Polygon]) -> ValidatorResult:
         """Check no obstacle overlaps another. Returns status and note keys per obstacle."""
-        result: ValidationResult = {}
+        result: ValidatorResult = {}
         obstacles_list: list[Polygon] = list(obstacles)
-        for idx, obs in enumerate(obstacles_list):
+        for idx, obstacle in enumerate(obstacles_list):
             prefix: str = f"obstacles.{idx}"
             try:
-                overlaps_another: bool = any(obs.intersects(other, inclusive=True) for other in obstacles_list if other is not obs)
+                overlaps_another: bool = any(obstacle.intersects(other, inclusive=True) for other in obstacles_list if other is not obstacle)
                 status: Status = Status.FAILED if overlaps_another else Status.SUCCESS
                 result[f"{prefix}.overlaps"] = status
                 result[f"{prefix}.overlaps.note"] = (
                     PolygonValidationCode.OBSTACLE_OVERLAPS.value if overlaps_another else PolygonValidationCode.OBSTACLE_NO_OVERLAP.value
                 )
             except Exception as e:
-                logger.debug("PolygonValidation.execute() | %s.overlaps error: %s", prefix, e)
+                logger.debug("PolygonValidator.execute() | %s.overlaps error: %s", prefix, e)
                 result[f"{prefix}.overlaps"] = Status.PENDING
                 result[f"{prefix}.overlaps.note"] = PolygonValidationCode.CHECK_SKIPPED.value
         return result
 
-    def execute(self, validated_input: ValidationRequest) -> ValidationResponse:
+    def execute(self, validated_input: ValidatorRequest) -> ValidatorResponse:
         """Run deep validations: boundary must be CCW, obstacles must be CW. Merge results; add status and status.note."""
-        req: PolygonValidationRequest = cast(PolygonValidationRequest, validated_input)
+        req: PolygonValidatorRequest = cast(PolygonValidatorRequest, validated_input)
         boundary: Polygon = req["boundary"]
         obstacles: Table[Polygon] = req["obstacles"]
 
-        results: list[ValidationResult] = [
+        results: list[ValidatorResult] = [
             self.validate_boundary_ccw(boundary),
             self.validate_obstacles_cw(obstacles),
         ]
-        merged: ValidationResult = {}
+        merged: ValidatorResult = {}
         for r in results:
             merged.update(r)
         overall: Status = _overall_status(merged)
@@ -369,5 +370,5 @@ class PolygonValidation(Validation):
             if overall == Status.SUCCESS
             else PolygonValidationCode.VALIDATIONS_FAILED_OR_PENDING.value
         )
-        out: PolygonValidationResponse = _normalize_result(merged)
-        return cast(ValidationResponse, out)
+        out: PolygonValidatorResponse = _normalize_result(merged)
+        return cast(ValidatorResponse, out)
