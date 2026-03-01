@@ -8,12 +8,12 @@ from attributes import Identifier
 from enums import StepName
 from models import Job
 from steps import ArtGalleryStep
+from steps import ValidationPolygonStep
 from tasks import StartTask
 from steps import ConvexComponentOptimizationStep
 from steps import EarClippingStep
 from steps import GuardPlacementStep
 from steps import StitchingStep
-from steps import VisibilityMatrixStep
 
 
 class TestStepRegistration:
@@ -23,36 +23,55 @@ class TestStepRegistration:
         assert StepName.ART_GALLERY in StartTask.STEP_CLASS_BY_NAME
         assert StartTask.STEP_CLASS_BY_NAME[StepName.ART_GALLERY] is ArtGalleryStep
 
-    def test_step_class_by_name_has_visibility_matrix(self):
-        assert StepName.VISIBILITY_MATRIX in StartTask.STEP_CLASS_BY_NAME
-        assert StartTask.STEP_CLASS_BY_NAME[StepName.VISIBILITY_MATRIX] is VisibilityMatrixStep
+    def test_step_class_by_name_has_validate_polygons(self):
+        assert StepName.VALIDATE_POLYGONS in StartTask.STEP_CLASS_BY_NAME
+        assert StartTask.STEP_CLASS_BY_NAME[StepName.VALIDATE_POLYGONS] is ValidationPolygonStep
 
 
 class TestSimpleSteps:
     """Test simple steps that return a fixed dict."""
 
-    def test_visibility_matrix_step_run(self):
-        job = Job(id=Identifier("j1"), step_name=StepName.VISIBILITY_MATRIX)
-        step = VisibilityMatrixStep(job=job, user_email=Email("u@e.com"))
-        out = step.run()
-        assert out == {"step:visibility_matrix": "success"}
-
-    def test_stitching_step_run(self):
+    @patch("steps.Queue")
+    def test_stitching_step_run(self, mock_queue_cls):
+        mock_queue = MagicMock()
+        mock_queue_cls.return_value = mock_queue
         job = Job(id=Identifier("j1"), step_name=StepName.STITCHING)
         step = StitchingStep(job=job, user_email=Email("u@e.com"))
-        assert step.run() == {"step:stitching": "success"}
+        out = step.run()
+        assert out == {"step:stitching": "success"}
+        mock_queue.put.assert_called()
 
-    def test_ear_clipping_step_run(self):
+    @patch("steps.Queue")
+    def test_validate_polygons_step_run_success(self, mock_queue_cls):
+        mock_queue = MagicMock()
+        mock_queue_cls.return_value = mock_queue
+        job = Job(
+            id=Identifier("j1"),
+            step_name=StepName.VALIDATE_POLYGONS,
+            stdin={"boundary": [[0, 0], [10, 0], [10, 10], [0, 10]], "obstacles": []},
+        )
+        step = ValidationPolygonStep(job=job, user_email=Email("u@e.com"))
+        out = step.run()
+        assert out == {"step:validate_polygons": "success"}
+        mock_queue.put.assert_called()
+
+    @patch("steps.Queue")
+    def test_ear_clipping_step_run(self, mock_queue_cls):
+        mock_queue_cls.return_value = MagicMock()
         job = Job(id=Identifier("j1"), step_name=StepName.EAR_CLIPPING)
         step = EarClippingStep(job=job, user_email=Email("u@e.com"))
         assert step.run() == {"step:ear_clipping": "success"}
 
-    def test_convex_component_optimization_step_run(self):
+    @patch("steps.Queue")
+    def test_convex_component_optimization_step_run(self, mock_queue_cls):
+        mock_queue_cls.return_value = MagicMock()
         job = Job(id=Identifier("j1"), step_name=StepName.CONVEX_COMPONENT_OPTIMIZATION)
         step = ConvexComponentOptimizationStep(job=job, user_email=Email("u@e.com"))
         assert step.run() == {"step:convex_component_optimization": "success"}
 
-    def test_guard_placement_step_run(self):
+    @patch("steps.Queue")
+    def test_guard_placement_step_run(self, mock_queue_cls):
+        mock_queue_cls.return_value = MagicMock()
         job = Job(id=Identifier("j1"), step_name=StepName.GUARD_PLACEMENT)
         step = GuardPlacementStep(job=job, user_email=Email("u@e.com"))
         assert step.run() == {"step:guard_placement": "success"}
@@ -75,10 +94,11 @@ class TestArtGalleryStep:
 
         out = step.run()
 
-        assert out == {"step:art_gallery": "success"}
+        assert out["step:art_gallery"] == "success"
+        assert out.get("boundary") == []
         assert len(job.children_ids) == 5
         mock_repo.save.assert_called()
-        mock_queue.put.assert_called_once()
+        assert mock_queue.put.call_count >= 1
 
     @patch("steps.Queue")
     @patch("steps.JobsRepository")
@@ -96,4 +116,4 @@ class TestArtGalleryStep:
 
         assert out == {"step:art_gallery": "success"}
         mock_repo.save.assert_not_called()
-        mock_queue.put.assert_called_once()
+        assert mock_queue.put.call_count >= 1

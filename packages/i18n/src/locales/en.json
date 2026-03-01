@@ -7,6 +7,7 @@
     },
     "steps": {
       "visibility_matrix": "Visibility Matrix",
+      "validate_polygons": "Validate Polygons",
       "stitching": "Stitching",
       "ear_clipping": "Ear Clipping",
       "convex_component_optimization": "Convex Components",

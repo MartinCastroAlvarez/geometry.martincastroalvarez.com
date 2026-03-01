@@ -50,7 +50,7 @@ from steps import EarClippingStep
 from steps import GuardPlacementStep
 from steps import Step
 from steps import StitchingStep
-from steps import VisibilityMatrixStep
+from steps import ValidationPolygonStep
 
 logger = get_logger(__name__)
 
@@ -127,7 +127,7 @@ class StartTask(Task):
 
     STEP_CLASS_BY_NAME: dict[StepName, Type[Step]] = {
         StepName.ART_GALLERY: ArtGalleryStep,
-        StepName.VISIBILITY_MATRIX: VisibilityMatrixStep,
+        StepName.VALIDATE_POLYGONS: ValidationPolygonStep,
         StepName.STITCHING: StitchingStep,
         StepName.EAR_CLIPPING: EarClippingStep,
         StepName.CONVEX_COMPONENT_OPTIMIZATION: ConvexComponentOptimizationStep,
@@ -139,7 +139,7 @@ class StartTask(Task):
             "job_id": Identifier(body.get("job_id")),
             "user_email": Email(body.get("user_email")),
         }
-        meta = body.get("meta")
+        meta: Any = body.get("meta")
         if meta is not None and isinstance(meta, dict):
             req["meta"] = meta
         return req
@@ -151,41 +151,55 @@ class StartTask(Task):
         user: User = User(email=user_email)
         repository: JobsRepository = JobsRepository(user=user)
         job: Job = repository.get(job_id)
+
+        # If the job is already failed, return failed.
         if job.is_failed():
             return {
                 "status": Status.FAILED,
                 "job_id": job_id,
                 "reason": "job_failed",
             }
+
+        # Find out the handler for this step.
         step_name: StepName = job.step_name
-        step_class = StartTask.STEP_CLASS_BY_NAME.get(step_name)
+        step_class: Type[Step] | None = StartTask.STEP_CLASS_BY_NAME.get(step_name)
         if step_class is None:
             logger.warning("StartTask.execute() | unknown step_name=%s job_id=%s", step_name, job_id)
             return {"status": Status.FAILED, "job_id": job_id, "reason": "unknown_step"}
-        step: Step = step_class(job=job, user_email=user_email)
-        run_output: dict[str, Any] = step.run(**meta)
-        job = step.job
-        job.stdout.update(run_output)
+
+        # Run step and check if there is any error.
+        try:
+            step: Step = step_class(job=job, user_email=user_email)
+            stdout: dict[str, Any] = step.run(**meta)
+            job = step.job
+            job.stdout.update(stdout)
+        except Exception as error:
+            job.status = Status.FAILED
+            job.stderr["error"] = str(error)
+            job.stderr["type"] = error.__class__.__name__
+            job.stderr["step"] = step_name.value
+            logger.error("StartTask.execute() | step failed job_id=%s step_name=%s error=%s", job_id, step_name, error)
+            return {"status": Status.FAILED, "job_id": job_id, "reason": str(error)}
+
+        # Save the updated job.
         repository.save(job)
-        if not isinstance(step, ArtGalleryStep):
-            message: Message = Message(
-                action=Action.REPORT,
-                job_id=job.id,
-                user_email=user_email,
-                meta=meta if meta else None,
-            )
+
+        # If there are no children, report the task.
+        if not job.children_ids:
+            message: Message = Message(action=Action.REPORT, job_id=job_id, user_email=user_email)
             queue.put(message)
+
         return {"status": Status.SUCCESS, "job_id": job_id}
 
 
 class ReportTask(Task):
     """
-    Load job by id. If job is failed, notify parent and return.
+    Load job by id. If job is failed, broadcast to parent and return.
     Load all children (no try/except). Merge children stdout into job.stdout (dict update; keys override).
     If any child failed: merge children stderr into job.stderr, job.status = FAILED.
     If any child pending: leave status unchanged.
     Else: job.status = SUCCESS.
-    Save job; if job is not pending, notify parent.
+    Save job; if job is not pending, broadcast to parent.
 
     For example, to run the report task (aggregate children):
     >>> task = ReportTask()
@@ -194,12 +208,12 @@ class ReportTask(Task):
     True
     """
 
-    def notify(self, job: Job, user_email: Email) -> None:
+    def broadcast(self, job: Job, user_email: Email) -> None:
         """
         Put a REPORT message for the parent; no-op if parent_id is None.
 
-        For example, to notify parent job of completion:
-        >>> task.notify(job, user_email)
+        For example, to broadcast to parent job of completion:
+        >>> task.broadcast(job, user_email)
         """
         if job.parent_id is None:
             return
@@ -219,29 +233,37 @@ class ReportTask(Task):
         repository: JobsRepository = JobsRepository(user=user)
         job: Job = repository.get(job_id)
 
+        # If the job is already failed, broadcast to parent and return.
         if job.is_failed():
             logger.info("ReportTask.execute() | job already failed job_id=%s", job_id)
-            self.notify(job, user_email)
+            self.broadcast(job, user_email)
             return {"status": Status.FAILED, "job_id": job_id, "reason": "job_failed"}
 
+        # Load all children, and combine their stdout into job.stdout.
         children: list[Job] = [repository.get(cid) for cid in job.children_ids]
         logger.debug("ReportTask.execute() | aggregating job_id=%s children=%d", job_id, len(children))
         for child in children:
             job.stdout.update(dict(child.stdout))
 
+        # If any child failed, merge their stderr into job.stderr and set job.status = FAILED.
         if any(child.is_failed() for child in children):
             for child in children:
                 job.stderr.update(dict(child.stderr))
             job.status = Status.FAILED
             logger.info("ReportTask.execute() | job failed job_id=%s status=FAILED", job_id)
         elif any(child.is_pending() for child in children):
+            # The job is still running. Safe to ignore and wait for children to complete.
             pass
         else:
+            # All children completed successfully. Set job.status = SUCCESS.
             job.status = Status.SUCCESS
             logger.info("ReportTask.execute() | job completed job_id=%s status=SUCCESS", job_id)
 
+        # Save the updated job.
         repository.save(job)
+
+        # If the job is not pending, broadcast to parent.
         if not job.is_pending():
-            self.notify(job, user_email)
+            self.broadcast(job, user_email)
 
         return {"status": Status.SUCCESS, "job_id": job_id, "job": job.serialize()}

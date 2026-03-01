@@ -345,10 +345,10 @@ class JobDeleteMutation(PrivateControllerMixin, Mutation):
         email = self.user.email
         if email is None:
             raise UserNotAuthenticatedError("User must be authenticated")
-        self._delete(validated_input["job_id"], email)
+        self.kill(validated_input["job_id"], email)
         return {}
 
-    def _delete(self, job_id: Identifier, user_email: Email) -> None:
+    def kill(self, job_id: Identifier, user_email: Email) -> None:
         from models import User
 
         repo = JobsRepository(user=User(email=user_email))
@@ -357,9 +357,9 @@ class JobDeleteMutation(PrivateControllerMixin, Mutation):
         except RecordNotFoundError:
             return
         for child_id in job.children_ids:
-            self._delete(child_id, user_email)
+            self.kill(child_id, user_email)
         if job.step_name == StepName.ART_GALLERY:
             index = JobsPrivateIndex(user_email=user_email)
             index.delete(Identifier(Countdown.from_timestamp(job.created_at)))
         repo.delete(job.id)
-        logger.info("JobDeleteMutation._delete() | deleted job_id=%s user=%s", job_id, user_email)
+        logger.info("JobDeleteMutation.kill() | deleted job_id=%s user=%s", job_id, user_email)

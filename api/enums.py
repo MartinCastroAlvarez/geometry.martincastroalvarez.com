@@ -147,10 +147,10 @@ class StepName(str, Enum):
     """
 
     ART_GALLERY = "art_gallery"
+    VALIDATE_POLYGONS = "validate_polygons"
     STITCHING = "stitching"
     EAR_CLIPPING = "ear_clipping"
     CONVEX_COMPONENT_OPTIMIZATION = "convex_component_optimization"
-    VISIBILITY_MATRIX = "visibility_matrix"
     GUARD_PLACEMENT = "guard_placement"
 
     @classmethod

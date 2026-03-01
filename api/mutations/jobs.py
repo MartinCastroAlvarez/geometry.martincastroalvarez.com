@@ -22,6 +22,7 @@ Examples:
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from attributes import Countdown
@@ -39,6 +40,7 @@ from indexes.jobs import JobsPrivateIndex
 from logger import get_logger
 from messages import Message
 from messages import Queue
+from models import ArtGallery
 from models import Job
 from mutations.base import Mutation
 from mutations.request import JobMutationRequest
@@ -50,8 +52,8 @@ from repositories import JobsRepository
 from structs import Table
 from validations.polygon import PolygonValidation
 
-queue = Queue()
-logger = get_logger(__name__)
+queue: Queue = Queue()
+logger: logging.Logger = get_logger(__name__)
 
 
 class JobMutation(PrivateControllerMixin, Mutation):
@@ -71,29 +73,30 @@ class JobMutation(PrivateControllerMixin, Mutation):
         )
 
     def execute(self, validated_input: JobMutationRequest) -> JobMutationResponse:
-        boundary = validated_input["boundary"]
-        obstacles = validated_input["obstacles"]
+        boundary: Polygon = validated_input["boundary"]
+        obstacles: Table[Polygon] = validated_input["obstacles"]
         # Fail fast: run polygon validation and raise if any check fails.
-        validation = PolygonValidation()
-        validation_result = validation.execute({"boundary": boundary, "obstacles": obstacles})
-        failed = [k for k, v in validation_result.items() if not k.endswith(".note") and v == "failed"]
+        validation: PolygonValidation = PolygonValidation()
+        validation_result: dict[str, Any] = validation.execute({"boundary": boundary, "obstacles": obstacles})
+        failed: list[str] = [k for k, v in validation_result.items() if not k.endswith(".note") and v == "failed"]
         if failed:
             raise PolygonValidationError("Polygon validation failed: " + ", ".join(failed))
-        job_id = Identifier(Signature(f"{hash(boundary)}_{hash(obstacles)}"))
-        job = Job(
+        job_id: Identifier = Identifier(Signature(f"{hash(boundary)}_{hash(obstacles)}"))
+        job: Job = Job(
             id=job_id,
             stdin={
                 "boundary": boundary.serialize(),
                 "obstacles": [poly.serialize() for poly in obstacles],
             },
         )
-        repo = JobsRepository(user=self.user)
+        repo: JobsRepository = JobsRepository(user=self.user)
         repo.save(job)
-        email = self.user.email
+        email: str | None = self.user.email
         if email is None:
             raise UnauthorizedError("User must be authenticated")
-        queue.put(Message(action=Action.START, job_id=job.id, user_email=email))
-        index = JobsPrivateIndex(user_email=email)
+        message: Message = Message(action=Action.START, job_id=job.id, user_email=email)
+        queue.put(message)
+        index: JobsPrivateIndex = JobsPrivateIndex(user_email=email)
         index.save(
             Indexed(
                 index_id=Identifier(Countdown.from_timestamp(job.created_at)),
@@ -127,20 +130,20 @@ class JobUpdateMutation(PrivateControllerMixin, Mutation):
         )
 
     def execute(self, validated_input: JobUpdateMutationRequest) -> JobMutationResponse:
-        job_id = validated_input["job_id"]
-        meta = validated_input["meta"]
-        email = self.user.email
+        job_id: Identifier = validated_input["job_id"]
+        meta: dict[str, str] = validated_input["meta"]
+        email: str | None = self.user.email
         if email is None:
             raise UnauthorizedError("User must be authenticated")
-        repo_job = JobsRepository(user=self.user)
-        job = repo_job.get(job_id)
+        repo_job: JobsRepository = JobsRepository(user=self.user)
+        job: Job = repo_job.get(job_id)
         job.meta = {**job.meta, **meta}
         repo_job.save(job)
         if "title" in meta:
-            gallery_repo = ArtGalleryRepository()
-            gallery_id = gallery_id_from_job_and_user(job_id, email)
+            gallery_repo: ArtGalleryRepository = ArtGalleryRepository()
+            gallery_id: Identifier = gallery_id_from_job_and_user(job_id, email)
             if gallery_repo.exists(gallery_id):
-                gallery = gallery_repo.get(gallery_id)
+                gallery: ArtGallery = gallery_repo.get(gallery_id)
                 gallery.title = Title(meta["title"])
                 gallery_repo.save(gallery)
         logger.info("JobUpdateMutation.mutate() | updated job_id=%s", job.id)

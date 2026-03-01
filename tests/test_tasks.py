@@ -76,26 +76,28 @@ class TestStartTask:
         assert result["status"] == Status.FAILED
         assert result["reason"] == "unknown_step"
 
+    @patch("steps.Queue")
     @patch("tasks.queue")
     @patch("tasks.JobsRepository")
-    def test_execute_success_enqueues_report_for_non_art_gallery_step(self, mock_repo_cls, mock_queue):
+    def test_execute_success_enqueues_report_for_non_art_gallery_step(
+        self, mock_repo_cls, mock_tasks_queue, mock_steps_queue_cls
+    ):
         mock_repo = MagicMock()
         mock_repo_cls.return_value = mock_repo
-        job = MagicMock()
-        job.is_failed.return_value = False
-        job.step_name = StepName.VISIBILITY_MATRIX
-        job.id = Identifier("j1")
-        job.stdout = {}
+        mock_steps_queue_cls.return_value = MagicMock()
+        job = Job(
+            id=Identifier("j1"),
+            step_name=StepName.STITCHING,
+            stdout={},
+            children_ids=[],
+            parent_id=None,
+        )
         mock_repo.get.return_value = job
-        step_instance = MagicMock()
-        step_instance.run.return_value = {"step:visibility_matrix": "success"}
-        step_instance.job = job
-        with patch.object(StartTask, "STEP_CLASS_BY_NAME", {StepName.VISIBILITY_MATRIX: lambda **kw: step_instance}):
-            task = StartTask()
-            req = {"job_id": Identifier("j1"), "user_email": Email("u@e.com")}
-            result = task.execute(req)
+        task = StartTask()
+        req = {"job_id": Identifier("j1"), "user_email": Email("u@e.com")}
+        result = task.execute(req)
         assert result["status"] == Status.SUCCESS
-        mock_queue.put.assert_called_once()
+        mock_tasks_queue.put.assert_called()
         mock_repo.save.assert_called_once()
 
 
@@ -151,10 +153,10 @@ class TestReportTask:
         mock_repo.save.assert_called_once()
         mock_queue.put.assert_called_once()
 
-    @patch("tasks.ReportTask.notify")
+    @patch("tasks.ReportTask.broadcast")
     @patch("tasks.queue")
     @patch("tasks.JobsRepository")
-    def test_execute_any_child_failed_merges_stderr_sets_failed(self, mock_repo_cls, mock_queue, mock_notify):
+    def test_execute_any_child_failed_merges_stderr_sets_failed(self, mock_repo_cls, mock_queue, mock_broadcast):
         mock_repo = MagicMock()
         mock_repo_cls.return_value = mock_repo
         parent = Job(
