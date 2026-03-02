@@ -130,7 +130,7 @@ class GeometryStack extends Stack {
         SECRETS_BUCKET_NAME: 'com.martincastroalvarez.secrets',
         DATA_BUCKET_NAME: apiBucket.bucketName,
         QUEUE_NAME: geometryQueue.queueName,
-        LOG_LEVEL: 'DEBUG',
+        LOG_LEVEL: 'WARNING',
       },
       timeout: Duration.seconds(30),
       memorySize: 256,
@@ -168,7 +168,7 @@ class GeometryStack extends Stack {
     // Low maxConcurrency is intentional to avoid costs; increase as the system scales.
     workerHandler.addEventSource(new lambda_event_sources.SqsEventSource(geometryQueue, {
       batchSize: 1,
-      maxBatchingWindow: Duration.seconds(300),
+      maxBatchingWindow: Duration.seconds(30),
       maxConcurrency: 20,
     }))
 

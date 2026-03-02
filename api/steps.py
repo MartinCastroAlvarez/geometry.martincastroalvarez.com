@@ -206,6 +206,7 @@ class ArtGalleryStep(CoordinatorStep):
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
         self.spawn()
+        logger.info("ArtGalleryStep.run() | job.id=%s children=%s", self.job.id, len(self.job.children_ids))
         return {
             "boundary": self.job.stdin.get("boundary"),
             "obstacles": self.job.stdin.get("obstacles"),
@@ -243,8 +244,11 @@ class ValidationPolygonStep(SequenceStep):
         Convention required for containment tests and stitching (bridge/merge logic).
         """
         assert self.boundary is not None
+        self.boundary.sort("ccw")
         if not self.boundary.is_ccw():
             raise ValidationBoundaryNotCCWError()
+        for obstacle in self.obstacles:
+            obstacle.sort("cw")
         if any(not obstacle.is_cw() for obstacle in self.obstacles):
             raise ValidationObstacleNotCWError()
 
@@ -289,9 +293,10 @@ class ValidationPolygonStep(SequenceStep):
         self.validate_orientation()
         self.validate_containment()
         self.validate_intersections()
+        logger.info("ValidationPolygonStep.run() | job.id=%s obstacles=%s", self.job.id, len(self.obstacles))
         return {
             "boundary": self.boundary.serialize(),
-            "obstacles": [o.serialize() for o in self.obstacles],
+            "obstacles": [obstacle.serialize() for obstacle in self.obstacles],
         }
 
 
@@ -330,28 +335,24 @@ class StitchingStep(SequenceStep):
         # No obstacles: stitched result is the boundary; no bridge edges added.
         if not self.obstacles:
             self.points = self.boundary
+            logger.info("StitchingStep.run() | job.id=%s boundary_points=%s", self.job.id, len(self.boundary))
             return {"stitched": self.points.serialize(), "stitches": []}
 
         # Sort obstacles by rightmost vertex (desc) and init working polygon and its edges.
         self.sort()
         assert self.boundary is not None
-        logger.info("Stitching %d obstacles to boundary (%d points).", len(self.obstacles), len(self.boundary))
+        logger.info("StitchingStep.run() | job.id=%s obstacles=%s boundary_points=%s", self.job.id, len(self.obstacles), len(self.boundary))
         points: Polygon = Polygon(list(self.boundary))
         edges: list[Segment] = list(points.edges)
         stitches: list[Segment] = []
 
         for obstacle in self.obstacles:
             obstacle.sort("cw")
-            anchors: list[Point] = sorted(
-                list(obstacle),
-                key=lambda point: (point.x, point.y),
-                reverse=True,
-            )
             bridge: Segment | None = None
             anchor: Point | None = None
 
-            # Find shortest valid bridge from polygon to obstacle anchor (bucket of candidates).
-            for anchor in anchors:
+            # Find valid bridge from polygon to obstacle anchor (bucket of candidates).
+            for anchor in obstacle:
                 bridge = None
                 bucket: list[Segment] = []
                 for candidate in points << points.rightmost:
@@ -406,6 +407,7 @@ class StitchingStep(SequenceStep):
 
         points.sort("ccw")
         self.points = points
+        logger.info("StitchingStep.run() | job.id=%s stitched_points=%s bridge_edges=%s", self.job.id, len(self.points), len(stitches))
         return {"stitched": self.points.serialize(), "stitches": [stitch.serialize() for stitch in stitches]}
 
 
@@ -422,6 +424,7 @@ class EarClippingStep(SequenceStep):
         gallery: ArtGallery = ArtGallery.unserialize(self.job.stdout)
         points: Polygon = gallery.stitched
         table: Table[Ear] = Table()
+        logger.info("EarClippingStep.run() | job.id=%s vertices=%s", self.job.id, len(points))
 
         # Ear clipping: while polygon has more than 3 vertices, find and clip an ear.
         while len(points) > 3:
@@ -446,11 +449,14 @@ class EarClippingStep(SequenceStep):
                 found = j
                 table += Ear([left, center, right])
                 break
+
+            # Safecheck against bugs.
             if found is None:
                 raise EarClippingFailureError(
                     f"No ear found for: {points}. "
                     "The polygon may have repeated (non-consecutive) vertices or be self-intersecting; "
-                    "ear clipping requires a simple polygon."
+                    "ear clipping requires a simple polygon. "
+                    f"The temporary polygon is: {points}."
                 )
 
             # Remove ear tip from polygon by index (position), not by point value;
@@ -467,6 +473,7 @@ class EarClippingStep(SequenceStep):
             else:
                 table += Ear([points[2], points[1], points[0]])
 
+        logger.info("EarClippingStep.run() | job.id=%s ears=%s", self.job.id, len(table))
         return {"ears": table.serialize()}
 
 
@@ -504,6 +511,7 @@ class ConvexComponentOptimizationStep(SequenceStep):
         ears: Table[Ear] = gallery.ears
         components_table: Table[ConvexComponent] = Table.unserialize([ConvexComponent(ear) for ear in ears])
         adjacency_table: Table[Bag[ConvexComponent, Identifier]] = self.build_adjacency_table(components_table)
+        logger.info("ConvexComponentOptimizationStep.run() | job.id=%s components=%s", self.job.id, len(components_table))
 
         # Merge adjacent pairs by largest area until no merge possible.
         while True:
@@ -532,6 +540,7 @@ class ConvexComponentOptimizationStep(SequenceStep):
             components_table += best_merge
             adjacency_table = self.build_adjacency_table(components_table)
 
+        logger.info("ConvexComponentOptimizationStep.run() | job.id=%s components_after_merges=%s", self.job.id, len(components_table))
         return {"convex_components": components_table.serialize(), "adjacency": adjacency_table.serialize()}
 
 
@@ -681,6 +690,7 @@ class GuardPlacementStep(SequenceStep):
 
         remaining_points: set[Point] = set(self.gallery.stitched)
         remaining_components: set[ConvexComponent] = set(self.gallery.convex_components)
+        logger.info("GuardPlacementStep.run() | job.id=%s points=%s components=%s", self.job.id, len(remaining_points), len(remaining_components))
 
         # Run until all points are covered.
         while remaining_points:
@@ -699,7 +709,7 @@ class GuardPlacementStep(SequenceStep):
             best_visibility: Bag[Point, Point] | None = None
             for guard in largest:
                 bag: Bag[Point, Point] = self.explore(guard)
-                count: int = sum(1 for point in remaining_points if point in bag) or 1
+                count: int = sum(1 for point in remaining_points if point in bag)
                 if count > best_count:
                     best_count = count
                     best_guard = guard
@@ -724,6 +734,9 @@ class GuardPlacementStep(SequenceStep):
                 if all(point in best_visibility for point in comp):
                     remaining_components -= {comp}
 
+            logger.info("GuardPlacementStep.run() | job.id=%s points_remaining=%s", self.job.id, len(remaining_points))
+
+        logger.info("GuardPlacementStep.run() | job.id=%s guards=%s", self.job.id, len(self.gallery.guards))
         return {
             "guards": self.gallery.guards.serialize(),
             "visibility": self.gallery.visibility.serialize(),

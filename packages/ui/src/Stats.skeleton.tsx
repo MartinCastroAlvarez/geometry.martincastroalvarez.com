@@ -13,7 +13,7 @@ export const StatsSkeleton: React.FC = () => {
         <Container name="geometry-stats-skeleton">
             <Container size={12} center>
                 <div
-                    className="h-14 md:h-16 lg:h-20 w-24 rounded bg-slate-700 animate-pulse"
+                    className="h-14 md:h-16 lg:h-20 w-24 rounded bg-slate-700 animate-pulse mx-auto"
                     aria-hidden
                 />
             </Container>
