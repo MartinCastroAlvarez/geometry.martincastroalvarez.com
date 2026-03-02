@@ -16,7 +16,7 @@ import { useJob, useJobChildren, useUpdateJob, usePublish, useDeleteJob, useSess
 import { Status } from "@geometry/domain";
 import { useAnalytics, GoogleAnalyticsActions, GoogleAnalyticsCategories } from "@geometry/analytics";
 import { Language, useLocale } from "@geometry/i18n";
-import { Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { JobPageSkeleton } from "../skeletons";
 
 const INSPECTOR_HEIGHT = 480;
@@ -204,14 +204,33 @@ export const JobPage = () => {
             </Container>
             <Container padded spaced>
                 <Container size={isMobile ? 12 : 6} left={!isMobile} center={isMobile}>
-                    <Badges left={!isMobile}>
-                        <Badge danger={job!.status === Status.FAILED} success={job!.status === Status.SUCCESS}>
-                            {t(`jobs.status.${job!.status}`)}
-                        </Badge>
-                        <Badge>
-                            {t("jobs.job.updated")} {updatedLabel}
-                        </Badge>
-                    </Badges>
+                    <Container size={12} left={!isMobile} center={isMobile}>
+                        <Input
+                            type="text"
+                            value={localTitle}
+                            onChange={handleTitleChange}
+                            placeholder={t("editor.untitledGallery")}
+                            aria-label={t("editor.untitledGallery")}
+                            className={isMobile ? "text-center max-w-full" : "text-left max-w-full"}
+                            xl
+                            transparent
+                            strong
+                        />
+                    </Container>
+                    <Container spaced>
+                        <Container size={12} left={!isMobile}>
+                            <Badges left={!isMobile}>
+                                <Badge danger={job!.status === Status.FAILED} success={job!.status === Status.SUCCESS}>
+                                    {t(`jobs.status.${job!.status}`)}
+                                </Badge>
+                            </Badges>
+                        </Container>
+                        <Container size={12} right={!isMobile} center={isMobile}>
+                            <Text muted right={!isMobile} center={isMobile}>
+                                {updatedLabel}
+                            </Text>
+                        </Container>
+                    </Container>
                 </Container>
                 <Container size={isMobile ? 12 : 6} center={isMobile} right={!isMobile}>
                     {(publishError || deleteError) && (
@@ -233,36 +252,18 @@ export const JobPage = () => {
                         {job!.artGallery != null && (
                             <Button
                                 onClick={handleEditClick}
+                                icon={<Pencil size={16} aria-hidden />}
                                 sm
                                 aria-label={t("jobs.job.edit")}
-                            >
-                                {t("jobs.job.edit")}
-                            </Button>
+                            />
                         )}
                         <Button
                             onClick={handleDeleteClick}
                             icon={<Trash2 size={16} aria-hidden />}
                             sm
                             aria-label={t("jobs.job.delete")}
-                        >
-                            {t("jobs.job.delete")}
-                        </Button>
+                        />
                     </Toolbar>
-                </Container>
-            </Container>
-            <Container padded spaced>
-                <Container size={12} left={!isMobile} center={isMobile}>
-                    <Input
-                        type="text"
-                        value={localTitle}
-                        onChange={handleTitleChange}
-                        placeholder={t("editor.untitledGallery")}
-                        aria-label={t("editor.untitledGallery")}
-                        className={isMobile ? "text-center max-w-full" : "text-left max-w-full"}
-                        xl
-                        transparent
-                        strong
-                    />
                 </Container>
             </Container>
             {childIds.length > 0 && (

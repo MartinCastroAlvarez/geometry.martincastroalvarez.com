@@ -185,6 +185,7 @@ class StartTask(Task):
             self.report()
             return {"status": Status.SUCCESS, "job_id": self.job.id}
 
+        # Log the start time of the step.
         started_at_key: str = f"step:{self.job.step_name.slug}:started_at"
         if started_at_key not in self.job.meta:
             self.job.meta[started_at_key] = Timestamp.now().to_iso()
@@ -192,14 +193,20 @@ class StartTask(Task):
         meta: dict[str, Any] = validated_input.get("meta") or {}
         step: Step = Step.of(self.job.step_name)(job=self.job, user=self.user)
         try:
+
+            # Run the step, and merge the output into job.stdout.
             stdout: dict[str, Any] = step.run(**meta)
             self.job = step.job
             self.job.stdout.update(stdout)
         except Exception as error:
+
+            # Log the failure time of the step, and merge the error into job.stderr.
             self.job.status = Status.FAILED
             self.job.stderr[f"error:{self.job.step_name.slug}:message"] = str(error)
             self.job.stderr[f"error:{self.job.step_name.slug}:type"] = error.__class__.__name__
             logger.error("StartTask.execute() | step failed job_id=%s step_name=%s error=%s", self.job.id, self.job.step_name, error)
+
+        # Save the job, broadcast the result, and report the job to the parent.
         self.repository.save(self.job)
         self.broadcast(step)
         self.report()

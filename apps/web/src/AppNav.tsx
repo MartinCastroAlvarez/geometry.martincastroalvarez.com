@@ -6,11 +6,10 @@
  */
 import { useNavigate } from "react-router-dom";
 import { Clock } from "lucide-react";
-import { Theme, useTheme } from "@geometry/theme";
-import { Nav, Button, Toggle, Card, useDevice } from "@geometry/ui";
+import { Nav, Button, Card, ThemeButton, LanguageButton, useDevice } from "@geometry/ui";
 import { NavSkeleton } from "./skeletons";
 import { useSession, useLogout, useJobs } from "@geometry/data";
-import { useLocale, Language } from "@geometry/i18n";
+import { useLocale } from "@geometry/i18n";
 import { useAnalytics, GoogleAnalyticsActions, GoogleAnalyticsCategories } from "@geometry/analytics";
 
 export const AppNav = () => {
@@ -18,8 +17,7 @@ export const AppNav = () => {
     const { user, isLoading: sessionLoading } = useSession();
     const { jobs } = useJobs();
     const logout = useLogout();
-    const { t, language, setLanguage } = useLocale();
-    const { theme, setTheme } = useTheme();
+    const { t } = useLocale();
     const { track } = useAnalytics();
     const { isMobile } = useDevice();
 
@@ -56,8 +54,8 @@ export const AppNav = () => {
                 </Button>
             )}
             {isMobile ? <span className="w-full basis-full block" /> : null}
-            <Toggle value={language} options={Object.values(Language)} onChange={(v) => setLanguage(v as Language)} sm />
-            <Toggle value={theme} options={Object.values(Theme)} onChange={(v) => setTheme(v as Theme)} formatLabel={(v) => t(`theme.${v}`)} sm />
+            <LanguageButton />
+            <ThemeButton />
             {isMobile ? <span className="w-full basis-full block" /> : null}
             {user && <Card user={user} sm right={!isMobile} rounded />}
             {isMobile ? <span className="w-full basis-full block" /> : null}

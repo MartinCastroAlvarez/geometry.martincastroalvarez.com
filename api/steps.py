@@ -324,14 +324,15 @@ class StitchingStep(SequenceStep):
             bridge: Segment | None = None
             bucket: list[Segment] = []  # up to STITCH_BUCKET_SIZE shortest candidates; when full, pick smallest and stop
 
-            # Start iteration from rightmost point (shift is O(n) once per obstacle; see 3 BACKEND.md).
+            # Start iteration from rightmost point (shift is O(n) once per obstacle;
             for candidate in points << points.rightmost:
                 if candidate == anchor:
                     continue
-                if candidate.x < anchor.x or candidate.y < anchor.y:
-                    continue
                 segment: Segment = candidate.to(anchor)
                 if not self.boundary.contains(segment, inclusive=True):
+                    continue
+                # Bridge must not intersect any obstacle (Polygon.intersects skips edges that connect to segment).
+                if any(other.intersects(segment, inclusive=False) for other in self.obstacles):
                     continue
                 if any(
                     Walk(start=edge[0], center=edge[1], end=segment[0]).is_collinear()
@@ -339,8 +340,6 @@ class StitchingStep(SequenceStep):
                     for edge in self.boundary.edges
                     if not edge.connects(segment)
                 ):
-                    continue
-                if any(other.intersects(segment, inclusive=False) for other in self.obstacles if other is not obstacle):
                     continue
                 if any(edge.intersects(segment) for edge in edges if not edge.connects(segment)):
                     continue

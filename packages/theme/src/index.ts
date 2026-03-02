@@ -4,5 +4,6 @@
  */
 export * from "./Theme";
 export * from "./ThemeContext";
+export * from "./ThemeIcon";
 export * from "./ThemeProvider";
 export * from "./useTheme";
