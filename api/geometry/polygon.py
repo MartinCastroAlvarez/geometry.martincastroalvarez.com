@@ -31,6 +31,7 @@ from decimal import Decimal
 from typing import Any
 
 from enums import Orientation
+from enums import PolygonSortMode
 from exceptions import PolygonBoxRequiresOnePointError
 from exceptions import PolygonItemMustBePointError
 from exceptions import PolygonsDoNotShareEdgeError
@@ -411,6 +412,29 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[list[Any]]
     def is_cw(self) -> bool:
         """Return True if polygon has at least 3 vertices and negative signed area (clockwise)."""
         return len(self) >= 3 and self.signed_area < Decimal("0")
+
+    def sort(
+        self,
+        sort_mode: str | PolygonSortMode = PolygonSortMode.DEFAULT,
+    ) -> Polygon:
+        """
+        Sort polygon in place. Return self for chaining.
+
+        sort_mode: "default" (or PolygonSortMode.DEFAULT) sorts vertices by (point.x, point.y).
+        "ccw" / PolygonSortMode.CCW ensures counter-clockwise orientation (reverses if needed).
+        "cw" / PolygonSortMode.CW ensures clockwise orientation (reverses if needed).
+        Invalid sort_mode raises InvalidPolygonSortModeError from exceptions.
+        """
+        mode: PolygonSortMode = PolygonSortMode.parse(sort_mode)
+        if mode == PolygonSortMode.DEFAULT:
+            list.sort(self, key=lambda p: (p.x, p.y))
+        elif mode == PolygonSortMode.CCW:
+            if not self.is_ccw():
+                self.reverse()
+        elif mode == PolygonSortMode.CW:
+            if not self.is_cw():
+                self.reverse()
+        return self
 
     def is_convex(self) -> bool:
         """

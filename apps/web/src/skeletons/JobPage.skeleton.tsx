@@ -2,7 +2,7 @@
  * Skeleton for single Job page. Matches JobPage layout: viewer; row (badges | toolbar); title row;
  * milestones row; three inspector columns.
  */
-import { Skeleton, Page, Container, TitleSkeleton, BadgeSkeleton, Badges, InspectorSkeleton, ButtonSkeleton, Toolbar, MilestonesSkeleton, useDevice } from "@geometry/ui";
+import { Skeleton, Page, Container, TitleSkeleton, BadgeSkeleton, InspectorSkeleton, ButtonSkeleton, Toolbar, MilestonesSkeleton, useDevice } from "@geometry/ui";
 import { ViewerSkeleton } from "@geometry/editor";
 
 const INSPECTOR_HEIGHT = 480;
@@ -21,10 +21,7 @@ export const JobPageSkeleton = () => {
                 </Container>
                 <Container padded spaced>
                     <Container size={colSize} left={!isMobile} center={isMobile}>
-                        <Badges left={!isMobile}>
-                            <BadgeSkeleton width="4rem" />
-                            <BadgeSkeleton width="8rem" />
-                        </Badges>
+                        <BadgeSkeleton width="4rem" />
                     </Container>
                     <Container size={colSize} center={isMobile} right={!isMobile}>
                         <Toolbar right={!isMobile} center={isMobile}>

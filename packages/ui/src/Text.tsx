@@ -1,5 +1,5 @@
 /**
- * Body text: size (xs–xxxl), alignment (left/center/right), optional truncate and max width.
+ * Body text: size (xxs–xxxl), alignment (left/center/right), optional truncate and max width.
  * When truncate is true and the content overflows, hovering shows the full text in a native tooltip.
  *
  * Context: Renders inside a center-aligned Container; applies text-primary or text-muted and size/alignment
@@ -16,6 +16,7 @@ import { Tooltip } from "./Tooltip";
 
 interface TextProps {
     children: React.ReactNode;
+    xxs?: boolean;
     xs?: boolean;
     sm?: boolean;
     md?: boolean;
@@ -37,7 +38,7 @@ interface TextProps {
 
 export const Text: React.FC<TextProps> = ({
     children,
-    xs = false, sm = false, md = false, lg = false, xl = false, xxl = false, xxxl = false,
+    xxs = false, xs = false, sm = false, md = false, lg = false, xl = false, xxl = false, xxxl = false,
     center = false, left: _left = false, right = false,
     size, truncate = false,
     leading: leadingProp = "relaxed",
@@ -57,11 +58,11 @@ export const Text: React.FC<TextProps> = ({
 
     if (children == null || (typeof children === "string" && children.trim() === "")) return null;
     const maxWidthStyle = size ? { maxWidth: `${size}px` } : undefined;
-    let sizeClass = xs ? "text-xs" : sm ? "text-sm" : md ? "text-md" : lg ? "text-lg" : xl ? "text-xl" : xxl ? "text-2xl" : xxxl ? "text-3xl" : "text-base";
+    let sizeClass = xxs ? "text-[0.65rem]" : xs ? "text-xs" : sm ? "text-sm" : md ? "text-md" : lg ? "text-lg" : xl ? "text-xl" : xxl ? "text-2xl" : xxxl ? "text-3xl" : "text-base";
     let alignmentClass = center ? "text-center" : right ? "text-right" : "text-left";
     const truncateClass = truncate ? "truncate" : "";
     const leadingClass = leadingProp === "tight" ? "leading-tight" : leadingProp === "snug" ? "leading-snug" : "leading-relaxed";
-    const colorClass = muted ? "text-slate-800 dark:text-slate-300" : "text-[rgb(var(--color-text))]";
+    const colorClass = muted ? "text-slate-500 dark:text-slate-400" : "text-[rgb(var(--color-text))]";
 
     const content = (
         <div

@@ -161,6 +161,7 @@ export const toDomainArtGallery = (api: ApiArtGallery): Gallery => {
     return {
         id: api.id,
         title: api.title,
+        updated_at: api.updated_at,
         artGallery,
     };
 };

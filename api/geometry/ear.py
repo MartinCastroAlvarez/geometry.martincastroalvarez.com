@@ -21,6 +21,8 @@ Examples:
 
 from __future__ import annotations
 
+from typing import Any
+
 from exceptions import ValidationError
 from geometry.convex import ConvexComponent
 from geometry.point import Point
@@ -49,3 +51,8 @@ class Ear(ConvexComponent):
         self_cc = ConvexComponent(list(self))
         other_cc = ConvexComponent(list(other)) if isinstance(other, Ear) else other
         return self_cc & other_cc
+
+    @classmethod
+    def unserialize(cls, data: list[Any]) -> Ear:
+        """Build Ear from list of 3 point coords (each [x, y])."""
+        return cls(list(Polygon.unserialize(data)))

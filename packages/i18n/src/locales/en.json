@@ -2,6 +2,10 @@
   "home": {
     "emptyGalleries": "No published galleries yet."
   },
+  "gallery": {
+    "updated": "Updated",
+    "edit": "Edit"
+  },
   "jobs": {
     "status": {
       "pending": "Processing",

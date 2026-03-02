@@ -21,6 +21,8 @@ Examples:
 
 from __future__ import annotations
 
+from typing import Any
+
 from exceptions import ValidationError
 from geometry.point import Point
 from geometry.polygon import Polygon
@@ -43,3 +45,47 @@ class ConvexComponent(Polygon):
         """Shared edge; returns ConvexComponent (2-point edge allowed)."""
         result: Polygon = super().__and__(other)
         return ConvexComponent(list(result))
+
+    def __add__(self, other: ConvexComponent) -> ConvexComponent:
+        """Merge with other along shared edge; returns new ConvexComponent."""
+        from structs import Sequence
+
+        shared: Polygon = super().__and__(other)
+        a: Point = shared[0]
+        b: Point = shared[1]
+        n_self: int = len(self)
+        n_other: int = len(other)
+        left: Polygon
+        for i in range(n_self):
+            if self[i] == a and self[(i + 1) % n_self] == b:
+                left = Polygon(list(Sequence(list(self)) >> (i + 1)))
+                break
+        else:
+            self_rev: Polygon = Polygon(list(reversed(self)))
+            for i in range(n_self):
+                if self_rev[i] == a and self_rev[(i + 1) % n_self] == b:
+                    left = Polygon(list(Sequence(list(self_rev)) >> (i + 1)))
+                    break
+            else:
+                raise ValidationError("ConvexComponent merge: shared edge not found in self")
+        right: Polygon
+        for j in range(n_other):
+            if other[j] == a and other[(j + 1) % n_other] == b:
+                right = Polygon(list(Sequence(list(other)) << j))
+                break
+        else:
+            other_rev: Polygon = Polygon(list(reversed(other)))
+            for j in range(n_other):
+                if other_rev[j] == a and other_rev[(j + 1) % n_other] == b:
+                    right = Polygon(list(Sequence(list(other_rev)) << j))
+                    break
+            else:
+                raise ValidationError("ConvexComponent merge: shared edge not found in other")
+        merged: list[Point] = list(left)[:-2] + [a] + list(right)[2:] + [b]
+        deduped: Sequence[Point] = Sequence(merged).dedup()
+        return ConvexComponent(list(deduped))
+
+    @classmethod
+    def unserialize(cls, data: list[Any]) -> ConvexComponent:
+        """Build ConvexComponent from list of point coords (each [x, y])."""
+        return cls(list(Polygon.unserialize(data)))

@@ -36,8 +36,12 @@ from controllers import PrivateControllerMixin
 from enums import Action
 from exceptions import BoundaryRequiredError
 from exceptions import GalleryHasNoBoundaryError
+from exceptions import GalleryHasNoConvexComponentsError
+from exceptions import GalleryHasNoEarsError
+from exceptions import GalleryHasNoGuardsError
 from exceptions import GalleryHasNoStitchedError
 from exceptions import GalleryHasNoStitchesError
+from exceptions import GalleryHasNoVisibilityError
 from exceptions import GalleryHasStitchesWithoutObstaclesError
 from exceptions import JobNotFinishedToPublishError
 from exceptions import MetaKeysMustBeStringsError
@@ -318,6 +322,14 @@ class ArtGalleryPublishMutation(PrivateControllerMixin, Mutation):
                 raise GalleryHasNoStitchesError("Gallery has no stitches; cannot publish")
         elif gallery.stitches:
             raise GalleryHasStitchesWithoutObstaclesError("Gallery has stitches but no obstacles; invalid state")
+        if not gallery.ears or len(gallery.ears) == 0:
+            raise GalleryHasNoEarsError("Gallery has no ears; cannot publish")
+        if not gallery.convex_components or len(gallery.convex_components) == 0:
+            raise GalleryHasNoConvexComponentsError("Gallery has no convex components; cannot publish")
+        if not gallery.guards or len(gallery.guards) == 0:
+            raise GalleryHasNoGuardsError("Gallery has no guards; cannot publish")
+        if not gallery.visibility or len(gallery.visibility) == 0:
+            raise GalleryHasNoVisibilityError("Gallery has no visibility; cannot publish")
 
         # Save the gallery.
         ArtGalleryRepository().save(gallery)

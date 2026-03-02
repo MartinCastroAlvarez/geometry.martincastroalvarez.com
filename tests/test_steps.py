@@ -50,6 +50,23 @@ class TestSimpleSteps:
         assert len(out["stitched"]) == 4
         assert out["stitched"][0] in ([0, 0], ["0", "0"])
 
+    def test_stitching_step_run_with_one_obstacle(self):
+        # Boundary [0,0]-[10,0]-[10,10]-[0,10]; obstacle [2,2]-[4,2]-[4,4]-[2,4] inside.
+        job = Job(
+            id=Identifier("j1"),
+            step_name=StepName.STITCHING,
+            stdin={
+                "boundary": [[0, 0], [10, 0], [10, 10], [0, 10]],
+                "obstacles": [[[2, 2], [4, 2], [4, 4], [2, 4]]],
+            },
+        )
+        step = StitchingStep(job=job, user=_user())
+        out = step.run()
+        assert "stitched" in out
+        assert "stitches" in out
+        assert len(out["stitched"]) > 4
+        assert len(out["stitches"]) == 1
+
     def test_validate_polygons_step_run_success(self):
         job = Job(
             id=Identifier("j1"),
@@ -61,19 +78,72 @@ class TestSimpleSteps:
         assert out == {}
 
     def test_ear_clipping_step_run(self):
-        job = Job(id=Identifier("j1"), step_name=StepName.EAR_CLIPPING)
+        job = Job(
+            id=Identifier("j1"),
+            step_name=StepName.EAR_CLIPPING,
+            stdin={"boundary": [[0, 0], [10, 0], [10, 10], [0, 10]], "obstacles": []},
+        )
         step = EarClippingStep(job=job, user=_user())
-        assert step.run() == {}
+        out = step.run()
+        assert "ears" in out
+        assert len(out["ears"]) >= 1
+        assert len(out["ears"][0]) == 3
+
+    def test_ear_clipping_step_run_pentagon(self):
+        job = Job(
+            id=Identifier("j1"),
+            step_name=StepName.EAR_CLIPPING,
+            stdin={
+                "boundary": [[0, 0], [2, 0], [2.5, 1.5], [1, 2.5], [-0.5, 1.5]],
+                "obstacles": [],
+            },
+        )
+        step = EarClippingStep(job=job, user=_user())
+        out = step.run()
+        assert "ears" in out
+        assert len(out["ears"]) == 3
+        for ear in out["ears"]:
+            assert len(ear) == 3
 
     def test_convex_component_optimization_step_run(self):
-        job = Job(id=Identifier("j1"), step_name=StepName.CONVEX_COMPONENT_OPTIMIZATION)
+        job = Job(
+            id=Identifier("j1"),
+            step_name=StepName.CONVEX_COMPONENT_OPTIMIZATION,
+            stdin={"boundary": [[0, 0], [10, 0], [10, 10], [0, 10]], "obstacles": []},
+        )
         step = ConvexComponentOptimizationStep(job=job, user=_user())
-        assert step.run() == {}
+        out = step.run()
+        assert "convex_components" in out
+        assert len(out["convex_components"]) >= 1
 
     def test_guard_placement_step_run(self):
-        job = Job(id=Identifier("j1"), step_name=StepName.GUARD_PLACEMENT)
+        job = Job(
+            id=Identifier("j1"),
+            step_name=StepName.GUARD_PLACEMENT,
+            stdin={"boundary": [[0, 0], [10, 0], [10, 10], [0, 10]], "obstacles": []},
+        )
         step = GuardPlacementStep(job=job, user=_user())
-        assert step.run() == {}
+        out = step.run()
+        assert "guards" in out
+        assert "visibility" in out
+        assert len(out["guards"]) >= 1
+        assert len(out["visibility"]) == len(out["guards"])
+
+    def test_guard_placement_step_run_with_one_obstacle(self):
+        job = Job(
+            id=Identifier("j1"),
+            step_name=StepName.GUARD_PLACEMENT,
+            stdin={
+                "boundary": [[0, 0], [10, 0], [10, 10], [0, 10]],
+                "obstacles": [[[2, 2], [4, 2], [4, 4], [2, 4]]],
+            },
+        )
+        step = GuardPlacementStep(job=job, user=_user())
+        out = step.run()
+        assert "guards" in out
+        assert "visibility" in out
+        assert len(out["guards"]) >= 1
+        assert len(out["visibility"]) == len(out["guards"])
 
 
 class TestArtGalleryStep:

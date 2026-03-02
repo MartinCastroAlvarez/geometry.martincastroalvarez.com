@@ -426,6 +426,34 @@ class GalleryHasStitchesWithoutObstaclesError(ValidationError):
         super().__init__(message)
 
 
+class GalleryHasNoEarsError(ValidationError):
+    """Gallery has no ears; cannot publish."""
+
+    def __init__(self, message: str = "Gallery has no ears; cannot publish"):
+        super().__init__(message)
+
+
+class GalleryHasNoConvexComponentsError(ValidationError):
+    """Gallery has no convex components; cannot publish."""
+
+    def __init__(self, message: str = "Gallery has no convex components; cannot publish"):
+        super().__init__(message)
+
+
+class GalleryHasNoGuardsError(ValidationError):
+    """Gallery has no guards; cannot publish."""
+
+    def __init__(self, message: str = "Gallery has no guards; cannot publish"):
+        super().__init__(message)
+
+
+class GalleryHasNoVisibilityError(ValidationError):
+    """Gallery has no visibility; cannot publish."""
+
+    def __init__(self, message: str = "Gallery has no visibility; cannot publish"):
+        super().__init__(message)
+
+
 class UserNotAuthenticatedError(UnauthorizedError):
     """User must be authenticated."""
 
@@ -496,6 +524,13 @@ class PolygonsDoNotShareEdgeError(ValidationError):
         super().__init__(message)
 
 
+class InvalidPolygonSortModeError(ValidationError):
+    """Polygon sort mode must be 'default', 'ccw', or 'cw'."""
+
+    def __init__(self, message: str = "polygon sort_mode must be one of 'default', 'ccw', 'cw'"):
+        super().__init__(message)
+
+
 class BridgeFailureError(GeometryException):
     """No valid bridge segment found from obstacle anchor to boundary in stitching."""
 
@@ -556,4 +591,22 @@ class ParallelStepRequiresParentError(GeometryException):
     code: http.HTTPStatus = http.HTTPStatus.BAD_REQUEST
 
     def __init__(self, message: str = "ParallelStep requires parent"):
+        super().__init__(message)
+
+
+class EarClippingFailureError(GeometryException):
+    """No valid ear found during ear clipping triangulation."""
+
+    code: http.HTTPStatus = http.HTTPStatus.BAD_REQUEST
+
+    def __init__(self, message: str = "No ear found for polygon"):
+        super().__init__(message)
+
+
+class GuardCoverageFailureError(GeometryException):
+    """Guards failed to cover all convex components or all perimeter points."""
+
+    code: http.HTTPStatus = http.HTTPStatus.BAD_REQUEST
+
+    def __init__(self, message: str = "Failed to cover all components or points"):
         super().__init__(message)

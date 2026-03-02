@@ -199,6 +199,26 @@ class TestPolygonValidatorExecute:
         assert "polygon.ccw" in result
         assert result["polygon.ccw"] == "failed"
 
+    def test_execute_duplicate_vertex_in_boundary_fails_vertex_degree(self):
+        v = PolygonValidator()
+        body = {
+            "boundary": [[0, 0], [10, 0], [10, 10], [0, 10], [0, 0]],
+            "obstacles": [],
+        }
+        result = v.handler(body)
+        assert result["polygon.vertex_degree"] == "failed"
+        assert result["status"] == "failed"
+
+    def test_validate_vertex_degree_raw_accepts_points_as_dict_xy(self):
+        v = PolygonValidator()
+        body = {
+            "boundary": [{"x": 0, "y": 0}, {"x": 10, "y": 0}, {"x": 10, "y": 10}, {"x": 0, "y": 10}],
+            "obstacles": [],
+        }
+        result = v.validate_vertex_degree_raw(body)
+        assert "polygon.vertex_degree" in result
+        assert result["polygon.vertex_degree"] == Status.SUCCESS
+
 
 class TestPolygonValidatorHandler:
     """Test full handler flow."""

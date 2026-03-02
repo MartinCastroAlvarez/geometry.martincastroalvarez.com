@@ -304,10 +304,11 @@ class ReportTask(Task):
     def execute(self, validated_input: TaskRequest) -> ReportTaskResponse:
         logger.debug("ReportTask.execute() | aggregating job_id=%s children=%d", self.job.id, len(self.children))
         for child in self.children:
-            self.job.stdout.update(dict(child.stdout))
+            self.job.stdout.update(child.stdout)
+            self.job.meta.update(child.meta)
         if any(child.is_failed() for child in self.children):
             for child in self.children:
-                self.job.stderr.update(dict(child.stderr))
+                self.job.stderr.update(child.stderr)
             self.job.status = Status.FAILED
             logger.info("ReportTask.execute() | job failed job_id=%s status=FAILED", self.job.id)
         elif any(child.is_pending() for child in self.children):

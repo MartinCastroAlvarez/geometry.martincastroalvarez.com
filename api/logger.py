@@ -63,14 +63,28 @@ def log_extra(
     return extra
 
 
+# Third-party loggers that are noisy at DEBUG; we keep them at WARNING
+# so app debug logs stay visible (botocore/boto3/urllib3/s3transfer).
+_NOISY_LOGGERS: tuple[str, ...] = (
+    "botocore",
+    "boto3",
+    "urllib3",
+    "s3transfer",
+)
+
+
 def configure_logging() -> None:
     """
     Configure root logger for Lambda. Call at Lambda cold start if needed.
     CloudWatch captures stdout; log level from settings.LOG_LEVEL (derived from
-    DEBUG env when set, otherwise from LOG_LEVEL env).
+    DEBUG env when set, otherwise from LOG_LEVEL env). Noisy third-party
+    loggers (botocore, boto3, urllib3, s3transfer) are set to WARNING so
+    debug mode shows only app logs.
 
     For example, to set log level from LOG_LEVEL env at cold start:
     >>> configure_logging()
     """
     level: int = getattr(logging, LOG_LEVEL.name, logging.INFO)
     logging.getLogger().setLevel(level)
+    for name in _NOISY_LOGGERS:
+        logging.getLogger(name).setLevel(logging.WARNING)

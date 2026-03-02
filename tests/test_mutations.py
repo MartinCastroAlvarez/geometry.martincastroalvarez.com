@@ -7,11 +7,16 @@ import pytest
 from attributes import Email
 from attributes import Identifier
 from exceptions import GalleryHasNoBoundaryError
+from exceptions import GalleryHasNoConvexComponentsError
+from exceptions import GalleryHasNoEarsError
+from exceptions import GalleryHasNoGuardsError
+from exceptions import GalleryHasNoVisibilityError
 from exceptions import UnauthorizedError
 from exceptions import ValidationError
 from models import User
 from mutations import ArtGalleryPublishMutation
 from mutations import JobMutation
+from mutations import JobDeleteMutation
 from mutations import JobUpdateMutation
 from mutations import Mutation
 from mutations import MutationResponse
@@ -163,9 +168,12 @@ class TestJobUpdateMutation:
         job.stdout = {
             "boundary": [[0, 0], [1, 0], [1, 1], [0, 1]],
             "obstacles": {},
-            "guards": {},
             "stitched": [[0, 0], [1, 0], [1, 1], [0, 1]],
             "stitches": [],
+            "ears": [[[0, 0], [1, 0], [1, 1]], [[0, 0], [1, 1], [0, 1]]],
+            "convex_components": [[[0, 0], [1, 0], [1, 1], [0, 1]]],
+            "guards": [[0, 0]],
+            "visibility": [[[0, 0], [1, 0], [1, 1], [0, 1]]],
         }
         job.created_at = "2024-01-01T12:00:00"
         job.updated_at = "2024-01-01T12:00:00"
@@ -205,9 +213,12 @@ class TestArtGalleryPublishMutation:
         job.stdout = {
             "boundary": [[0, 0], [1, 0], [1, 1], [0, 1]],
             "obstacles": {},
-            "guards": {},
             "stitched": [[0, 0], [1, 0], [1, 1], [0, 1]],
             "stitches": [],
+            "ears": [[[0, 0], [1, 0], [1, 1]], [[0, 0], [1, 1], [0, 1]]],
+            "convex_components": [[[0, 0], [1, 0], [1, 1], [0, 1]]],
+            "guards": [[0, 0]],
+            "visibility": [[[0, 0], [1, 0], [1, 1], [0, 1]]],
         }
         job.meta = {"title": "My Gallery"}
         job.created_at = "2024-01-01T12:00:00"
@@ -252,3 +263,151 @@ class TestArtGalleryPublishMutation:
         handler = ArtGalleryPublishMutation(user=user)
         with pytest.raises(GalleryHasNoBoundaryError, match="no boundary"):
             handler.execute({"job_id": Identifier("j1")})
+
+    @patch("mutations.JobsRepository")
+    def test_execute_stdout_no_ears_raises(self, mock_job_repo_cls):
+        user = User.test()
+        mock_job_repo = MagicMock()
+        mock_job_repo_cls.return_value = mock_job_repo
+        job = MagicMock()
+        job.id = Identifier("j1")
+        job.is_finished.return_value = True
+        job.stdout = {
+            "boundary": [[0, 0], [1, 0], [1, 1], [0, 1]],
+            "obstacles": {},
+            "stitched": [[0, 0], [1, 0], [1, 1], [0, 1]],
+            "stitches": [],
+            "ears": [],
+            "convex_components": [[[0, 0], [1, 0], [1, 1], [0, 1]]],
+            "guards": [[0, 0]],
+            "visibility": [[[0, 0], [1, 0], [1, 1], [0, 1]]],
+        }
+        job.meta = {}
+        job.created_at = "2024-01-01T12:00:00"
+        job.updated_at = "2024-01-01T12:00:00"
+        mock_job_repo.get.return_value = job
+        handler = ArtGalleryPublishMutation(user=user)
+        with pytest.raises(GalleryHasNoEarsError, match="no ears"):
+            handler.execute({"job_id": Identifier("j1")})
+
+    @patch("mutations.JobsRepository")
+    def test_execute_stdout_no_convex_components_raises(self, mock_job_repo_cls):
+        user = User.test()
+        mock_job_repo = MagicMock()
+        mock_job_repo_cls.return_value = mock_job_repo
+        job = MagicMock()
+        job.id = Identifier("j1")
+        job.is_finished.return_value = True
+        job.stdout = {
+            "boundary": [[0, 0], [1, 0], [1, 1], [0, 1]],
+            "obstacles": {},
+            "stitched": [[0, 0], [1, 0], [1, 1], [0, 1]],
+            "stitches": [],
+            "ears": [[[0, 0], [1, 0], [1, 1]], [[0, 0], [1, 1], [0, 1]]],
+            "convex_components": [],
+            "guards": [[0, 0]],
+            "visibility": [[[0, 0], [1, 0], [1, 1], [0, 1]]],
+        }
+        job.meta = {}
+        job.created_at = "2024-01-01T12:00:00"
+        job.updated_at = "2024-01-01T12:00:00"
+        mock_job_repo.get.return_value = job
+        handler = ArtGalleryPublishMutation(user=user)
+        with pytest.raises(GalleryHasNoConvexComponentsError, match="no convex components"):
+            handler.execute({"job_id": Identifier("j1")})
+
+    @patch("mutations.JobsRepository")
+    def test_execute_stdout_no_guards_raises(self, mock_job_repo_cls):
+        user = User.test()
+        mock_job_repo = MagicMock()
+        mock_job_repo_cls.return_value = mock_job_repo
+        job = MagicMock()
+        job.id = Identifier("j1")
+        job.is_finished.return_value = True
+        job.stdout = {
+            "boundary": [[0, 0], [1, 0], [1, 1], [0, 1]],
+            "obstacles": {},
+            "stitched": [[0, 0], [1, 0], [1, 1], [0, 1]],
+            "stitches": [],
+            "ears": [[[0, 0], [1, 0], [1, 1]], [[0, 0], [1, 1], [0, 1]]],
+            "convex_components": [[[0, 0], [1, 0], [1, 1], [0, 1]]],
+            "guards": [],
+            "visibility": [],
+        }
+        job.meta = {}
+        job.created_at = "2024-01-01T12:00:00"
+        job.updated_at = "2024-01-01T12:00:00"
+        mock_job_repo.get.return_value = job
+        handler = ArtGalleryPublishMutation(user=user)
+        with pytest.raises(GalleryHasNoGuardsError, match="no guards"):
+            handler.execute({"job_id": Identifier("j1")})
+
+    @patch("mutations.JobsRepository")
+    def test_execute_stdout_no_visibility_raises(self, mock_job_repo_cls):
+        user = User.test()
+        mock_job_repo = MagicMock()
+        mock_job_repo_cls.return_value = mock_job_repo
+        job = MagicMock()
+        job.id = Identifier("j1")
+        job.is_finished.return_value = True
+        job.stdout = {
+            "boundary": [[0, 0], [1, 0], [1, 1], [0, 1]],
+            "obstacles": {},
+            "stitched": [[0, 0], [1, 0], [1, 1], [0, 1]],
+            "stitches": [],
+            "ears": [[[0, 0], [1, 0], [1, 1]], [[0, 0], [1, 1], [0, 1]]],
+            "convex_components": [[[0, 0], [1, 0], [1, 1], [0, 1]]],
+            "guards": [[0, 0]],
+            "visibility": [],
+        }
+        job.meta = {}
+        job.created_at = "2024-01-01T12:00:00"
+        job.updated_at = "2024-01-01T12:00:00"
+        mock_job_repo.get.return_value = job
+        handler = ArtGalleryPublishMutation(user=user)
+        with pytest.raises(GalleryHasNoVisibilityError, match="no visibility"):
+            handler.execute({"job_id": Identifier("j1")})
+
+
+class TestJobDeleteMutation:
+    """Test JobDeleteMutation validate and execute (kill path)."""
+
+    def test_validate_success(self):
+        user = User.test()
+        handler = JobDeleteMutation(user=user)
+        req = handler.validate({"id": "job-123"})
+        assert str(req["job_id"]) == "job-123"
+
+    @patch("mutations.JobsPrivateIndex")
+    @patch("mutations.ArtGalleryPublicIndex")
+    @patch("mutations.ArtGalleryRepository")
+    @patch("mutations.JobsRepository")
+    @patch("mutations.Countdown")
+    def test_execute_kill_deletes_gallery_and_job(
+        self, mock_countdown_cls, mock_job_repo_cls, mock_gallery_repo_cls, mock_index_cls, mock_private_index_cls
+    ):
+        user = User.test()
+        mock_job_repo = MagicMock()
+        mock_job_repo_cls.return_value = mock_job_repo
+        job = MagicMock()
+        job.id = Identifier("j1")
+        job.children_ids = []
+        job.created_at = "2024-01-01T12:00:00"
+        mock_job_repo.get.return_value = job
+
+        mock_gallery_repo = MagicMock()
+        mock_gallery_repo_cls.return_value = mock_gallery_repo
+        mock_gallery_repo.exists.return_value = True
+        gallery = MagicMock()
+        gallery.created_at = "2024-01-01T12:00:00"
+        mock_gallery_repo.get.return_value = gallery
+
+        mock_countdown_cls.from_timestamp.return_value = "countdown-123"
+        mock_index_cls.return_value = MagicMock()
+        mock_private_index_cls.return_value = MagicMock()
+
+        handler = JobDeleteMutation(user=user)
+        result = handler.execute({"job_id": Identifier("j1")})
+        assert result == {}
+        mock_gallery_repo.delete.assert_called_once()
+        mock_job_repo.delete.assert_called_once_with(job.id)

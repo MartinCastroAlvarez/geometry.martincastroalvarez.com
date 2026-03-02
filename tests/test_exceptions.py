@@ -4,6 +4,7 @@ import http
 
 import pytest
 from exceptions import ConflictError
+from exceptions import ForbiddenError
 from exceptions import GeometryException
 from exceptions import InvalidActionError
 from exceptions import MethodNotAllowedError
@@ -72,6 +73,12 @@ class TestRecordNotFoundError:
         assert e.code == http.HTTPStatus.NOT_FOUND
 
 
+class TestForbiddenError:
+    def test_code_forbidden(self):
+        e = ForbiddenError()
+        assert e.code == http.HTTPStatus.FORBIDDEN
+
+
 class TestConflictError:
     def test_code_conflict(self):
         e = ConflictError()
@@ -88,3 +95,68 @@ class TestServiceUnavailableError:
     def test_code_service_unavailable(self):
         e = ServiceUnavailableError()
         assert e.code == http.HTTPStatus.SERVICE_UNAVAILABLE
+
+
+class TestGalleryHasNoEarsError:
+    def test_code_bad_request(self):
+        from exceptions import GalleryHasNoEarsError
+
+        e = GalleryHasNoEarsError()
+        assert e.code == http.HTTPStatus.BAD_REQUEST
+        assert "ears" in e.message.lower()
+
+
+class TestGalleryHasNoConvexComponentsError:
+    def test_code_bad_request(self):
+        from exceptions import GalleryHasNoConvexComponentsError
+
+        e = GalleryHasNoConvexComponentsError()
+        assert e.code == http.HTTPStatus.BAD_REQUEST
+
+
+class TestGalleryHasNoGuardsError:
+    def test_code_bad_request(self):
+        from exceptions import GalleryHasNoGuardsError
+
+        e = GalleryHasNoGuardsError()
+        assert e.code == http.HTTPStatus.BAD_REQUEST
+
+
+class TestGalleryHasNoVisibilityError:
+    def test_code_bad_request(self):
+        from exceptions import GalleryHasNoVisibilityError
+
+        e = GalleryHasNoVisibilityError()
+        assert e.code == http.HTTPStatus.BAD_REQUEST
+
+
+class TestEarClippingFailureError:
+    def test_code_bad_request(self):
+        from exceptions import EarClippingFailureError
+
+        e = EarClippingFailureError("No ear found")
+        assert e.code == http.HTTPStatus.BAD_REQUEST
+
+
+class TestGuardCoverageFailureError:
+    def test_code_bad_request(self):
+        from exceptions import GuardCoverageFailureError
+
+        e = GuardCoverageFailureError()
+        assert e.code == http.HTTPStatus.BAD_REQUEST
+
+
+class TestJobNotFinishedToPublishError:
+    def test_code_bad_request(self):
+        from exceptions import JobNotFinishedToPublishError
+
+        e = JobNotFinishedToPublishError("Job must be finished")
+        assert e.code == http.HTTPStatus.BAD_REQUEST
+
+
+class TestPolygonNotSimpleError:
+    def test_code_bad_request(self):
+        from exceptions import PolygonNotSimpleError
+
+        e = PolygonNotSimpleError()
+        assert e.code == http.HTTPStatus.BAD_REQUEST

@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { enUS, es } from "date-fns/locale";
-import { Page, Container, Title, Text, Badge, Badges, Inspector, Input, Toolbar, Button, Problem, Confirm, Milestones, Milestone, MilestonesSkeleton, useDevice, useDebounce } from "@geometry/ui";
+import { Page, Container, Title, Text, Badge, Inspector, Input, Toolbar, Button, Problem, Confirm, Milestones, Milestone, MilestonesSkeleton, useDevice, useDebounce } from "@geometry/ui";
 import { Viewer } from "@geometry/editor";
 import { useJob, useJobChildren, useUpdateJob, usePublish, useDeleteJob, useSession, type ApiErrorResponse } from "@geometry/data";
 import { Status } from "@geometry/domain";
@@ -180,7 +180,7 @@ export const JobPage = () => {
     const dateFnsLocale = language === Language.ES ? es : enUS;
     const updatedLabel =
         job!.updated_at && !Number.isNaN(Date.parse(job!.updated_at))
-            ? formatDistanceToNow(new Date(job!.updated_at), { addSuffix: true, locale: dateFnsLocale })
+            ? `${t("jobs.job.updated")} ${formatDistanceToNow(new Date(job!.updated_at), { addSuffix: true, locale: dateFnsLocale })}`
             : t("jobs.job.updated");
 
     const hasError = Object.keys(job!.stderr ?? {}).length > 0;
@@ -218,17 +218,15 @@ export const JobPage = () => {
                         />
                     </Container>
                     <Container spaced>
-                        <Container size={12} left={!isMobile}>
-                            <Badges left={!isMobile}>
-                                <Badge danger={job!.status === Status.FAILED} success={job!.status === Status.SUCCESS}>
-                                    {t(`jobs.status.${job!.status}`)}
-                                </Badge>
-                            </Badges>
-                        </Container>
-                        <Container size={12} right={!isMobile} center={isMobile}>
-                            <Text muted right={!isMobile} center={isMobile}>
+                        <Container size={12} left>
+                            <Text muted xxs left>
                                 {updatedLabel}
                             </Text>
+                        </Container>
+                        <Container size={12} left={!isMobile}>
+                            <Badge danger={job!.status === Status.FAILED} success={job!.status === Status.SUCCESS}>
+                                {t(`jobs.status.${job!.status}`)}
+                            </Badge>
                         </Container>
                     </Container>
                 </Container>

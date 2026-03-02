@@ -23,6 +23,7 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 from exceptions import InvalidActionError
+from exceptions import InvalidPolygonSortModeError
 from exceptions import MethodNotAllowedError
 from exceptions import ValidationError
 
@@ -214,6 +215,42 @@ class Status(str, Enum):
             return cls(raw)
         except ValueError:
             raise ValidationError(f"status must be one of [{cls.PENDING.value!r}, {cls.FAILED.value!r}, {cls.SUCCESS.value!r}], got {raw!r}")
+
+
+class PolygonSortMode(str, Enum):
+    """
+    Polygon sort mode: DEFAULT (by (x, y)), CCW (counter-clockwise), CW (clockwise).
+
+    For example, to parse from string or use enum:
+    >>> PolygonSortMode.parse("cw")
+    <PolygonSortMode.CW: 'cw'>
+    >>> PolygonSortMode.parse(PolygonSortMode.CCW)
+    <PolygonSortMode.CCW: 'ccw'>
+    """
+
+    DEFAULT = "default"
+    CCW = "ccw"
+    CW = "cw"
+
+    @classmethod
+    def parse(cls, value: str | PolygonSortMode | None) -> PolygonSortMode:
+        """
+        Coerce string or PolygonSortMode to PolygonSortMode; raises InvalidPolygonSortModeError if invalid.
+        Accepts both strings ('default', 'ccw', 'cw') and the enum itself (returns as-is).
+        """
+        if value is None:
+            raise InvalidPolygonSortModeError("polygon sort_mode is required")
+        if isinstance(value, cls):
+            return value
+        if not isinstance(value, str) or not value.strip():
+            raise InvalidPolygonSortModeError(f"polygon sort_mode must be a non-empty string or PolygonSortMode, got {type(value).__name__!r}")
+        raw: str = value.strip().lower()
+        try:
+            return cls(raw)
+        except ValueError:
+            raise InvalidPolygonSortModeError(
+                f"polygon sort_mode must be one of [{cls.DEFAULT.value!r}, {cls.CCW.value!r}, {cls.CW.value!r}], got {raw!r}"
+            )
 
 
 class PolygonValidationCode(str, Enum):

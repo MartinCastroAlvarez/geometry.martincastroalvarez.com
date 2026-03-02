@@ -7,6 +7,7 @@ import pytest
 
 from attributes import Email
 from attributes import Identifier
+from enums import Action
 from enums import Status
 from enums import StepName
 from exceptions import StepNotHandledError
@@ -113,6 +114,59 @@ class TestStartTask:
         mock_tasks_queue.put.assert_called()
         mock_repo.save.assert_called_once()
 
+    @patch.object(StartTask, "broadcast")
+    @patch("tasks.queue")
+    @patch("tasks.JobsRepository")
+    def test_execute_step_raises_marks_job_failed_and_saves_stderr(
+        self, mock_repo_cls, mock_tasks_queue, mock_broadcast
+    ):
+        mock_repo = MagicMock()
+        mock_repo_cls.return_value = mock_repo
+        job = Job(
+            id=Identifier("j1"),
+            step_name=StepName.STITCHING,
+            stdin={"boundary": None, "obstacles": []},
+            stdout={},
+            children_ids=[],
+            parent_id=None,
+        )
+        mock_repo.get.return_value = job
+        task = StartTask()
+        req = {"job_id": Identifier("j1"), "user_email": Email("u@e.com")}
+        result = task.handler(req)
+        assert result["status"] == Status.FAILED
+        assert job.status == Status.FAILED
+        assert "error:stitching" in str(job.stderr)
+        mock_repo.save.assert_called_once()
+        mock_tasks_queue.put.assert_called()
+
+    @patch("tasks.queue")
+    @patch("tasks.JobsRepository")
+    def test_execute_art_gallery_step_broadcast_starts_first_child(self, mock_repo_cls, mock_queue):
+        mock_repo = MagicMock()
+        mock_repo_cls.return_value = mock_repo
+        mock_repo.exists.return_value = False
+        job = Job(
+            id=Identifier("parent-1"),
+            step_name=StepName.ART_GALLERY,
+            stdin={"boundary": [[0, 0], [10, 0], [10, 10], [0, 10]], "obstacles": []},
+            stdout={},
+            children_ids=[],
+            parent_id=None,
+        )
+        mock_repo.get.return_value = job
+        task = StartTask()
+        req = {"job_id": Identifier("parent-1"), "user_email": Email("u@e.com")}
+        task.handler(req)
+        assert len(job.children_ids) == 5
+        put_calls = mock_queue.put.call_args_list
+        assert len(put_calls) >= 2
+        actions = [put_calls[i][0][0].action for i in range(len(put_calls))]
+        assert Action.REPORT in actions
+        assert Action.START in actions
+        start_msg = next(m for m in (put_calls[i][0][0] for i in range(len(put_calls))) if m.action == Action.START)
+        assert start_msg.job_id == job.children_ids[0]
+
 
 class TestReportTask:
     """Test ReportTask validate and execute with mocks."""
@@ -197,3 +251,40 @@ class TestReportTask:
         task.handler(req)
         assert parent.status == Status.FAILED
         assert parent.stderr == {"err": "failed"}
+
+    @patch("tasks.ReportTask.broadcast")
+    @patch("tasks.queue")
+    @patch("tasks.JobsRepository")
+    def test_execute_merges_children_meta_into_parent(self, mock_repo_cls, mock_queue, mock_broadcast):
+        mock_repo = MagicMock()
+        mock_repo_cls.return_value = mock_repo
+        parent = Job(
+            id=Identifier("p1"),
+            parent_id=None,
+            children_ids=[Identifier("c1")],
+            status=Status.PENDING,
+            step_name=StepName.ART_GALLERY,
+            meta={"step:art-gallery:started_at": "2026-03-02T01:00:00"},
+        )
+        child = Job(
+            id=Identifier("c1"),
+            parent_id=Identifier("p1"),
+            children_ids=[],
+            status=Status.SUCCESS,
+            step_name=StepName.EAR_CLIPPING,
+            stdout={"triangles": []},
+            meta={
+                "step:ear-clipping:started_at": "2026-03-02T01:00:05",
+                "step:ear-clipping:finished_at": "2026-03-02T01:00:10",
+            },
+        )
+        mock_repo.get.side_effect = lambda rid: parent if str(rid) == "p1" else child
+        task = ReportTask()
+        req = {"job_id": Identifier("p1"), "user_email": Email("u@e.com")}
+        task.handler(req)
+        assert parent.status == Status.SUCCESS
+        assert parent.stdout == {"triangles": []}
+        assert parent.meta["step:art-gallery:started_at"] == "2026-03-02T01:00:00"
+        assert parent.meta["step:ear-clipping:started_at"] == "2026-03-02T01:00:05"
+        assert parent.meta["step:ear-clipping:finished_at"] == "2026-03-02T01:00:10"
+        assert "step:art-gallery:finished_at" in parent.meta
