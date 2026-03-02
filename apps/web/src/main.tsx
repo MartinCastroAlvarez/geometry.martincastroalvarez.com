@@ -19,7 +19,11 @@ import App from './App.tsx'
 import './index.css'
 
 const googleTagId = typeof import.meta.env.VITE_GOOGLE_TAG_ID === 'string' ? import.meta.env.VITE_GOOGLE_TAG_ID : null
-const jwtToken = typeof import.meta.env.VITE_JWT_TEST === 'string' ? import.meta.env.VITE_JWT_TEST : undefined
+// Only use test JWT from env in development; never in production (avoids leaking token from build or cookie).
+const jwtToken =
+  import.meta.env.DEV && typeof import.meta.env.VITE_JWT_TEST === 'string'
+    ? import.meta.env.VITE_JWT_TEST
+    : undefined
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>

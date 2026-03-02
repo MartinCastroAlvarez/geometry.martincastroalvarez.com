@@ -3,7 +3,7 @@
  * When artGallery is null or undefined, the grid is shown but no polygon (empty state).
  * When interactive is true, pan is enabled and a ViewerToolbar is shown for mode.
  * Default: boundary and obstacles. Stitching: stitched polygon (edges not on boundary/obstacles muted).
- * Ear clipping: ears (ear edges muted). Convex: convex components (internal edges muted).
+ * Ear clipping: ears (all edges equal). Convex: convex components (all edges equal).
  * Visibility: boundary and obstacle edges shown muted; visibility polygon edges (guard to visible points) normal, drawn on top.
  * In all modes, a Vertex is shown for each guard.
  */
@@ -143,13 +143,11 @@ const ViewerInner = ({
         }
         if (mode === ViewerMode.EarClipping && artGallery.ears.length > 0) {
             const { vertices: vs, edges: es } = earsToEditorState(artGallery.ears);
-            const muted = es.map(([a, b]) => !boundaryKeys.has(edgeKey(vs[a], vs[b])));
-            return { vertices: vs, edges: es, edgeMuted: muted, guardVertices };
+            return { vertices: vs, edges: es, edgeMuted: es.map(() => false), guardVertices };
         }
         if (mode === ViewerMode.ConvexComponent && artGallery.convex_components.length > 0) {
             const { vertices: vs, edges: es } = convexComponentsToEditorState(artGallery.convex_components);
-            const muted = es.map(([a, b]) => !boundaryKeys.has(edgeKey(vs[a], vs[b])));
-            return { vertices: vs, edges: es, edgeMuted: muted, guardVertices };
+            return { vertices: vs, edges: es, edgeMuted: es.map(() => false), guardVertices };
         }
         if (mode === ViewerMode.Visibility && artGallery.visibility.length > 0) {
             const base = artGalleryToEditorState(artGallery);

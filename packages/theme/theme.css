@@ -24,6 +24,8 @@
   --color-success: 134 239 172;
   /* Editor canvas stroke/fill (Vertex, Edge); lighter slate in dark mode for visibility */
   --color-polygon: 203 213 225;
+  /* Muted edge (Viewer): darker in dark mode, not black */
+  --color-edge-muted: 71 85 105;
   /* Stitched edge (Viewer): subtle in dark mode */
   --color-edge-stitched: 51 65 85;
   /* Grid overlay: background and line color (full rgba for use in inline style / linear-gradient) */
@@ -72,6 +74,8 @@
   --color-danger: 239 68 68;
   --color-success: 34 197 94;
   --color-polygon: 71 85 105;
+  /* Muted edge (Viewer): lighter in light mode, not white */
+  --color-edge-muted: 203 213 225;
   /* Stitched edge (Viewer): lighter than polygon so clearly distinct in light mode */
   --color-edge-stitched: 203 213 225;
   --grid-bg: rgba(248, 250, 252, 0.25);

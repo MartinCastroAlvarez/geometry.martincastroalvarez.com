@@ -19,6 +19,7 @@ import { Page, Container, Title, Badge, useDevice } from "@geometry/ui";
 import { Viewer } from "@geometry/editor";
 import { useJobs, useSession } from "@geometry/data";
 import { useLocale } from "@geometry/i18n";
+import { Clock, TriangleAlert } from "lucide-react";
 import { JobsPageSkeleton } from "../skeletons";
 import { getDisplayStatus } from "../utils/jobStatus";
 
@@ -45,11 +46,19 @@ const Cell = ({ job }: CellProps) => {
             <Container size={8} left>
                 <Title left truncate>{title}</Title>
             </Container>
-            <Container size={4} right>
-                <Badge danger={displayStatus === Status.FAILED} success={displayStatus === Status.SUCCESS}>
-                    {t(`jobs.status.${displayStatus}`)}
-                </Badge>
-            </Container>
+            {displayStatus !== Status.SUCCESS && (
+                <Container size={4} right>
+                    <Badge danger={displayStatus === Status.FAILED}>
+                        {displayStatus === Status.FAILED ? (
+                            <TriangleAlert size={16} aria-label={t(`jobs.status.${displayStatus}`)} />
+                        ) : displayStatus === Status.PENDING ? (
+                            <Clock size={16} aria-label={t(`jobs.status.${displayStatus}`)} />
+                        ) : (
+                            t(`jobs.status.${displayStatus}`)
+                        )}
+                    </Badge>
+                </Container>
+            )}
         </Container>
     );
 };

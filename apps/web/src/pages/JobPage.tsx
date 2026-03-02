@@ -231,11 +231,13 @@ export const JobPage = () => {
                                 {updatedLabel}
                             </Text>
                         </Container>
-                        <Container size={12} left={!isMobile}>
-                            <Badge danger={displayStatus === Status.FAILED} success={displayStatus === Status.SUCCESS}>
-                                {t(`jobs.status.${displayStatus}`)}
-                            </Badge>
-                        </Container>
+                        {displayStatus !== Status.SUCCESS && (
+                            <Container size={12} left={!isMobile}>
+                                <Badge danger={displayStatus === Status.FAILED}>
+                                    {t(`jobs.status.${displayStatus}`)}
+                                </Badge>
+                            </Container>
+                        )}
                     </Container>
                 </Container>
                 <Container size={isMobile ? 12 : 6} center={isMobile} right={!isMobile}>

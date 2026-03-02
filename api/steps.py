@@ -38,9 +38,6 @@ from enums import StepName
 from exceptions import BridgeFailureError
 from exceptions import EarClippingFailureError
 from exceptions import GuardCoverageFailureError
-from exceptions import JobStdoutMissingConvexComponentsError
-from exceptions import JobStdoutMissingEarsError
-from exceptions import JobStdoutMissingStitchedError
 from exceptions import PolygonNotSimpleError
 from exceptions import PolygonsDoNotShareEdgeError
 from exceptions import StepNotHandledError
@@ -404,14 +401,13 @@ class EarClippingStep(SequenceStep):
     """
     Ear clipping step. Reads stitched polygon from job.stdout (from stitching step).
     Runs ear clipping only; returns ears as Table.serialize().
-    Raises JobStdoutMissingStitchedError if stitched is missing.
+    Polygon.unserialize() raises if stitched is missing or invalid.
     """
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
-        stitched_raw = self.job.stdout.get("stitched") or self.job.stdout.get("stiteched")
-        if not stitched_raw:
-            raise JobStdoutMissingStitchedError("Ear clipping requires stitched polygon in job.stdout (run stitching step first).")
-        points: Polygon = Polygon.unserialize(stitched_raw)
+        points: Polygon = Polygon.unserialize(
+            self.job.stdout.get("stitched") or self.job.stdout.get("stiteched")
+        )
         table: Table[Ear] = Table()
 
         # Ear clipping: while polygon has more than 3 vertices, find and clip an ear.
@@ -460,19 +456,15 @@ class ConvexComponentOptimizationStep(SequenceStep):
     """
     Convex component optimization step. Reads ears from job.stdout (from ear clipping step).
     Merges adjacent convex components; returns convex_components as Table.serialize().
-    Raises JobStdoutMissingEarsError if ears are missing.
+    Ear.unserialize() raises if ears data is missing or invalid.
     """
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
-        ears_raw = self.job.stdout.get("ears")
-        if not ears_raw:
-            raise JobStdoutMissingEarsError("Convex component step requires ears in job.stdout (run ear clipping step first).")
-        ears_items = list(ears_raw.values()) if isinstance(ears_raw, dict) else ears_raw
+        ears_data = self.job.stdout.get("ears")
+        ears_items = list(ears_data.values()) if isinstance(ears_data, dict) else ears_data
         ears_list: list[Ear] = [Ear.unserialize(serialized) for serialized in ears_items]
 
-        table: Table[ConvexComponent] = Table()
-        for ear in ears_list:
-            table += ConvexComponent(list(ear))
+        table: Table[ConvexComponent] = Table.unserialize([ConvexComponent(list(ear)) for ear in ears_list])
 
         # Merge adjacent pairs by largest area until no merge possible.
         while True:
@@ -537,35 +529,33 @@ class GuardPlacementStep(SequenceStep):
     5. Repeat until no points remain to be seen.
 
     Post-process: remove redundant guards whose visibility is contained in the union of the others.
-    Returns guards and visibility as Table.serialize(). Raises if stitched or convex_components missing.
+    Returns guards and visibility as Table.serialize(). Unserializers raise if required data is missing or invalid.
     """
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
-        stitched_raw = self.job.stdout.get("stitched") or self.job.stdout.get("stiteched")
-        if not stitched_raw:
-            raise JobStdoutMissingStitchedError("Guard placement requires stitched polygon in job.stdout (run stitching step first).")
-        stitched: Polygon = Polygon.unserialize(stitched_raw)
-
-        convex_raw = self.job.stdout.get("convex_components")
-        if not convex_raw:
-            raise JobStdoutMissingConvexComponentsError("Guard placement requires convex_components in job.stdout (run convex component step first).")
-        convex_items = list(convex_raw.values()) if isinstance(convex_raw, dict) else convex_raw
-        components_guard: list[ConvexComponent] = [ConvexComponent.unserialize(serialized) for serialized in convex_items]
-
+        stitched: Polygon = Polygon.unserialize(
+            self.job.stdout.get("stitched") or self.job.stdout.get("stiteched")
+        )
+        convex_data = self.job.stdout.get("convex_components")
+        convex_items = list(convex_data.values()) if isinstance(convex_data, dict) else convex_data
+        components_guard: list[ConvexComponent] = [
+            ConvexComponent.unserialize(serialized) for serialized in convex_items
+        ]
         boundary: Polygon = Polygon.unserialize(self.job.stdin.get("boundary"))
-        obstacles: list[Polygon] = [Polygon.unserialize(obstacle) for obstacle in (self.job.stdin.get("obstacles") or [])]
+        obstacles: list[Polygon] = [
+            Polygon.unserialize(obstacle) for obstacle in (self.job.stdin.get("obstacles") or [])
+        ]
 
-        # Remaining points to cover (shrinks each iteration). Visibility tests always use full boundary + obstacles.
+        guards_table: Table[Point] = Table()
+        visibility_table: Table[Visibility] = Table()
+
         remaining_points: set[Point] = set(stitched)
         remaining_components: set[ConvexComponent] = set(components_guard)
-        guards_list: list[Point] = []
 
         while remaining_points:
             if not remaining_components:
                 raise GuardCoverageFailureError("Failed to cover all points; no remaining convex components.")
-            # Step 1: pick the largest convex component (by area) from the list of remaining components.
             largest: ConvexComponent = max(remaining_components, key=lambda c: abs(c.signed_area))
-            # Step 2: evaluate only guards at the vertices of that component; score = remaining points visible (visibility vs full art gallery).
             candidates: list[Point] = list(largest)
             best_guard: Point | None = None
             best_count: int = -1
@@ -576,14 +566,14 @@ class GuardPlacementStep(SequenceStep):
                     best_guard = guard
             if best_guard is None or best_count == 0:
                 raise GuardCoverageFailureError("Failed to cover all convex components.")
-            if best_guard not in guards_list:
-                guards_list.append(best_guard)
-            # Step 3: remove the chosen component and any other convex component this guard completely sees.
+            if best_guard not in guards_table:
+                guards_table += best_guard
+                visible: list[Point] = [p for p in stitched if _point_visible_from(best_guard, p, boundary, obstacles)]
+                visibility_table += Visibility(best_guard, visible)
             remaining_components.discard(largest)
             for comp in list(remaining_components):
                 if all(_point_visible_from(best_guard, p, boundary, obstacles) for p in comp):
                     remaining_components.discard(comp)
-            # Step 4: remove from remaining points all points visible to this guard; repeat until no points left.
             for p in list(remaining_points):
                 if _point_visible_from(best_guard, p, boundary, obstacles):
                     remaining_points.discard(p)
@@ -592,25 +582,19 @@ class GuardPlacementStep(SequenceStep):
         removed: bool = True
         while removed:
             removed = False
-            visibility_by_guard: list[list[Point]] = []
-            for guard in guards_list:
-                visible: list[Point] = [p for p in stitched if _point_visible_from(guard, p, boundary, obstacles)]
-                visibility_by_guard.append(visible)
-            uncovered: set[Point] = set(stitched) - set().union(*(set(visible) for visible in visibility_by_guard))
+            guards_list = list(guards_table)
+            visibility_list = list(visibility_table)
+            uncovered: set[Point] = set(stitched) - set().union(*(set(v.points) for v in visibility_list))
             if uncovered:
                 raise GuardCoverageFailureError("Failed to cover points.")
             for index, guard in enumerate(guards_list):
-                other_union: set[Point] = set().union(*(set(visibility_by_guard[j]) for j in range(len(guards_list)) if j != index))
-                if set(visibility_by_guard[index]).issubset(other_union):
-                    guards_list.pop(index)
+                other_union: set[Point] = set().union(*(set(visibility_list[j].points) for j in range(len(guards_list)) if j != index))
+                if set(visibility_list[index].points).issubset(other_union):
+                    guards_table -= guard
+                    visibility_table -= visibility_list[index]
                     removed = True
                     break
 
-        # Build guards table and Table[Visibility] (keys match Table[Point] keys for guards).
-        guards_table: Table[Point] = Table.unserialize(guards_list)
-        visibility_table: Table[Visibility] = Table()
-        for guard, pts in zip(guards_list, visibility_by_guard):
-            visibility_table.add(Visibility(guard, pts))
         return {
             "guards": guards_table.serialize(),
             "visibility": visibility_table.serialize(),
