@@ -1,5 +1,9 @@
 """Tests for models package."""
 
+from attributes import Identifier
+from geometry import ConvexComponent
+from geometry import Point
+from models import ArtGallery
 from models import User
 from settings import ANONYMOUS_EMAIL
 from settings import ANONYMOUS_NAME
@@ -32,3 +36,52 @@ class TestUser:
         u = User.unserialize({"email": "a@b.com", "name": "Ab"})
         assert str(u.email) == "a@b.com"
         assert u.name == "Ab"
+
+
+class TestArtGalleryAdjacency:
+    """Test ArtGallery adjacency field (serialize/unserialize)."""
+
+    def test_unserialize_with_adjacency(self):
+        c = ConvexComponent([Point([0, 0]), Point([1, 0]), Point([0.5, 1])])
+        h = hash(c)
+        data = {
+            "id": "g1",
+            "boundary": [[0, 0], [1, 0], [1, 1], [0, 1]],
+            "owner_job_id": "j1",
+            "title": "Test",
+            "created_at": "2024-01-01T00:00:00",
+            "updated_at": "2024-01-01T00:00:00",
+            "obstacles": {},
+            "ears": {},
+            "convex_components": {str(h): c.serialize()},
+            "adjacency": {str(h): [999]},
+            "guards": {},
+            "visibility": {},
+            "stitched": [],
+            "stitches": [],
+        }
+        gallery = ArtGallery.unserialize(data)
+        assert len(gallery.adjacency) == 1
+        adj = list(gallery.adjacency)[0]
+        assert Identifier(999) in adj.adjacent
+
+    def test_serialize_includes_adjacency(self):
+        data = {
+            "id": "g1",
+            "boundary": [[0, 0], [1, 0], [1, 1], [0, 1]],
+            "owner_job_id": "j1",
+            "title": "Test",
+            "created_at": "2024-01-01T00:00:00",
+            "updated_at": "2024-01-01T00:00:00",
+            "obstacles": {},
+            "ears": {},
+            "convex_components": {},
+            "guards": {},
+            "visibility": {},
+            "stitched": [],
+            "stitches": [],
+        }
+        gallery = ArtGallery.unserialize(data)
+        out = gallery.serialize()
+        assert "adjacency" in out
+        assert isinstance(out["adjacency"], dict)

@@ -122,11 +122,12 @@ class TestStartTask:
     ):
         mock_repo = MagicMock()
         mock_repo_cls.return_value = mock_repo
+        # StitchingStep reads from stdout; invalid boundary makes ArtGallery.unserialize raise.
         job = Job(
             id=Identifier("j1"),
             step_name=StepName.STITCHING,
-            stdin={"boundary": None, "obstacles": []},
-            stdout={},
+            stdin={},
+            stdout={"boundary": 123, "obstacles": []},
             children_ids=[],
             parent_id=None,
         )

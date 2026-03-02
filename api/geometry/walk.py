@@ -24,17 +24,26 @@ from __future__ import annotations
 
 from decimal import Decimal
 from functools import cached_property
-from typing import Any
 
 from enums import Orientation
 from geometry.point import Point
+from geometry.point import PointLike
 
 
 class Walk:
-    def __init__(self, *, start: Any, center: Any, end: Any) -> None:
-        self.start = start if isinstance(start, Point) else Point(start)
-        self.center = center if isinstance(center, Point) else Point(center)
-        self.end = end if isinstance(end, Point) else Point(end)
+    def __init__(self, *, start: PointLike, center: PointLike, end: PointLike) -> None:
+        if isinstance(start, Point):
+            self.start = start
+        else:
+            self.start = Point.unserialize(start)
+        if isinstance(center, Point):
+            self.center = center
+        else:
+            self.center = Point.unserialize(center)
+        if isinstance(end, Point):
+            self.end = end
+        else:
+            self.end = Point.unserialize(end)
 
     @cached_property
     def signed_area(self) -> Decimal:

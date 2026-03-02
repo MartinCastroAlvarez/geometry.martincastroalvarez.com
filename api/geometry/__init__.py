@@ -25,13 +25,17 @@ Examples:
 
 from enums import Orientation
 from geometry.box import Box
+from geometry.box import SerializedBox
 from geometry.convex import ConvexComponent
 from geometry.ear import Ear
 from geometry.interval import Interval
+from geometry.interval import SerializedInterval
 from geometry.point import Point
+from geometry.point import SerializedPoint
 from geometry.polygon import Polygon
+from geometry.polygon import SerializedPolygon
 from geometry.segment import Segment
-from geometry.visibility import Visibility
+from geometry.segment import SerializedSegment
 from geometry.walk import Walk
 
 __all__ = [
@@ -43,6 +47,10 @@ __all__ = [
     "Point",
     "Polygon",
     "Segment",
-    "Visibility",
+    "SerializedBox",
+    "SerializedInterval",
+    "SerializedPoint",
+    "SerializedPolygon",
+    "SerializedSegment",
     "Walk",
 ]

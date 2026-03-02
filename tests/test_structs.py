@@ -216,6 +216,16 @@ class TestTable:
         t.add("foo")
         assert "foo" in t
 
+    def test_table_getitem_by_key_or_item(self):
+        t = Table()
+        t.add("foo")
+        t.add("bar")
+        assert t[hash("foo")] == "foo"
+        assert t["foo"] == "foo"
+        assert t["bar"] == "bar"
+        with pytest.raises(KeyError):
+            _ = t["baz"]
+
     def test_table_iter(self):
         t = Table()
         t.add(1)

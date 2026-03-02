@@ -24,14 +24,17 @@ from __future__ import annotations
 from decimal import Decimal
 from decimal import InvalidOperation
 from typing import Any
+from typing import TypeAlias
 
 from exceptions import ValidationError
 from interfaces import Measurable
 from interfaces import Serializable
 from interfaces import Spatial
 
+SerializedInterval: TypeAlias = list[str]
 
-class Interval(list, Measurable, Spatial, Serializable[list[Any]]):
+
+class Interval(list, Measurable, Spatial, Serializable[SerializedInterval]):
     """
     An interval as a list of exactly two Decimal values (start, end) with start <= end.
 
@@ -102,7 +105,7 @@ class Interval(list, Measurable, Spatial, Serializable[list[Any]]):
             return self[0] <= obj[1] and obj[0] <= self[1]
         return self[0] < obj[1] and obj[0] < self[1]
 
-    def serialize(self) -> list[str]:
+    def serialize(self) -> SerializedInterval:
         return [str(self[0]), str(self[1])]
 
     @classmethod

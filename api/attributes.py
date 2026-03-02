@@ -1,9 +1,9 @@
 """
-API value types and geometry re-exports.
+API value types.
 
 Title
 -----
-Attributes Module (Value Types and Geometry)
+Attributes Module (Value Types)
 
 Context
 -------
@@ -11,17 +11,15 @@ This module defines validated value types used across the API: Timestamp,
 Countdown, Identifier, Email, Url, Title, Path, Origin, Limit, Offset,
 Slug, Signature, ReceiptHandle. Each enforces format and raises
 ValidationError (or a specific exception) on invalid input. Geometry types
-(Box, ConvexComponent, Ear, Walk, Point, Polygon, Segment, Interval,
-Orientation) are re-exported via __getattr__ from the geometry package to
-avoid circular imports. Data structures (Sequence, Table) live in structs/.
-Use these types in request/response validation and in domain models.
+(Point, Polygon, Segment, etc.) live in the geometry package. Data
+structures (Sequence, Table, Bag) live in structs. Use these types in
+request/response validation and in domain models.
 
 Examples:
 >>> from attributes import Timestamp, Email, Identifier, Path, Limit
 >>> ts = Timestamp.now()
 >>> email = Email("user@example.com")
 >>> path = Path("/v1/galleries/abc")
->>> from attributes import Polygon, Point
 """
 
 from __future__ import annotations
@@ -264,6 +262,11 @@ class Signature(int):
     def __hash__(self) -> Signature:
         return self
 
+    @classmethod
+    def from_int(cls, value: int) -> Signature:
+        """Wrap an existing int as a Signature (e.g. when unserializing adjacency ids)."""
+        return super().__new__(cls, value)
+
 
 class Slug(str):
     """
@@ -352,6 +355,12 @@ class Identifier(str):
         if not cls.PATTERN.match(raw):
             raise ValidationError("Identifier may only contain letters, digits, underscore (_), and dash (-)")
         return super().__new__(cls, raw)
+
+    def __hash__(self) -> int:
+        """When the identifier is a decimal integer string, return that int so id matches hash for table lookup."""
+        if self.isdigit():
+            return int(self)
+        return str.__hash__(self)
 
 
 class Limit(int):
@@ -512,27 +521,3 @@ class Url(str):
         if parsed.scheme not in ("http", "https", "ftp", "mailto"):
             raise ValidationError("Url scheme must be one of: http, https, ftp, mailto")
         return super().__new__(cls, raw)
-
-
-_GEOMETRY_NAMES = frozenset(
-    {
-        "Box",
-        "ConvexComponent",
-        "Ear",
-        "Interval",
-        "Orientation",
-        "Point",
-        "Polygon",
-        "Segment",
-        "Visibility",
-        "Walk",
-    }
-)
-
-
-def __getattr__(name: str):
-    if name in _GEOMETRY_NAMES:
-        import geometry
-
-        return getattr(geometry, name)
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

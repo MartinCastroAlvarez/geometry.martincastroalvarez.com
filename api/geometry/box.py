@@ -24,19 +24,23 @@ Examples:
 from __future__ import annotations
 
 from typing import Any
+from typing import TypeAlias
 
 from exceptions import BoxInvalidEdgeError
 from exceptions import SerializedInvalidDictError
 from geometry.interval import Interval
 from geometry.point import Point
+from geometry.point import SerializedPoint
 from geometry.segment import Segment
 from interfaces import Bounded
 from interfaces import Serializable
 from interfaces import Spatial
 
+SerializedBox: TypeAlias = dict[str, SerializedPoint]
 
-class Box(Spatial, Serializable[dict[str, Any]]):
-    def serialize(self) -> dict[str, Any]:
+
+class Box(Spatial, Serializable[SerializedBox]):
+    def serialize(self) -> SerializedBox:
         return {
             "bottom_left": self.bottom_left.serialize(),
             "top_left": self.top_left.serialize(),
@@ -45,7 +49,7 @@ class Box(Spatial, Serializable[dict[str, Any]]):
         }
 
     @classmethod
-    def unserialize(cls, data: dict[str, Any]) -> Box:
+    def unserialize(cls, data: SerializedBox) -> Box:
         if not isinstance(data, dict):
             raise SerializedInvalidDictError(f"Box.unserialize expects a dict, got {type(data).__name__}")
         for key in ("bottom_left", "top_left", "bottom_right", "top_right"):

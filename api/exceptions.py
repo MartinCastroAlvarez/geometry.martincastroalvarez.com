@@ -631,3 +631,12 @@ class GuardCoverageFailureError(GeometryException):
 
     def __init__(self, message: str = "Failed to cover all components or points"):
         super().__init__(message)
+
+
+class AdjacencyNotBuiltError(GeometryException):
+    """Adjacency table was never built (e.g. convex step exited without building)."""
+
+    code: http.HTTPStatus = http.HTTPStatus.INTERNAL_SERVER_ERROR
+
+    def __init__(self, message: str = "Adjacency table was not built"):
+        super().__init__(message)

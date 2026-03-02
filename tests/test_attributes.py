@@ -115,15 +115,13 @@ class TestLimit:
 
 
 class TestAttributesGetAttr:
-    """Test attributes lazy __getattr__ for geometry names."""
+    """Test that attributes does not expose geometry types (they live in geometry package)."""
 
-    def test_getattr_returns_geometry_type(self):
+    def test_getattr_point_raises(self):
         import attributes
 
-        Point = getattr(attributes, "Point")
-        from geometry import Point as GPoint
-
-        assert Point is GPoint
+        with pytest.raises(AttributeError, match="no attribute"):
+            getattr(attributes, "Point")
 
     def test_getattr_unknown_raises(self):
         import attributes

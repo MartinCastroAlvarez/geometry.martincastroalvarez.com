@@ -18,7 +18,7 @@ export interface ApiUser {
     avatarUrl: string | null;
 }
 
-/** Job - matches geometry API job response */
+/** Job - matches geometry API job response. stdin/stdout may contain boundary, obstacles, stitched, guards, visibility, etc.; coordinates may be numbers or numeric strings. */
 export interface ApiJob {
     id: string;
     parent_id: string | null;
@@ -61,7 +61,7 @@ export interface ApiArtGallery {
     updated_at: string;
 }
 
-/** List endpoint response: array of entities under `data` and next_token. */
+/** List endpoint response: array of entities under `data` and optional next_token (e.g. jobs list, galleries list). */
 export interface ListResponse<T> {
     data: T[];
     next_token: string;

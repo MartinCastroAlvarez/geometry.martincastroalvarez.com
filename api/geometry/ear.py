@@ -21,12 +21,12 @@ Examples:
 
 from __future__ import annotations
 
-from typing import Any
-
 from exceptions import ValidationError
 from geometry.convex import ConvexComponent
 from geometry.point import Point
 from geometry.polygon import Polygon
+from geometry.polygon import SerializedPolygon
+from structs import Sequence
 
 
 class Ear(ConvexComponent):
@@ -36,7 +36,7 @@ class Ear(ConvexComponent):
 
     def __init__(
         self,
-        value: list[Point] | None = None,
+        value: list[Point] | Sequence[Point] | None = None,
     ) -> None:
         super().__init__(value)
         if len(self) != 3:
@@ -53,6 +53,6 @@ class Ear(ConvexComponent):
         return self_cc & other_cc
 
     @classmethod
-    def unserialize(cls, data: list[Any]) -> Ear:
+    def unserialize(cls, data: SerializedPolygon) -> Ear:
         """Build Ear from list of 3 point coords (each [x, y])."""
         return cls(list(Polygon.unserialize(data)))

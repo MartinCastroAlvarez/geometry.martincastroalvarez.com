@@ -21,11 +21,12 @@ Examples:
 
 from __future__ import annotations
 
-from typing import Any
-
+from attributes import Signature
 from exceptions import ValidationError
 from geometry.point import Point
 from geometry.polygon import Polygon
+from geometry.polygon import SerializedPolygon
+from structs import Sequence
 
 
 class ConvexComponent(Polygon):
@@ -33,9 +34,12 @@ class ConvexComponent(Polygon):
     A convex polygon. Validates is_convex() in constructor (skipped for 2-point edge result from __and__).
     """
 
+    def __hash__(self) -> Signature:
+        return super().__hash__()
+
     def __init__(
         self,
-        value: list[Point] | None = None,
+        value: list[Point] | Sequence[Point] | None = None,
     ) -> None:
         super().__init__(value)
         if len(self) >= 3 and not self.is_convex():
@@ -48,8 +52,6 @@ class ConvexComponent(Polygon):
 
     def __add__(self, other: ConvexComponent) -> ConvexComponent:
         """Merge with other along shared edge; returns new ConvexComponent."""
-        from structs import Sequence
-
         shared: Polygon = super().__and__(other)
         a: Point = shared[0]
         b: Point = shared[1]
@@ -86,6 +88,6 @@ class ConvexComponent(Polygon):
         return ConvexComponent(list(deduped))
 
     @classmethod
-    def unserialize(cls, data: list[Any]) -> ConvexComponent:
+    def unserialize(cls, data: SerializedPolygon) -> ConvexComponent:
         """Build ConvexComponent from list of point coords (each [x, y])."""
         return cls(list(Polygon.unserialize(data)))

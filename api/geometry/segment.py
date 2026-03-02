@@ -26,10 +26,12 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import TypeAlias
 
 from attributes import Signature
 from exceptions import ValidationError
 from geometry.point import Point
+from geometry.point import SerializedPoint
 from geometry.walk import Walk
 from interfaces import Bounded
 from interfaces import Serializable
@@ -38,8 +40,10 @@ from interfaces import Spatial
 if TYPE_CHECKING:
     from geometry.box import Box
 
+SerializedSegment: TypeAlias = list[SerializedPoint]
 
-class Segment(list, Spatial, Bounded, Serializable[list[Any]]):
+
+class Segment(list, Spatial, Bounded, Serializable[SerializedSegment]):
     """
     A segment as a list of exactly two Point (start, end). Validates in constructor.
 
@@ -197,11 +201,11 @@ class Segment(list, Spatial, Bounded, Serializable[list[Any]]):
             )
         )
 
-    def serialize(self) -> list[list[Any]]:
+    def serialize(self) -> SerializedSegment:
         return [self[0].serialize(), self[1].serialize()]
 
     @classmethod
-    def unserialize(cls, data: list[Any]) -> Segment:
+    def unserialize(cls, data: SerializedSegment) -> Segment:
         if not isinstance(data, list) or len(data) != 2:
             raise ValidationError("Segment.unserialize expects a list of exactly 2 Point")
         return cls([Point.unserialize(data[0]), Point.unserialize(data[1])])

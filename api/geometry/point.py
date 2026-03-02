@@ -28,6 +28,8 @@ from decimal import Decimal
 from decimal import InvalidOperation
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import TypeAlias
+from typing import Union
 
 from attributes import Signature
 from exceptions import ValidationError
@@ -36,8 +38,12 @@ from interfaces import Serializable
 if TYPE_CHECKING:
     from geometry.segment import Segment
 
+SerializedPoint: TypeAlias = list[str]
 
-class Point(list, Serializable[list[str]]):
+PointLike: TypeAlias = Union["Point", str, list[Any]]
+
+
+class Point(list, Serializable[SerializedPoint]):
     """
     A point as a list of exactly two Decimal values (x, y). Inherits from list.
     Implements serialize (-> str), unserialize (str | list); __hash__, __eq__, __lt__, __sub__, __len__, __getitem__.
@@ -120,16 +126,18 @@ class Point(list, Serializable[list[str]]):
             return super().__getitem__(1)
         raise IndexError("Point index out of range")
 
-    def serialize(self) -> list[str]:
+    def serialize(self) -> SerializedPoint:
         """Return list of two coordinate strings [str(x), str(y)] for wire format."""
         return [str(self.x), str(self.y)]
 
     @classmethod
-    def unserialize(cls, data: str | list[Any]) -> Point:
+    def unserialize(cls, data: PointLike) -> Point:
         """
         Build Point from list of numbers (int or float), list of strings, or JSON str.
-        Raises ValidationError on invalid JSON or data.
+        If data is already a Point, return it. Raises ValidationError on invalid JSON or data.
         """
+        if isinstance(data, Point):
+            return data
         if isinstance(data, str):
             data = data.strip()
             if not data:

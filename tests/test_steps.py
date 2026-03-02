@@ -36,10 +36,12 @@ class TestSimpleSteps:
     """Test simple steps that return a fixed dict (steps do not enqueue messages; StartTask does)."""
 
     def test_stitching_step_run(self):
+        # StitchingStep reads from job.stdout (output of validation step).
         job = Job(
             id=Identifier("j1"),
             step_name=StepName.STITCHING,
-            stdin={
+            stdin={},
+            stdout={
                 "boundary": [[0, 0], [10, 0], [10, 10], [0, 10]],
                 "obstacles": [],
             },
@@ -52,10 +54,12 @@ class TestSimpleSteps:
 
     def test_stitching_step_run_with_one_obstacle(self):
         # Boundary [0,0]-[10,0]-[10,10]-[0,10]; obstacle [2,2]-[4,2]-[4,4]-[2,4] inside.
+        # StitchingStep reads from job.stdout (output of validation step).
         job = Job(
             id=Identifier("j1"),
             step_name=StepName.STITCHING,
-            stdin={
+            stdin={},
+            stdout={
                 "boundary": [[0, 0], [10, 0], [10, 10], [0, 10]],
                 "obstacles": [[[2, 2], [4, 2], [4, 4], [2, 4]]],
             },
@@ -75,7 +79,10 @@ class TestSimpleSteps:
         )
         step = ValidationPolygonStep(job=job, user=_user())
         out = step.run()
-        assert out == {}
+        assert "boundary" in out
+        assert "obstacles" in out
+        assert len(out["boundary"]) == 4
+        assert out["obstacles"] == []
 
     def test_ear_clipping_step_run(self):
         # Ear clipping reads stitched from job.stdout (from stitching step).
@@ -127,7 +134,12 @@ class TestSimpleSteps:
         step = ConvexComponentOptimizationStep(job=job, user=_user())
         out = step.run()
         assert "convex_components" in out
+        assert "adjacency" in out
         assert len(out["convex_components"]) >= 1
+        assert isinstance(out["adjacency"], dict)
+        for key, value in out["adjacency"].items():
+            assert isinstance(key, str)
+            assert isinstance(value, list)
 
     def test_guard_placement_step_run(self):
         # Guard placement reads stitched and convex_components from job.stdout.
@@ -162,10 +174,12 @@ class TestSimpleSteps:
     def test_guard_placement_step_run_with_one_obstacle(self):
         boundary = [[0, 0], [10, 0], [10, 10], [0, 10]]
         obstacles = [[[2, 2], [4, 2], [4, 4], [2, 4]]]
+        # StitchingStep reads from stdout (output of validation step).
         job_stitch = Job(
             id=Identifier("j_stitch"),
             step_name=StepName.STITCHING,
-            stdin={"boundary": boundary, "obstacles": obstacles},
+            stdin={},
+            stdout={"boundary": boundary, "obstacles": obstacles},
         )
         stitch_out = StitchingStep(job=job_stitch, user=_user()).run()
         job_ear = Job(
@@ -186,7 +200,13 @@ class TestSimpleSteps:
             id=Identifier("j1"),
             step_name=StepName.GUARD_PLACEMENT,
             stdin={"boundary": boundary, "obstacles": obstacles},
-            stdout={"stitched": stitch_out["stitched"], "convex_components": convex_out["convex_components"]},
+            stdout={
+                "boundary": boundary,
+                "obstacles": obstacles,
+                "stitched": stitch_out["stitched"],
+                "convex_components": convex_out["convex_components"],
+                "adjacency": convex_out["adjacency"],
+            },
         )
         step = GuardPlacementStep(job=job, user=_user())
         out = step.run()

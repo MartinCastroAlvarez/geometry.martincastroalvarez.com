@@ -13,6 +13,66 @@ from geometry import Point
 from geometry import Polygon
 from geometry import Segment
 from geometry import Walk
+from attributes import Email
+from models import Job
+from models import User
+from steps import ConvexComponentOptimizationStep
+from structs import Bag
+from structs import Table
+
+
+class TestAdjacencyBag:
+    """Test Table[Bag[ConvexComponent, Identifier]] (adjacency) and build_adjacency_table."""
+
+    def test_bag_init_and_add(self):
+        c = ConvexComponent([Point([0, 0]), Point([1, 0]), Point([0.5, 1])])
+        bag: Bag[ConvexComponent, int] = Bag(c)
+        assert bag.key is c
+        assert len(bag) == 0
+        assert list(bag) == []
+
+    def test_bag_hash_equals_key_hash(self):
+        c = ConvexComponent([Point([0, 0]), Point([1, 0]), Point([0.5, 1])])
+        bag = Bag(c)
+        assert hash(bag) == hash(c)
+
+    def test_bag_iadd_adds_hash(self):
+        c = ConvexComponent([Point([0, 0]), Point([1, 0]), Point([0.5, 1])])
+        d = ConvexComponent([Point([1, 0]), Point([2, 0]), Point([1.5, 1])])
+        bag = Bag(c)
+        bag += hash(d)
+        assert len(bag) == 1
+        assert hash(d) in bag.adjacent
+        bag += hash(d)  # idempotent
+        assert len(bag) == 1
+
+    def test_bag_contains(self):
+        c = ConvexComponent([Point([0, 0]), Point([1, 0]), Point([0.5, 1])])
+        bag = Bag(c)
+        bag.adjacent.add(42)
+        bag.adjacent.add(17)
+        assert 42 in bag
+        assert 17 in bag
+        assert bag.serialize() == [17, 42]
+
+    def test_build_adjacency_table(self):
+        left = ConvexComponent([Point([0, 0]), Point([1, 0]), Point([0.5, 1])])
+        right = ConvexComponent([Point([1, 0]), Point([0.5, 1]), Point([1.5, 0.5])])
+        table: Table[ConvexComponent] = Table()
+        table += left
+        table += right
+        step = ConvexComponentOptimizationStep(
+            job=Job.unserialize({"id": "j1", "stdout": {}}),
+            user=User(email=Email("test@test.com")),
+        )
+        built = step.build_adjacency_table(table)
+        assert len(built) == 2
+        bag_left = built[left]
+        bag_right = built[right]
+        assert len(bag_left) == 1
+        assert len(bag_right) == 1
+        assert right.id in bag_left.adjacent
+        assert left.id in bag_right.adjacent
 
 
 class TestConvexComponent:
@@ -42,6 +102,20 @@ class TestConvexComponent:
         result = c & d
         assert isinstance(result, ConvexComponent)
         assert len(result) == 2
+
+    def test_hash_matches_id(self):
+        """Hash of a convex component matches its id (int(component.id) == hash(component))."""
+        c = ConvexComponent([Point([0, 0]), Point([1, 0]), Point([0.5, 1])])
+        assert hash(c) == hash(c.id)
+        assert int(c.id) == hash(c)
+
+    def test_hash_depends_on_points_and_order(self):
+        """Hash depends on the points and their order; same points same order -> same hash."""
+        points = [Point([0, 0]), Point([1, 0]), Point([0.5, 1])]
+        c1 = ConvexComponent(points)
+        c2 = ConvexComponent(list(points))
+        assert hash(c1) == hash(c2)
+        assert c1.id == c2.id
 
 
 class TestPoint:

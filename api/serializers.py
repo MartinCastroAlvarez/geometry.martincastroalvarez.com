@@ -21,15 +21,15 @@ from typing import TypedDict
 class Serialized(TypedDict, total=False):
     """Parent shape for any serialized model (used as Serializable[T] in models)."""
 
-    id: str
-    created_at: str
-    updated_at: str
+    pass
 
 
 class ModelDict(Serialized):
     """Base shape for serialized Model instances."""
 
-    pass
+    id: str
+    created_at: str
+    updated_at: str
 
 
 class UserDict(ModelDict):
@@ -62,6 +62,7 @@ class ArtGalleryDict(ModelDict):
     title: str
     ears: dict[str, Any]
     convex_components: dict[str, Any]
+    adjacency: dict[str, Any]
     guards: dict[str, Any]
     visibility: dict[str, Any]
     stitched: list[Any]

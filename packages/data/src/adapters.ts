@@ -178,7 +178,13 @@ function parsePath(path: unknown): Point[] {
     return points;
 }
 
-/** Parse guards and visibility from stdout; returns guards list and Visibility[] (dicts share keys). */
+/** True if value looks like an array of IDs (numbers or numeric strings) rather than points. */
+function isIdList(path: unknown): boolean {
+    return Array.isArray(path) && path.length > 0 && path.every((v) => typeof v === "number" || (typeof v === "string" && !Number.isNaN(Number(v))));
+}
+
+/** Parse guards and visibility from stdout; returns guards list and Visibility[] (dicts share keys).
+ * API may send visibility as guard_id -> array of [x,y] points (visible region) or array of vertex/guard IDs (numeric); ID list is treated as empty path. */
 function parseGuardsAndVisibility(data: Record<string, unknown>): { guards: Point[]; visibility: Visibility[] } {
     const rawGuards = data.guards;
     const rawVis = data.visibility;
@@ -191,13 +197,19 @@ function parseGuardsAndVisibility(data: Record<string, unknown>): { guards: Poin
             const path = (rawVis as Record<string, unknown>)[k];
             if (!g) continue;
             guards.push(new Point(g.x, g.y));
-            if (Array.isArray(path)) visibility.push(new Visibility(new Point(g.x, g.y), parsePath(path)));
+            if (Array.isArray(path)) {
+                const points = isIdList(path) ? [] : parsePath(path);
+                visibility.push(new Visibility(new Point(g.x, g.y), points));
+            }
         }
         return { guards, visibility };
     }
     const guards = parseGuards(data);
     const visItems = Array.isArray(rawVis) ? rawVis : rawVis && typeof rawVis === "object" ? Object.values(rawVis) : [];
-    const visibility = visItems.map((path: unknown, i: number) => new Visibility(guards[i] ?? new Point(0, 0), parsePath(path))).filter((_, i) => guards[i] != null);
+    const visibility = visItems.map((path: unknown, i: number) => {
+        const points = Array.isArray(path) && isIdList(path) ? [] : parsePath(path);
+        return new Visibility(guards[i] ?? new Point(0, 0), points);
+    }).filter((_, i) => guards[i] != null);
     return { guards, visibility };
 }
 
@@ -205,6 +217,7 @@ function parseGuardsAndVisibility(data: Record<string, unknown>): { guards: Poin
  * Build an ArtGallery from a record (stdin or stdout) when it contains valid boundary and obstacles.
  * Used when reading job list, single job, or createJob response. Optional stitched from stdout
  * (key "stitched" or "stiteched"). Parses ears, convex_components, guards, visibility when present.
+ * API may send boundary/obstacles/points as [x,y] with numeric or string coordinates.
  */
 export function artGalleryFromPolygonData(_jobId: string, data: Record<string, unknown>): ArtGallery | undefined {
     const boundary = parseBoundary(data);

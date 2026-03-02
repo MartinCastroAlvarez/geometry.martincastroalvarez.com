@@ -28,7 +28,10 @@ from __future__ import annotations
 
 from decimal import Decimal
 from typing import Any
+from typing import TypeAlias
+from typing import Union
 
+from attributes import Identifier
 from enums import Orientation
 from enums import PolygonSortMode
 from exceptions import PolygonBoxRequiresOnePointError
@@ -37,6 +40,7 @@ from exceptions import PolygonsDoNotShareEdgeError
 from exceptions import PolygonUnserializeExpectsListError
 from geometry.box import Box
 from geometry.point import Point
+from geometry.point import SerializedPoint
 from geometry.segment import Segment
 from geometry.walk import Walk
 from interfaces import Bounded
@@ -45,8 +49,12 @@ from interfaces import Spatial
 from interfaces import Volume
 from structs import Sequence
 
+SerializedPolygon: TypeAlias = list[SerializedPoint]
 
-class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[list[Any]]):
+PolygonLike: TypeAlias = Union["Polygon", SerializedPolygon, dict[str, Any]]
+
+
+class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[SerializedPolygon]):
     """
     A polygon as a Sequence of Point (closed chain). Items must be Point.
 
@@ -64,9 +72,9 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[list[Any]]
 
     def __init__(
         self,
-        value: list[Point] | None = None,
+        value: list[Point] | Sequence[Point] | None = None,
     ) -> None:
-        """Build polygon from list of Point; raises if any item is not a Point. Simplicity is not validated here."""
+        """Build polygon from list or Sequence of Point; raises if any item is not a Point. Simplicity is not validated here."""
         if value is None:
             value = []
         if not isinstance(value, list):
@@ -75,6 +83,11 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[list[Any]]
             if not isinstance(item, Point):
                 raise PolygonItemMustBePointError(f"Polygon item at index {i} must be a Point, got {type(item).__name__}")
         super().__init__(value)
+
+    @property
+    def id(self) -> Identifier:
+        """Identifier that matches this polygon's hash (for table keys and adjacency)."""
+        return Identifier(str(hash(self)))
 
     @property
     def rightmost(self) -> Point:
@@ -319,7 +332,7 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[list[Any]]
             return False
         raise NotImplementedError(f"Polygon.intersects only supports Point, Segment, Box, Polygon; got {type(obj).__name__}")
 
-    def serialize(self) -> list[list[Any]]:
+    def serialize(self) -> SerializedPolygon:
         """
         Return list of point coords (each point as list [x, y]).
 
@@ -332,9 +345,10 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[list[Any]]
         return [point.serialize() for point in self]
 
     @classmethod
-    def unserialize(cls, data: dict[str, Any] | list[Any]) -> Polygon:
+    def unserialize(cls, data: PolygonLike) -> Polygon:
         """
         Build Polygon from list of point coords or dict with "points" key; each point validated via Point.unserialize.
+        If data is already a Polygon, return it.
 
         Example
         -------
@@ -345,6 +359,8 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[list[Any]]
         >>> len(poly)
         3
         """
+        if isinstance(data, Polygon):
+            return data
         if isinstance(data, dict) and "points" in data:
             data = data["points"]
         if not isinstance(data, list):

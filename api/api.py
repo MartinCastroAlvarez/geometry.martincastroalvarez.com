@@ -10,12 +10,13 @@ Context
 This module implements the HTTP API surface for the geometry (art gallery)
 backend. The handler receives API Gateway proxy events, parses them into
 ApiRequest, applies the private (auth) decorator, matches path and method
-to ROUTES, and delegates to Query or Mutation classes. The interceptor wraps
-the handler to build ApiResponse with CORS headers and to turn exceptions
-into JSON error bodies. ROUTES maps path prefixes and HTTP methods to handler classes.
+to request.routes (injected by the private decorator: merged or public only), and delegates
+to Query or Mutation classes. The interceptor wraps the handler to build ApiResponse with
+CORS headers and to turn exceptions into JSON error bodies. PUBLIC_ROUTES and PRIVATE_ROUTES
+define path prefixes and HTTP methods to handler classes.
 
 Examples:
->>> from api import handler, ApiRequest, ApiResponse, ROUTES
+>>> from api import handler, ApiRequest, ApiResponse, PUBLIC_ROUTES, PRIVATE_ROUTES
 >>> response_dict = handler(api_gateway_event, context)
 """
 
@@ -39,15 +40,14 @@ from controllers import Controller
 from controllers import PrivateControllerMixin
 from data import Secret
 from enums import Method
-from exceptions import AuthHeaderRequiredError
 from exceptions import ConfigurationError
 from exceptions import GeometryException
 from exceptions import InternalServerError
-from exceptions import InvalidTokenError
-from exceptions import MethodNotAllowedError
+from exceptions import NotFoundError
 from exceptions import PathMissingResourceIdError
-from exceptions import TokenExpiredError
-from exceptions import TokenMissingEmailClaimError
+from exceptions import ServiceUnavailableError
+from exceptions import UnauthorizedError
+from exceptions import ValidationError
 from interfaces import Serializable
 from logger import configure_logging
 from logger import get_logger
@@ -101,6 +101,7 @@ class ApiRequest(Serializable[dict[str, Any]]):
         self._body: str = event.get("body", "")
         self.is_base64_encoded: bool = event.get("isBase64Encoded", False)
         self.user: User = User.anonymous()
+        self.routes: dict[Path, dict[Method, Type[Controller]]] = {}
 
     def serialize(self) -> dict[str, Any]:
         raise NotImplementedError("ApiRequest.serialize is not used")
@@ -164,56 +165,73 @@ class ApiResponse(Serializable[dict[str, Any]]):
         raise NotImplementedError
 
 
-ROUTES: dict[Path, dict[Method, Type[Controller]]] = {
+PUBLIC_ROUTES: dict[Path, dict[Method, Type[Controller]]] = {
     Path("v1/galleries/"): {Method.GET: ArtGalleryDetailsQuery},
     Path("v1/galleries"): {Method.GET: ArtGalleryListQuery},
     Path("v1/polygon"): {Method.POST: PolygonValidator},
+}
+
+# Private has jobs plus duplicated gallery/polygon routes; order matters (longer prefix first).
+PRIVATE_ROUTES: dict[Path, dict[Method, Type[Controller]]] = {
     Path("v1/jobs/"): {
         Method.GET: JobDetailsQuery,
         Method.POST: ArtGalleryPublishMutation,
         Method.PATCH: JobUpdateMutation,
         Method.DELETE: JobDeleteMutation,
     },
+    Path("v1/galleries/"): {Method.GET: ArtGalleryDetailsQuery},
     Path("v1/jobs"): {Method.GET: JobListQuery, Method.POST: JobMutation},
+    Path("v1/galleries"): {Method.GET: ArtGalleryListQuery},
+    Path("v1/polygon"): {Method.POST: PolygonValidator},
 }
+
+
+def authenticate(request: ApiRequest) -> User:
+    """
+    Core auth: validate X-Auth token (test token or JWT).
+    Returns User.test(), User from JWT claims, or User.anonymous(). Does not set request.user or request.routes.
+    May raise ConfigurationError, ValidationError, NotFoundError, ServiceUnavailableError.
+    """
+    if request.http_method.upper() == Method.OPTIONS.value:
+        return User.anonymous()
+    jwt_secret = Secret.get(JWT_SECRET_NAME)
+    jwt_test = Secret.get(JWT_TEST_NAME)
+    token: str | None = request.headers.get(X_AUTH_HEADER.lower()) or request.headers.get(X_AUTH_HEADER)
+    if token and secrets.compare_digest(token, jwt_test):
+        return User.test()
+    if token and token.count(".") == 2:
+        try:
+            payload = jwt.decode(token, jwt_secret, algorithms=[JWT_ALGORITHM])
+        except (jwt.PyJWTError, Exception):
+            pass
+        else:
+            email_raw = payload.get("email")
+            if email_raw:
+                return User(
+                    email=Email(email_raw),
+                    name=payload.get("name", ""),
+                    avatar_url=payload.get("avatarUrl"),
+                )
+    if token:
+        logger.warning("private | auth failed path=%s", request.path)
+    return User.anonymous()
 
 
 def private(func: Callable) -> Callable:
     """
-    Decorator that enforces authentication on handler functions.
-    Validates X-Auth header (test token or JWT) and injects User into request.
+    Decorator that injects request.user and request.routes. Uses authenticate(); on auth errors
+    uses User.anonymous() and PUBLIC_ROUTES. If user.is_authenticated(), uses PRIVATE_ROUTES.
     """
 
     @wraps(func)
     def wrapper(request: ApiRequest, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        if request.http_method.upper() != Method.OPTIONS.value:
-            jwt_secret = Secret.get(JWT_SECRET_NAME)
-            jwt_test = Secret.get(JWT_TEST_NAME)
-            token: str | None = request.headers.get(X_AUTH_HEADER.lower()) or request.headers.get(X_AUTH_HEADER)
-            if not token:
-                logger.warning("private.wrapper() | auth failed %s header missing path=%s", X_AUTH_HEADER, request.path)
-                raise AuthHeaderRequiredError(f"{X_AUTH_HEADER} header is required")
-            if secrets.compare_digest(token, jwt_test):
-                request.user = User.test()
-            else:
-                try:
-                    payload = jwt.decode(token, jwt_secret, algorithms=[JWT_ALGORITHM])
-                except jwt.ExpiredSignatureError:
-                    logger.warning("private.wrapper() | auth failed token expired path=%s", request.path)
-                    raise TokenExpiredError("Token has expired")
-                except jwt.InvalidTokenError:
-                    logger.warning("private.wrapper() | auth failed invalid token path=%s", request.path)
-                    raise InvalidTokenError("Invalid token")
-                email_raw = payload.get("email")
-                if not email_raw:
-                    logger.warning("private.wrapper() | auth failed token missing email claim path=%s", request.path)
-                    raise TokenMissingEmailClaimError("Token missing email claim")
-                email = Email(email_raw)
-                request.user = User(
-                    email=email,
-                    name=payload.get("name", ""),
-                    avatar_url=payload.get("avatarUrl"),
-                )
+        try:
+            user = authenticate(request)
+        except (ConfigurationError, ValidationError, NotFoundError, ServiceUnavailableError):
+            user = User.anonymous()
+            logger.warning("private.wrapper() | auth error path=%s", request.path)
+        request.user = user
+        request.routes = PUBLIC_ROUTES if not user.is_authenticated() else PRIVATE_ROUTES
         return func(request, *args, **kwargs)
 
     return wrapper
@@ -242,16 +260,8 @@ def interceptor(
             extra=extra,
         )
         start: float = time.perf_counter()
-
-        def _request_origin(ev: dict[str, Any]) -> Origin:
-            headers = ev.get("headers") or {}
-            origin_val = headers.get("Origin") or headers.get("origin")
-            if origin_val is None:
-                for k, v in headers.items():
-                    if k.lower() == "origin" and v:
-                        origin_val = v
-                        break
-            return Origin(origin_val)
+        headers = event.get("headers") or {}
+        origin: Origin = Origin(headers.get("Origin") or headers.get("origin"))
 
         try:
             request: ApiRequest = ApiRequest.unserialize(event)
@@ -269,7 +279,6 @@ def interceptor(
                 extra={**extra, "elapsed_ms": elapsed_ms, "status": 200},
             )
 
-            origin: Origin = _request_origin(event)
             return ApiResponse(http.HTTPStatus.OK, json.dumps(result, default=str), origin).serialize()
 
         except GeometryException as e:
@@ -283,7 +292,6 @@ def interceptor(
                 elapsed_ms,
                 extra={**extra, "elapsed_ms": elapsed_ms, "error": str(e)},
             )
-            origin = _request_origin(event)
             # Do not expose configuration or internal details to the client.
             if type(e) is ConfigurationError:
                 response = ApiResponse.unserialize(InternalServerError("An error occurred"))
@@ -304,7 +312,6 @@ def interceptor(
                 extra={**extra, "elapsed_ms": elapsed_ms},
             )
             logger.error("Interceptor.wrapper() | traceback:\n%s", tb_str, extra=extra)
-            origin = _request_origin(event)
             # Do not leak internal details (S3, SQS, stack traces) unless EXPOSE_TRACEBACK is set.
             if EXPOSE_TRACEBACK:
                 body = json.dumps(
@@ -345,14 +352,14 @@ def handler(request: ApiRequest, context: Any) -> dict[str, Any]:
 
     matched_prefix: str | None = None
     controller_class: type[Controller] | None = None
-    for route_path, methods in ROUTES.items():
+    for route_path, methods in request.routes.items():
         if path.startswith(route_path):
             controller_class = methods.get(method)
             matched_prefix = str(route_path)
             break
     if controller_class is None or matched_prefix is None:
-        logger.warning("handler.handler() | method not allowed path=%s method=%s", path, method)
-        raise MethodNotAllowedError("Method not allowed")
+        logger.warning("handler.handler() | route or method not supported path=%s method=%s", path, method)
+        raise UnauthorizedError("Not supported")
 
     logger.debug("handler.handler() | route matched path=%s prefix=%s controller=%s", path, matched_prefix, controller_class.__name__)
 

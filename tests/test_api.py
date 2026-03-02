@@ -16,7 +16,8 @@ from exceptions import ValidationError
 from models import Job
 from models import User
 
-from api.api import ROUTES
+from api.api import PRIVATE_ROUTES
+from api.api import PUBLIC_ROUTES
 from api.api import ApiRequest
 from api.api import ApiResponse
 from api.api import handler
@@ -36,6 +37,7 @@ class TestApiRequest:
         assert request._body == ""
         assert not request.is_base64_encoded
         assert isinstance(request.user, User)
+        assert request.routes == {}
 
     def test_init_full_event(self):
         event = {
@@ -181,41 +183,38 @@ class TestHandler:
     """Test handler routing (without full Lambda event)."""
 
     @patch("indexes.bucket")
-    @patch("api.api.Secret")
-    def test_handler_returns_dict_for_list_galleries(self, mock_secret, mock_bucket):
-        mock_secret.get.side_effect = lambda key: "test-secret" if key == "JWT_SECRET" else "test-token"
+    def test_handler_returns_dict_for_list_galleries_public(self, mock_bucket):
+        """GET /v1/galleries is public; no auth required."""
         mock_bucket.search.return_value = Page(keys=[], next_token=None)
         event = {
             "path": "/v1/galleries",
             "httpMethod": "GET",
-            "headers": {"X-Auth": "test-token"},
+            "headers": {},
             "queryStringParameters": None,
             "pathParameters": None,
             "body": None,
         }
         result = handler(event, None)
         assert isinstance(result, dict)
-        assert "statusCode" in result
         assert result["statusCode"] == 200
         body = json.loads(result["body"])
         assert "data" in body and "next_token" in body
 
-    @patch("api.api.Secret")
-    def test_handler_method_not_allowed(self, mock_secret):
-        mock_secret.get.side_effect = lambda key: "test-secret" if key == "JWT_SECRET" else "test-token"
+    def test_handler_method_not_allowed(self):
+        """DELETE /v1/galleries is not allowed (public routes only when unauthenticated)."""
         event = {
             "path": "/v1/galleries",
             "httpMethod": "DELETE",
-            "headers": {"X-Auth": "test-token"},
+            "headers": {},
             "queryStringParameters": None,
             "pathParameters": None,
             "body": None,
         }
         result = handler(event, None)
         assert isinstance(result, dict)
-        assert result["statusCode"] == 405
+        assert result["statusCode"] == 401
         body = json.loads(result["body"])
-        assert "error" in body and body["error"]["type"] == "MethodNotAllowedError"
+        assert "error" in body and body["error"]["type"] == "UnauthorizedError"
 
     def test_handler_options_returns_empty_dict(self):
         event = {
@@ -248,9 +247,10 @@ class TestHandler:
         body = json.loads(result["body"])
         assert body["error"]["type"] == "BoundaryRequiredError"
 
-    @patch("api.api.Secret")
-    def test_handler_auth_missing_token_returns_401(self, mock_secret):
-        mock_secret.get.side_effect = lambda key: "test-secret" if key == "JWT_SECRET" else "test-token"
+    @patch("indexes.bucket")
+    def test_handler_public_route_no_auth_returns_200(self, mock_bucket):
+        """GET /v1/galleries without token returns 200 (public route)."""
+        mock_bucket.search.return_value = Page(keys=[], next_token=None)
         event = {
             "path": "/v1/galleries",
             "httpMethod": "GET",
@@ -260,22 +260,14 @@ class TestHandler:
             "body": None,
         }
         result = handler(event, None)
-        assert result["statusCode"] == 401
-        body = json.loads(result["body"])
-        assert "Unauthorized" in body["error"]["type"] or "401" in str(body["error"])
+        assert result["statusCode"] == 200
 
-    @patch("api.api.jwt")
-    @patch("api.api.Secret")
-    def test_handler_auth_expired_token_returns_401(self, mock_secret, mock_jwt):
-        ExpiredSignatureError = type("ExpiredSignatureError", (Exception,), {})
-        mock_jwt.ExpiredSignatureError = ExpiredSignatureError
-        mock_jwt.InvalidTokenError = type("InvalidTokenError", (Exception,), {})
-        mock_secret.get.side_effect = lambda key: "secret" if key == "JWT_SECRET" else "test-token"
-        mock_jwt.decode.side_effect = ExpiredSignatureError("expired")
+    def test_handler_private_route_no_auth_returns_401(self):
+        """GET /v1/jobs without token returns 401 (route not in public routes)."""
         event = {
-            "path": "/v1/galleries",
+            "path": "/v1/jobs",
             "httpMethod": "GET",
-            "headers": {"X-Auth": "bearer-expired-token"},
+            "headers": {},
             "queryStringParameters": None,
             "pathParameters": None,
             "body": None,
@@ -283,20 +275,18 @@ class TestHandler:
         result = handler(event, None)
         assert result["statusCode"] == 401
         body = json.loads(result["body"])
-        assert "expired" in body["error"]["message"].lower() or "401" in str(body["error"])
+        assert body["error"]["type"] == "UnauthorizedError"
 
-    @patch("api.api.jwt")
+    @patch("indexes.bucket")
     @patch("api.api.Secret")
-    def test_handler_auth_invalid_token_returns_401(self, mock_secret, mock_jwt):
-        InvalidTokenError = type("InvalidTokenError", (Exception,), {})
-        mock_jwt.ExpiredSignatureError = type("ExpiredSignatureError", (Exception,), {})
-        mock_jwt.InvalidTokenError = InvalidTokenError
-        mock_secret.get.side_effect = lambda key: "secret" if key == "JWT_SECRET" else "test-token"
-        mock_jwt.decode.side_effect = InvalidTokenError("invalid")
+    def test_handler_private_route_bad_token_returns_401(self, mock_secret, mock_bucket):
+        """Private route with invalid token gets public routes only -> 401."""
+        mock_secret.get.side_effect = lambda key: "test-secret" if key == "JWT_SECRET" else "test-token"
+        mock_bucket.search.return_value = Page(keys=[], next_token=None)
         event = {
-            "path": "/v1/galleries",
+            "path": "/v1/jobs",
             "httpMethod": "GET",
-            "headers": {"X-Auth": "bearer-bad-token"},
+            "headers": {"X-Auth": "bad-token"},
             "queryStringParameters": None,
             "pathParameters": None,
             "body": None,
@@ -304,27 +294,7 @@ class TestHandler:
         result = handler(event, None)
         assert result["statusCode"] == 401
         body = json.loads(result["body"])
-        assert "invalid" in body["error"]["message"].lower() or "401" in str(body["error"])
-
-    @patch("api.api.jwt")
-    @patch("api.api.Secret")
-    def test_handler_auth_missing_email_returns_401(self, mock_secret, mock_jwt):
-        mock_secret.get.side_effect = lambda key: "secret" if key == "JWT_SECRET" else "test-token"
-        mock_jwt.decode.return_value = {"name": "User"}
-        mock_jwt.ExpiredSignatureError = type("ExpiredSignatureError", (Exception,), {})
-        mock_jwt.InvalidTokenError = type("InvalidTokenError", (Exception,), {})
-        event = {
-            "path": "/v1/galleries",
-            "httpMethod": "GET",
-            "headers": {"X-Auth": "bearer-some-token"},
-            "queryStringParameters": None,
-            "pathParameters": None,
-            "body": None,
-        }
-        result = handler(event, None)
-        assert result["statusCode"] == 401
-        body = json.loads(result["body"])
-        assert "email" in body["error"]["message"].lower() or "401" in str(body["error"])
+        assert body["error"]["type"] == "UnauthorizedError"
 
     @patch("queries.JobsRepository")
     @patch("api.api.Secret")
@@ -417,9 +387,14 @@ class TestInterceptor:
         assert body["error"]["type"] == "InternalServerError"
 
 
-class TestROUTES:
-    """Test ROUTES mapping."""
+class TestPublicAndPrivateRoutes:
+    """Test PUBLIC_ROUTES and PRIVATE_ROUTES mapping."""
 
-    def test_routes_has_galleries_and_jobs(self):
-        assert Path("v1/galleries") in ROUTES or any("galleries" in str(k) for k in ROUTES)
-        assert Path("v1/jobs") in ROUTES or any("jobs" in str(k) for k in ROUTES)
+    def test_public_routes_has_galleries_and_polygon(self):
+        assert Path("v1/galleries") in PUBLIC_ROUTES
+        assert Path("v1/galleries/") in PUBLIC_ROUTES
+        assert Path("v1/polygon") in PUBLIC_ROUTES
+
+    def test_private_routes_has_jobs(self):
+        assert Path("v1/jobs") in PRIVATE_ROUTES
+        assert Path("v1/jobs/") in PRIVATE_ROUTES

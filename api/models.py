@@ -32,7 +32,6 @@ from typing import Any
 
 from attributes import Email
 from attributes import Identifier
-from attributes import Point
 from attributes import Signature
 from attributes import Timestamp
 from attributes import Title
@@ -42,9 +41,9 @@ from enums import StepName
 from exceptions import ValidationError
 from geometry import ConvexComponent
 from geometry import Ear
+from geometry import Point
 from geometry import Polygon
 from geometry import Segment
-from geometry import Visibility
 from interfaces import Serializable
 from serializers import ArtGalleryDict
 from serializers import JobDict
@@ -58,6 +57,7 @@ from settings import TEST_AVATAR_URL
 from settings import TEST_EMAIL
 from settings import TEST_NAME
 from settings import UNTITLED_ART_GALLERY_NAME
+from structs import Bag
 from structs import Table
 
 
@@ -349,8 +349,9 @@ class ArtGallery(Model):
     obstacles: Table[Polygon] = field(default_factory=Table)
     ears: Table[Ear] = field(default_factory=Table)
     convex_components: Table[ConvexComponent] = field(default_factory=Table)
+    adjacency: Table[Bag[ConvexComponent, Identifier]] = field(default_factory=Table)
     guards: Table[Point] = field(default_factory=Table)
-    visibility: Table[Visibility] = field(default_factory=Table)
+    visibility: Table[Bag[Point, Point]] = field(default_factory=Table)
     stitched: Polygon = field(default_factory=lambda: Polygon([]))
     stitches: list[Segment] = field(default_factory=list)
 
@@ -377,7 +378,7 @@ class ArtGallery(Model):
         """
         boundary = data.get("boundary") or data.get("boundaries") or []
         obstacles_raw = data.get("obstacles") or data.get("holes") or []
-        obstacles_list: list[Any] = list(obstacles_raw.values()) if isinstance(obstacles_raw, dict) else obstacles_raw
+        obstacles_list: list[Any] = list(obstacles_raw.values()) if isinstance(obstacles_raw, dict) else (obstacles_raw or [])
         ears_raw = data.get("ears") or []
         convex_components_raw = data.get("convex_components") or []
         guards_raw = data.get("guards") or []
@@ -403,35 +404,55 @@ class ArtGallery(Model):
         else:
             convex_components = Table.unserialize([ConvexComponent.unserialize(cc) for cc in convex_components_raw])
 
+        adjacency_raw = data.get("adjacency") or {}
+        adjacency_table: Table[Bag[ConvexComponent, Identifier]] = Table()
+        if isinstance(adjacency_raw, dict):
+            for component in convex_components:
+                hashes_list = adjacency_raw.get(str(component.id), [])
+                if isinstance(hashes_list, (list, tuple)):
+                    bag: Bag[ConvexComponent, Identifier] = Bag(component)
+                    for h in hashes_list:
+                        bag += Identifier(int(h))
+                    adjacency_table.add(bag)
+
         if isinstance(guards_raw, dict):
             guards_table: Table[Point] = Table()
             for serialized in guards_raw.values():
                 guards_table.add(Point.unserialize(serialized))
             guards = guards_table
-            visibility_table: Table[Visibility] = Table()
+            visibility_table: Table[Bag[Point, Point]] = Table()
             for k, guard_ser in guards_raw.items():
                 guard = Point.unserialize(guard_ser)
                 pts_raw = (visibility_raw.get(k) or []) if isinstance(visibility_raw, dict) else []
                 if isinstance(pts_raw, (list, tuple)):
-                    visibility_table.add(Visibility(guard, [Point.unserialize(p) for p in pts_raw]))
+                    vis_bag: Bag[Point, Point] = Bag(guard)
+                    for p in pts_raw:
+                        vis_bag += Point.unserialize(p)
+                    visibility_table.add(vis_bag)
         else:
             guards = Table.unserialize([Point.unserialize(guard) for guard in guards_raw])
-            visibility_table = Table()
+            visibility_table: Table[Bag[Point, Point]] = Table()
             if isinstance(visibility_raw, list):
                 for guard, path in zip(list(guards.values()), visibility_raw):
                     if isinstance(path, (list, tuple)):
-                        visibility_table.add(Visibility(guard, [Point.unserialize(p) for p in path]))
+                        vis_bag = Bag(guard)
+                        for p in path:
+                            vis_bag += Point.unserialize(p)
+                        visibility_table.add(vis_bag)
 
+        id_raw = (data.get("id") or "").strip()
+        owner_raw = (data.get("owner_job_id") or "").strip()
         return cls(
-            id=Identifier(data.get("id")),
+            id=Identifier(id_raw or "art-gallery"),
             boundary=Polygon.unserialize(boundary),
             obstacles=Table.unserialize([Polygon.unserialize(obstacle) for obstacle in obstacles_list]),
-            owner_job_id=Identifier(data.get("owner_job_id")),
+            owner_job_id=Identifier(owner_raw or "art-gallery"),
             title=Title(data.get("title", UNTITLED_ART_GALLERY_NAME)),
             created_at=Timestamp(data.get("created_at")),
             updated_at=Timestamp(data.get("updated_at")),
             ears=ears,
             convex_components=convex_components,
+            adjacency=adjacency_table,
             guards=guards,
             visibility=visibility_table,
             stitched=stitched,
@@ -449,8 +470,9 @@ class ArtGallery(Model):
             "updated_at": str(self.updated_at),
             "ears": self.ears.serialize(),
             "convex_components": self.convex_components.serialize(),
+            "adjacency": self.adjacency.serialize(),
             "guards": self.guards.serialize(),
-            "visibility": self.visibility.serialize(),
+            "visibility": {str(hash(bag.key)): [p.serialize() for p in bag.adjacent] for bag in self.visibility},
             "stitched": self.stitched.serialize(),
             "stitches": [s.serialize() for s in self.stitches],
         }

@@ -50,12 +50,13 @@ from geometry import Polygon
 from geometry.convex import ConvexComponent
 from geometry.ear import Ear
 from geometry.segment import Segment
-from geometry.visibility import Visibility
 from geometry.walk import Walk
+from models import ArtGallery
 from models import Job
 from models import User
 from repositories import JobsRepository
 from settings import STITCH_BUCKET_SIZE
+from structs import Bag
 from structs import Table
 
 logger = logging.getLogger(__name__)
@@ -157,6 +158,8 @@ class ArtGalleryStep(CoordinatorStep):
     convex_component_optimization, guard_placement) with deterministic ids. Children
     are created in PENDING status.
     Idempotent: same job and inputs yield the same children. run() ends with broadcast().
+
+    Complexity: O(1).
     """
 
     def spawn(self) -> None:
@@ -213,6 +216,8 @@ class ValidationPolygonStep(SequenceStep):
     Validates boundary and obstacles using api/geometry (same logic as lab ArtGallery.validate()).
     Parses boundary and obstacles via Polygon.unserialize(); let it throw. On success returns step
     result and calls broadcast(). We do not catch Exception; let failures raise so StartTask handles them.
+
+    Complexity: O(n^2), n = total vertices (boundary + all obstacles).
     """
 
     def __init__(self, job: Job, user: User) -> None:
@@ -276,13 +281,17 @@ class ValidationPolygonStep(SequenceStep):
             raise PolygonNotSimpleError("Obstacles intersect or touch.")
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
-        self.boundary = Polygon.unserialize(self.job.stdin.get("boundary"))
-        self.obstacles = [Polygon.unserialize(obstacle) for obstacle in (self.job.stdin.get("obstacles") or [])]
+        gallery: ArtGallery = ArtGallery.unserialize(self.job.stdin)
+        self.boundary = gallery.boundary
+        self.obstacles = list(gallery.obstacles)
         self.validate_simplicity()
         self.validate_orientation()
         self.validate_containment()
         self.validate_intersections()
-        return {}
+        return {
+            "boundary": self.boundary.serialize(),
+            "obstacles": [o.serialize() for o in self.obstacles],
+        }
 
 
 class StitchingStep(SequenceStep):
@@ -293,11 +302,13 @@ class StitchingStep(SequenceStep):
     yield the same stitched polygon. Emits "stitched" (serialized Polygon) and
     "stitches" (list of serialized bridge Segment) in stdout.
 
-    Performance optimization (see docs 3 BACKEND.md and 12 PROTOTYPE.md): we iterate
-    polygon points starting from the rightmost (using Sequence shift from structs.py;
-    one O(n) rotation per obstacle, cheap). We keep a bucket of the shortest
-    STITCH_BUCKET_SIZE valid bridges; once the bucket is full we pick the smallest
-    by size and stop, avoiding full O(n) checks when good short bridges exist.
+    Performance optimization: we iterate polygon points starting from the rightmost
+    (using Sequence shift from structs.py; one O(n) rotation per obstacle). We keep
+    a bucket of the shortest STITCH_BUCKET_SIZE valid bridges; once the bucket is
+    full we pick the smallest by size and stop, avoiding full O(n) checks when good
+    short bridges exist.
+
+    Complexity: O(n^3), n = total vertices (boundary + all obstacles); bucket early exit often reduces work.
     """
 
     def __init__(self, job: Job, user: User) -> None:
@@ -311,9 +322,9 @@ class StitchingStep(SequenceStep):
         self.obstacles.sort(key=lambda obstacle: (obstacle.rightmost.x, obstacle.rightmost.y), reverse=True)
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
-        # Parse boundary and obstacles from job stdin (Polygon.unserialize may raise).
-        self.boundary = Polygon.unserialize(self.job.stdin.get("boundary"))
-        self.obstacles = [Polygon.unserialize(obstacle) for obstacle in (self.job.stdin.get("obstacles") or [])]
+        gallery: ArtGallery = ArtGallery.unserialize(self.job.stdout)
+        self.boundary = gallery.boundary
+        self.obstacles = list(gallery.obstacles)
 
         # No obstacles: stitched result is the boundary; no bridge edges added.
         if not self.obstacles:
@@ -402,12 +413,13 @@ class EarClippingStep(SequenceStep):
     Ear clipping step. Reads stitched polygon from job.stdout (from stitching step).
     Runs ear clipping only; returns ears as Table.serialize().
     Polygon.unserialize() raises if stitched is missing or invalid.
+
+    Complexity: O(n^3), n = number of vertices of the stitched polygon.
     """
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
-        points: Polygon = Polygon.unserialize(
-            self.job.stdout.get("stitched") or self.job.stdout.get("stiteched")
-        )
+        gallery: ArtGallery = ArtGallery.unserialize(self.job.stdout)
+        points: Polygon = gallery.stitched
         table: Table[Ear] = Table()
 
         # Ear clipping: while polygon has more than 3 vertices, find and clip an ear.
@@ -457,145 +469,239 @@ class ConvexComponentOptimizationStep(SequenceStep):
     Convex component optimization step. Reads ears from job.stdout (from ear clipping step).
     Merges adjacent convex components; returns convex_components as Table.serialize().
     Ear.unserialize() raises if ears data is missing or invalid.
+
+    Complexity: O(n^3), n = number of ears (triangles), on the order of stitched vertices.
     """
 
-    def run(self, **kwargs: Any) -> dict[str, Any]:
-        ears_data = self.job.stdout.get("ears")
-        ears_items = list(ears_data.values()) if isinstance(ears_data, dict) else ears_data
-        ears_list: list[Ear] = [Ear.unserialize(serialized) for serialized in ears_items]
+    def build_adjacency_table(self, table: Table[ConvexComponent]) -> Table[Bag[ConvexComponent, Identifier]]:
+        """
+        Build Table[Bag[ConvexComponent, Identifier]] from Table[ConvexComponent]: index by edge,
+        then for each component create a bag and add ids of components sharing an edge.
+        Serializes as dict mapping component id -> list of adjacent component ids.
+        """
+        components_by_edge: defaultdict[Segment, list[ConvexComponent]] = defaultdict(list)
+        for component in table:
+            for edge in component.edges:
+                components_by_edge[edge].append(component)
+        result: Table[Bag[ConvexComponent, Identifier]] = Table()
+        for component in table:
+            bag: Bag[ConvexComponent, Identifier] = Bag(component)
+            for edge in component.edges:
+                for other in components_by_edge[edge]:
+                    if other is not component:
+                        bag.adjacent.add(other.id)
+            result.add(bag)
+        return result
 
-        table: Table[ConvexComponent] = Table.unserialize([ConvexComponent(list(ear)) for ear in ears_list])
+    def run(self, **kwargs: Any) -> dict[str, Any]:
+        gallery: ArtGallery = ArtGallery.unserialize(self.job.stdout)
+        ears: Table[Ear] = gallery.ears
+        components_table: Table[ConvexComponent] = Table.unserialize([ConvexComponent(ear) for ear in ears])
+        adjacency_table: Table[Bag[ConvexComponent, Identifier]] = self.build_adjacency_table(components_table)
 
         # Merge adjacent pairs by largest area until no merge possible.
         while True:
-            components: list[ConvexComponent] = list(table)
-            components_by_edge: defaultdict[Segment, list[ConvexComponent]] = defaultdict(list)
-            for component in components:
-                for edge in component.edges:
-                    components_by_edge[edge].append(component)
             best_area: Decimal | None = None
-            best_merged_result: ConvexComponent | None = None
+            best_merge: ConvexComponent | None = None
             best_pair: tuple[ConvexComponent, ConvexComponent] | None = None
-            for component in components:
-                adjacent: set[ConvexComponent] = {other for edge in component.edges for other in components_by_edge[edge] if other is not component}
-                for other in adjacent:
+            for component in components_table:
+                for adjacent_id in adjacency_table[component]:
+                    adjacent: ConvexComponent = components_table[adjacent_id]
                     try:
-                        best_merged: ConvexComponent = component + other
+                        merge: ConvexComponent = component + adjacent
                     except (ValidationError, PolygonsDoNotShareEdgeError):
                         continue
-                    if best_area is None or abs(best_merged.signed_area) > best_area:
-                        best_area = abs(best_merged.signed_area)
-                        best_merged_result = best_merged
-                        best_pair = (component, other)
-            if best_pair is None or best_merged_result is None:
+                    if best_area is None or abs(merge.signed_area) > best_area:
+                        best_area = abs(merge.signed_area)
+                        best_merge = merge
+                        best_pair = (component, adjacent)
+
+            # When no merge occurs, it is time to stop.
+            if best_pair is None or best_merge is None:
                 break
-            table -= best_pair[0]
-            table -= best_pair[1]
-            table += best_merged_result
 
-        return {"convex_components": table.serialize()}
+            # Merge the best pair, and update the tables.
+            components_table -= best_pair[0]
+            components_table -= best_pair[1]
+            components_table += best_merge
+            adjacency_table = self.build_adjacency_table(components_table)
 
-
-def _point_visible_from(guard: Point, point: Point, boundary: Polygon, obstacles: list[Polygon]) -> bool:
-    """
-    True if point is visible from guard (segment guard->point inside boundary, no obstacle crossing).
-    Visibility is always evaluated against the full art gallery (all boundary and obstacle edges).
-    """
-    if guard == point:
-        return True
-    segment: Segment = guard.to(point)
-    if not boundary.contains(segment, inclusive=True):
-        return False
-    if any(obstacle.intersects(segment, inclusive=False) for obstacle in obstacles):
-        return False
-    if any(obstacle.contains(segment.midpoint, inclusive=False) for obstacle in obstacles):
-        return False
-    return True
+        return {"convex_components": components_table.serialize(), "adjacency": adjacency_table.serialize()}
 
 
 class GuardPlacementStep(SequenceStep):
     """
-    Guard placement step. Reads stitched and convex_components from job.stdout
-    (from stitching and convex component steps). Boundary and obstacles from stdin for visibility.
+    Guard placement step. Reads stitched, convex_components and adjacency from job.stdout.
+    Boundary and obstacles come from stdout (merged from validation).
 
-    Algorithm (reduces search space by component and remaining points):
+    Algorithm (same greedy logic with exploration heuristic for performance):
     1. Remaining state: all convex components and all stitched points (vertices to cover).
-    2. Pick the largest convex component (by area) from remaining components.
-    3. Evaluate only the vertices of that component as guard candidates; score each by how many
-       remaining points it sees. Visibility is always tested against the full art gallery
-       (boundary + obstacles); only the set of "remaining points" shrinks each iteration.
-    4. Add the guard that sees the most remaining points; remove that component and any other
-       component that guard fully covers; remove from remaining points all points that guard sees.
-    5. Repeat until no points remain to be seen.
+    2. Sort remaining components by size (signed area, largest first).
+    3. Pick the largest component; its vertices are the guard candidates.
+    4. Score each candidate via explore(guard, largest, remaining_components): returns a Bag of points
+       visible from that guard. Exploration restricts visibility checks to the current component,
+       its adjacent components, and then adjacent-of-adjacent only for components that yielded at
+       least one visible point (explorable set). Explored set avoids re-entering the same component.
+       Points in the starting component are marked visible in the cache so sees() only reads cache.
+    5. Best guard = candidate that sees the most remaining points (using explore). Add that guard and
+       its full visibility (all stitched points seen) to the gallery; remove the largest component
+       and any other component fully covered; remove from remaining points all points that guard sees.
+    6. Repeat until no points remain.
 
-    Post-process: remove redundant guards whose visibility is contained in the union of the others.
-    Returns guards and visibility as Table.serialize(). Unserializers raise if required data is missing or invalid.
+    explore(guard, convex_component, remaining_components): initializes self.explored = {convex_component},
+    pre-fills visibility cache and bag with all points of that component, then explorable = adjacent
+    components (in remaining). While explorable non-empty: take a component, skip if in explored, add
+    to explored, compute visibility of its points via sees(), add visible to bag; if at least one
+    point visible, add its adjacent (in remaining, not in explored) to explorable. Returns the bag.
+
+    Returns guards and visibility as Table.serialize().
+
+    Complexity: O(n^4) in the worst case; the exploration heuristic reduces visibility checks in practice.
     """
 
+    def explore(
+        self,
+        guard: Point,
+        convex_component: ConvexComponent,
+    ) -> Bag[Point, Point]:
+        """
+        Return a Bag(guard) of points visible from guard by exploring from convex_component.
+        Pre-fills cache with points of convex_component (so sees() only reads cache for them).
+        Then expands via adjacent components; only adds adjacent-of-adjacent to explorable when
+        the current component yielded at least one visible point. Uses self.explored to avoid
+        re-entering the same component.
+        """
+        visibility: Bag[Point, Point] = Bag(guard)
+
+        # All the points in the guard's component are instantly visible.
+        for point in convex_component:
+            segment: Segment = guard.to(point)
+            self.visibility_by_pair[segment] = True
+            visibility += point
+
+        # Track all the components that have already been explored.
+        explored: set[Identifier] = {convex_component.id}
+
+        # Track all the components that can be explored.
+        bag_adj = self.gallery.adjacency[convex_component]
+        explorable: set[Identifier] = set(bag_adj.adjacent)
+
+        # Continue exploring explorable components until no more are available.
+        while explorable - explored:
+            adjacent_id = (explorable - explored).pop()
+            adjacent = next(
+                (comp for comp in self.gallery.convex_components if comp.id == adjacent_id),
+                None,
+            )
+            if adjacent is None:
+                explored.add(adjacent_id)
+                continue
+            explored.add(adjacent.id)
+
+            # Check if that adjacent component is visible.
+            visible = False
+            for point in adjacent:
+                if self.sees(guard, point):
+                    visibility += point
+                    visible = True
+
+            # If the component is visible, explore its adjacent components.
+            if visible:
+                adj_bag = self.gallery.adjacency[adjacent]
+                explorable.update(adj_bag.adjacent)
+
+        return visibility
+
+    def sees(self, guard: Point, target: Point) -> bool:
+        """
+        True if target is visible from guard in the art gallery. Uses self.gallery. Caches by segment in visibility_by_pair.
+        """
+
+        # If the guard and target are the same, they are visible.
+        if guard == target:
+            return True
+
+        # Check if the segment has already been evaluated.
+        segment: Segment = guard.to(target)
+        if segment in self.visibility_by_pair:
+            return self.visibility_by_pair[segment]
+
+        # Check if the segment is inside the boundary.
+        if not self.gallery.boundary.contains(segment, inclusive=True):
+            self.visibility_by_pair[segment] = False
+            return False
+
+        # Check if the segment intersects any obstacles.
+        for obstacle in self.gallery.obstacles:
+            if obstacle.intersects(segment, inclusive=False):
+                self.visibility_by_pair[segment] = False
+                return False
+            if obstacle.contains(segment.midpoint, inclusive=False):
+                self.visibility_by_pair[segment] = False
+                return False
+
+        # The segment is visible if no checks failed.
+        self.visibility_by_pair[segment] = True
+        return True
+
+    def measure(self, convex_component: ConvexComponent) -> Decimal:
+        """Return the signed area of the component, using instance cache signed_area_by_component to avoid recomputation."""
+        if convex_component not in self.signed_area_by_component:
+            self.signed_area_by_component[convex_component] = convex_component.signed_area
+        return self.signed_area_by_component[convex_component]
+
     def run(self, **kwargs: Any) -> dict[str, Any]:
-        stitched: Polygon = Polygon.unserialize(
-            self.job.stdout.get("stitched") or self.job.stdout.get("stiteched")
-        )
-        convex_data = self.job.stdout.get("convex_components")
-        convex_items = list(convex_data.values()) if isinstance(convex_data, dict) else convex_data
-        components_guard: list[ConvexComponent] = [
-            ConvexComponent.unserialize(serialized) for serialized in convex_items
-        ]
-        boundary: Polygon = Polygon.unserialize(self.job.stdin.get("boundary"))
-        obstacles: list[Polygon] = [
-            Polygon.unserialize(obstacle) for obstacle in (self.job.stdin.get("obstacles") or [])
-        ]
+        self.gallery = ArtGallery.unserialize(self.job.stdout)
+        self.visibility_by_pair: dict[Segment, bool] = {}
+        self.signed_area_by_component: dict[ConvexComponent, Decimal] = {}
+        self.explored: set[ConvexComponent] = set()
 
-        guards_table: Table[Point] = Table()
-        visibility_table: Table[Visibility] = Table()
+        remaining_points: set[Point] = set(self.gallery.stitched)
+        remaining_components: set[ConvexComponent] = set(self.gallery.convex_components)
 
-        remaining_points: set[Point] = set(stitched)
-        remaining_components: set[ConvexComponent] = set(components_guard)
-
+        # Run until all points are covered.
         while remaining_points:
+
+            # Safecheck against bugs.
             if not remaining_components:
                 raise GuardCoverageFailureError("Failed to cover all points; no remaining convex components.")
-            largest: ConvexComponent = max(remaining_components, key=lambda c: abs(c.signed_area))
-            candidates: list[Point] = list(largest)
+
+            # Evaluate the largest convex (remaining) component.
+            sorted_by_size: list[ConvexComponent] = sorted(remaining_components, key=lambda c: abs(self.measure(c)), reverse=True)
+            largest: ConvexComponent = sorted_by_size[0]
+
+            # Calculate the visibility of each candidate guard (vertices of largest component).
             best_guard: Point | None = None
             best_count: int = -1
-            for guard in candidates:
-                count = sum(1 for p in remaining_points if _point_visible_from(guard, p, boundary, obstacles))
+            best_visibility: Bag[Point, Point] | None = None
+            for guard in largest:
+                bag: Bag[Point, Point] = self.explore(guard, largest)
+                count: int = sum(1 for point in remaining_points if point in bag) or 1
                 if count > best_count:
                     best_count = count
                     best_guard = guard
-            if best_guard is None or best_count == 0:
-                raise GuardCoverageFailureError("Failed to cover all convex components.")
-            if best_guard not in guards_table:
-                guards_table += best_guard
-                visible: list[Point] = [p for p in stitched if _point_visible_from(best_guard, p, boundary, obstacles)]
-                visibility_table += Visibility(best_guard, visible)
-            remaining_components.discard(largest)
-            for comp in list(remaining_components):
-                if all(_point_visible_from(best_guard, p, boundary, obstacles) for p in comp):
-                    remaining_components.discard(comp)
-            for p in list(remaining_points):
-                if _point_visible_from(best_guard, p, boundary, obstacles):
-                    remaining_points.discard(p)
+                    best_visibility = bag
 
-        # Post-process: remove redundant guards whose visibility is contained in the union of the others.
-        removed: bool = True
-        while removed:
-            removed = False
-            guards_list = list(guards_table)
-            visibility_list = list(visibility_table)
-            uncovered: set[Point] = set(stitched) - set().union(*(set(v.points) for v in visibility_list))
-            if uncovered:
-                raise GuardCoverageFailureError("Failed to cover points.")
-            for index, guard in enumerate(guards_list):
-                other_union: set[Point] = set().union(*(set(visibility_list[j].points) for j in range(len(guards_list)) if j != index))
-                if set(visibility_list[index].points).issubset(other_union):
-                    guards_table -= guard
-                    visibility_table -= visibility_list[index]
-                    removed = True
-                    break
+            # Safecheck against bugs.
+            if best_guard is None or best_count == 0 or best_visibility is None:
+                raise GuardCoverageFailureError("Failed to cover all convex components.")
+            if best_guard in self.gallery.guards:
+                raise GuardCoverageFailureError("Best guard is already in the gallery.")
+
+            # Add the best guard and its visibility to the gallery.
+            self.gallery.guards += best_guard
+            self.gallery.visibility += best_visibility
+
+            # Remove the component and the points from the remaining sets.
+            remaining_points -= set(best_visibility.adjacent)
+            remaining_components -= {largest}
+
+            # Remove any component fully covered by best_guard using best_visibility (avoids redundant sees() calls).
+            for comp in list(remaining_components):
+                if all(point in best_visibility for point in comp):
+                    remaining_components -= {comp}
 
         return {
-            "guards": guards_table.serialize(),
-            "visibility": visibility_table.serialize(),
+            "guards": self.gallery.guards.serialize(),
+            "visibility": self.gallery.visibility.serialize(),
         }

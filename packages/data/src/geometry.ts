@@ -90,14 +90,38 @@ export class GeometryApiClient {
         const qs = searchParams.toString();
         const url = `${this.baseUrl}/v1/jobs${qs ? `?${qs}` : ""}`;
         const response = await requestOrThrow(url, this.jwtToken);
-        return response.json();
+        type ListBody =
+            | ListResponse<GeometryApiJob>
+            | { data?: GeometryApiJob[]; records?: GeometryApiJob[]; next_token?: string }
+            | GeometryApiJob[];
+        const body = (await response.json()) as ListBody;
+        if (Array.isArray(body)) {
+            return { data: body, next_token: "" };
+        }
+        const b = body as { data?: GeometryApiJob[]; records?: GeometryApiJob[]; next_token?: string };
+        const list = b.data ?? b.records ?? [];
+        return {
+            data: list,
+            next_token: b.next_token ?? "",
+        };
     }
 
     async getJob(jobId: string): Promise<GeometryApiJob> {
         if (this.jwtToken == null || this.jwtToken === "") requireToken("getJob");
         const response = await requestOrThrow(`${this.baseUrl}/v1/jobs/${jobId}`, this.jwtToken);
-        const json = (await response.json()) as DetailsResponse<GeometryApiJob>;
-        return json.data;
+        const body = (await response.json()) as
+            | DetailsResponse<GeometryApiJob>
+            | { data?: GeometryApiJob | GeometryApiJob[] }
+            | GeometryApiJob;
+        if (body != null && typeof body === "object" && "data" in body && body.data != null) {
+            const data = body.data;
+            if (Array.isArray(data)) {
+                const match = data.find((j) => String((j as GeometryApiJob).id) === String(jobId));
+                return (match ?? data[0]) as GeometryApiJob;
+            }
+            return data as GeometryApiJob;
+        }
+        return body as GeometryApiJob;
     }
 
     async publish(jobId: string): Promise<GeometryApiArtGallery> {
@@ -105,7 +129,11 @@ export class GeometryApiClient {
         const response = await requestOrThrow(`${this.baseUrl}/v1/jobs/${jobId}`, this.jwtToken, {
             method: "POST",
         });
-        return response.json();
+        const result = (await response.json()) as DetailsResponse<GeometryApiArtGallery> | GeometryApiArtGallery;
+        if (result != null && typeof result === "object" && "data" in result && result.data != null) {
+            return result.data;
+        }
+        return result as GeometryApiArtGallery;
     }
 
     async updateJob(jobId: string, meta: Record<string, string>): Promise<GeometryApiJob> {
@@ -114,7 +142,11 @@ export class GeometryApiClient {
             method: "PATCH",
             body: JSON.stringify({ meta }),
         });
-        return response.json();
+        const result = (await response.json()) as DetailsResponse<GeometryApiJob> | GeometryApiJob;
+        if (result != null && typeof result === "object" && "data" in result && result.data != null) {
+            return result.data;
+        }
+        return result as GeometryApiJob;
     }
 
     async deleteJob(jobId: string): Promise<void> {
@@ -136,7 +168,11 @@ export class GeometryApiClient {
             method: "POST",
             body: JSON.stringify(body),
         });
-        return response.json();
+        const result = (await response.json()) as DetailsResponse<GeometryApiJob> | GeometryApiJob;
+        if (result != null && typeof result === "object" && "data" in result && result.data != null) {
+            return result.data;
+        }
+        return result as GeometryApiJob;
     }
 
     /**
@@ -164,12 +200,22 @@ export class GeometryApiClient {
         const qs = searchParams.toString();
         const url = `${this.baseUrl}/v1/galleries${qs ? `?${qs}` : ""}`;
         const response = await requestOrThrow(url, this.jwtToken);
-        return response.json();
+        const body = (await response.json()) as ListResponse<GeometryApiArtGallery> | GeometryApiArtGallery[];
+        if (Array.isArray(body)) {
+            return { data: body, next_token: "" };
+        }
+        return {
+            data: body.data ?? [],
+            next_token: body.next_token ?? "",
+        };
     }
 
     async getArtGallery(galleryId: string): Promise<GeometryApiArtGallery> {
         const response = await requestOrThrow(`${this.baseUrl}/v1/galleries/${galleryId}`, this.jwtToken);
-        const json = (await response.json()) as DetailsResponse<GeometryApiArtGallery>;
-        return json.data;
+        const body = (await response.json()) as DetailsResponse<GeometryApiArtGallery> | GeometryApiArtGallery;
+        if (body != null && typeof body === "object" && "data" in body && body.data != null) {
+            return body.data;
+        }
+        return body as GeometryApiArtGallery;
     }
 }

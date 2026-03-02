@@ -1,5 +1,5 @@
 """
-Data structures: Sequence[T], Table[T].
+Data structures: Sequence[T], Table[T], Bag[K,T].
 
 Title
 -----
@@ -12,12 +12,25 @@ with modular slicing (wrap-around), shift, add/sub/and/invert, and
 canonical hash; used by Polygon and geometry. Table[T] is a dict-like
 keyed by hash(item), with add/pop and Serializable[dict]; used for
 obstacles, ears, convex_components, guards, visibility in ArtGallery.
-Both support serialize/unserialize for S3 and API.
+Bag[K,T] is a key plus set of items (set-like: +=, -=, __iter__, __len__, __contains__).
+Use Table[Bag[K,T]] for a table of bags. Both support serialize/unserialize for S3 and API.
 
 Examples:
->>> from structs import Sequence, Table
->>> poly = Polygon(Sequence([p0, p1, p2]))
+>>> from structs import Sequence, Table, Bag
+>>> seq = Sequence([p0, p1, p2])
+>>> seq[1:4]  # wrap-around slice
+Sequence([p1, p2, p0])
 >>> table = Table().add(ear1).add(ear2)
+>>> table[ear1] is ear1
+True
+>>> bag = Bag("key")
+>>> bag += 1
+>>> bag += 2
+>>> len(bag)
+2
+>>> table.add(bag)
+>>> len(table)
+3
 """
 
 from __future__ import annotations
@@ -33,6 +46,7 @@ from exceptions import SequenceMultipleOverlapsError
 from exceptions import ValidationError
 from interfaces import Serializable
 
+K = TypeVar("K")
 T = TypeVar("T")
 
 
@@ -47,10 +61,14 @@ class Sequence(list, Generic[T]):
     Invert: ~s returns reversed copy.
     Hash: idempotent by canonical rotation (same value for same cycle regardless of start).
 
-    For example, to build a polygon from points with wrap-around slicing:
+    For example, wrap-around slicing and shift:
     >>> seq = Sequence([p0, p1, p2, p3])
     >>> seq[2:5]
     Sequence([p2, p3, p0])
+    >>> seq << 2  # rotate so index 2 is first
+    Sequence([p2, p3, p0, p1])
+    >>> seq + Sequence([p4])  # concatenate
+    Sequence([p0, p1, p2, p3, p4])
     """
 
     def __init__(
@@ -82,7 +100,7 @@ class Sequence(list, Generic[T]):
         return super().__getitem__(key % n)
 
     def __lshift__(self, other: int | T) -> Sequence[T]:
-        """Rotate so index n or element other becomes first."""
+        """Rotate so index n or element other becomes first. E.g. seq << 1 puts seq[1] first."""
         if not self:
             return Sequence([])
         n = len(self)
@@ -93,7 +111,7 @@ class Sequence(list, Generic[T]):
         return Sequence(list(self)[i:] + list(self)[:i])
 
     def __rshift__(self, other: int | T) -> Sequence[T]:
-        """Rotate so index n or element other becomes last (index n+1 first)."""
+        """Rotate so index n or element other becomes last (index n+1 first). E.g. seq >> 0 puts seq[0] last."""
         if not self:
             return Sequence([])
         n = len(self)
@@ -257,7 +275,7 @@ class Sequence(list, Generic[T]):
         return list.pop(self, idx)
 
     def dedup(self) -> Sequence[T]:
-        """Return a new sequence with consecutive duplicates removed (preserves order)."""
+        """Return a new sequence with consecutive duplicates removed (preserves order). E.g. Sequence([1,1,2,2,1]).dedup() -> Sequence([1,2,1])."""
         if not self:
             return Sequence([])
         result: list[T] = [self[0]]
@@ -267,7 +285,8 @@ class Sequence(list, Generic[T]):
         return Sequence(result)
 
     def serialize(self) -> list[Any]:
-        """Export to list; elements must support serialize() or be serializable."""
+        """Export to list; elements must support serialize() or be serializable.
+        E.g. Sequence([p0, p1]).serialize() -> [p0.serialize(), p1.serialize()]."""
         out: list[Any] = []
         for item in self:
             if hasattr(item, "serialize") and callable(getattr(item, "serialize")):
@@ -290,10 +309,15 @@ class Table(dict[int, Any], Generic[T], Serializable[dict[str, Any]]):
     Dict-like collection where key is hash(item). Items must be hashable.
     Add with add(item) or table += item; remove with pop(key) or table -= item_or_key.
 
-    For example, to collect obstacles for a gallery:
+    For example, add items and look up by key or by item:
     >>> table = Table().add(poly1).add(poly2)
     >>> len(table)
     2
+    >>> table[poly1] is poly1
+    True
+    >>> table -= poly1
+    >>> len(table)
+    1
     """
 
     def add(self, item: T) -> Table[T]:
@@ -308,22 +332,31 @@ class Table(dict[int, Any], Generic[T], Serializable[dict[str, Any]]):
         return self
 
     def __iadd__(self, item: T) -> Table[T]:
-        """Add item; key is hash(item)."""
+        """Add item; key is hash(item). E.g. table += item."""
         self.add(item)
         return self
 
     def __isub__(self, item_or_key: T | int) -> Table[T]:
-        """Remove by key (int) or by item (then key = hash(item))."""
+        """Remove by key (int) or by item (then key = hash(item)). E.g. table -= item or table -= hash(item)."""
         key: int = item_or_key if isinstance(item_or_key, int) and item_or_key in self else hash(item_or_key)
         del self[key]
         return self
 
     def __contains__(self, item_or_key: object) -> bool:
-        """True if the key (int) or the item (value) is in the table."""
+        """True if the key (int) or the item (value) is in the table. E.g. item in table or hash(item) in table."""
         if isinstance(item_or_key, int):
             return dict.__contains__(self, item_or_key)
         key = hash(item_or_key)
         return key in self and self[key] == item_or_key
+
+    def __getitem__(self, key_or_item: int | T) -> T:
+        """Look up by key (int) or by item (then key = hash(item)). E.g. table[item] or table[hash(item)]."""
+        if isinstance(key_or_item, int) and key_or_item in self:
+            return dict.__getitem__(self, key_or_item)
+        k = hash(key_or_item)
+        if k in self:
+            return dict.__getitem__(self, k)
+        raise KeyError(key_or_item)
 
     def __iter__(self) -> Iterator[T]:
         """Iterate over values (items)."""
@@ -335,7 +368,7 @@ class Table(dict[int, Any], Generic[T], Serializable[dict[str, Any]]):
         return Signature(part)
 
     def __or__(self, other: Table[T]) -> Table[T]:
-        """Merge two tables; result has all items from self and other. Same key (hash): other wins."""
+        """Merge two tables; result has all items from self and other. Same key (hash): other wins. E.g. merged = table1 | table2."""
         if not isinstance(other, Table):
             return NotImplemented
         result: Table[T] = Table()
@@ -344,7 +377,7 @@ class Table(dict[int, Any], Generic[T], Serializable[dict[str, Any]]):
         return result
 
     def serialize(self) -> dict[str, Any]:
-        """Return dict mapping str(hash(item)) -> item.serialize()."""
+        """Return dict mapping str(hash(item)) -> item.serialize(). E.g. for API/S3 wire format."""
         return {str(hash(item)): item.serialize() for item in self.values()}
 
     @classmethod
@@ -353,6 +386,7 @@ class Table(dict[int, Any], Generic[T], Serializable[dict[str, Any]]):
         Single argument only: data is a list of items or dict of key -> item to put in the table.
         Caller must pass already-unserialized items.
         List: each item added with key hash(item). Dict: key must equal hash(value) or raise.
+        E.g. Table.unserialize([a, b]) or Table.unserialize({str(hash(a)): a, str(hash(b)): b}).
         """
         result: Table[T] = cls()
         if isinstance(data, list):
@@ -365,3 +399,60 @@ class Table(dict[int, Any], Generic[T], Serializable[dict[str, Any]]):
                     raise ValidationError("Table key does not match hash of item")
                 result[k] = value
         return result
+
+
+class Bag(Generic[K, T], Serializable[list[Any]]):
+    """
+    A key (e.g. component or guard) and a set of items. Set-like over the items: +=, -=, __iter__, __len__, __contains__.
+    __hash__ is the key's hash so Table[Bag] keys match the key type's table.
+
+    For example, create a bag, add and remove items, iterate and serialize:
+    >>> bag = Bag("key")
+    >>> bag += 1
+    >>> bag += 2
+    >>> len(bag)
+    2
+    >>> 1 in bag
+    True
+    >>> bag -= 1
+    >>> len(bag)
+    1
+    >>> bag.serialize()  # sorted by hash; ints as-is, Serializable items call .serialize()
+    [2]
+    """
+
+    def __init__(self, key: K) -> None:
+        self.key: K = key
+        self.adjacent: set[T] = set()
+
+    def __hash__(self) -> int:
+        return hash(self.key)
+
+    def __iter__(self) -> Iterator[T]:
+        return iter(self.adjacent)
+
+    def __len__(self) -> int:
+        return len(self.adjacent)
+
+    def __contains__(self, item: object) -> bool:
+        return item in self.adjacent
+
+    def __iadd__(self, other: T) -> Bag[K, T]:
+        """Add an item. No-op if already present. E.g. bag += item."""
+        self.adjacent.add(other)
+        return self
+
+    def __isub__(self, other: T) -> Bag[K, T]:
+        """Remove an item. No-op if not present. E.g. bag -= item."""
+        self.adjacent.discard(other)
+        return self
+
+    def serialize(self) -> list[Any]:
+        """Return sorted list of item ids (hash of each item).
+        Table[Bag[K,T]].serialize() gives dict key id -> list of ids (backward-compatible)."""
+        return [hash(item) for item in sorted(self.adjacent, key=hash)]
+
+    @classmethod
+    def unserialize(cls, data: Any) -> Bag[K, T]:
+        """Base implementation: key must be supplied by subclass. Override in subclasses (e.g. from_serialized(key, data))."""
+        raise NotImplementedError("Bag.unserialize requires key; use Bag(key) and += items")
