@@ -146,7 +146,7 @@ export function earsToEditorState(ears: Ear[]): {
     return { vertices, edges };
 }
 
-/** Flat vertices and edges from all visibility polygons (one per guard; each Visibility.points is a closed ring). */
+/** Vertices and edges for visibility: one vertex per guard and per visible point; edges from guard to each visible point (muted in viewer). */
 export function visibilityToEditorState(visibility: Visibility[]): {
     vertices: EditorVertex[];
     edges: [number, number][];
@@ -155,8 +155,15 @@ export function visibilityToEditorState(visibility: Visibility[]): {
     const edges: [number, number][] = [];
     let offset = 0;
     visibility.forEach((vis: Visibility, pathIdx: number) => {
+        const guard = vis.guard;
         const path = vis.points;
-        if (path.length < 2) return;
+        vertices.push({
+            id: `visibility-guard-${pathIdx}-${guard.x}-${guard.y}`,
+            x: guard.x,
+            y: guard.y,
+        });
+        const guardIdx = offset;
+        offset += 1;
         for (let i = 0; i < path.length; i++) {
             const p = path[i];
             vertices.push({
@@ -164,12 +171,9 @@ export function visibilityToEditorState(visibility: Visibility[]): {
                 x: p.x,
                 y: p.y,
             });
+            edges.push([guardIdx, offset + i] as [number, number]);
         }
-        const n = path.length;
-        for (let i = 0; i < n; i++) {
-            edges.push([offset + i, offset + (i + 1) % n] as [number, number]);
-        }
-        offset += n;
+        offset += path.length;
     });
     return { vertices, edges };
 }

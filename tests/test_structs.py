@@ -3,6 +3,7 @@
 import pytest
 from exceptions import SequenceMultipleOverlapsError
 from exceptions import ValidationError
+from interfaces import Serializable
 from structs import Sequence
 from structs import Table
 
@@ -253,12 +254,16 @@ class TestTable:
         assert t.__or__({}) is NotImplemented
 
     def test_table_serialize(self):
-        class SerializableItem:
+        class SerializableItem(Serializable[dict]):
             def __init__(self, val):
                 self.val = val
 
             def serialize(self):
                 return {"v": self.val}
+
+            @classmethod
+            def unserialize(cls, data):
+                return cls(data["v"])
 
         t = Table()
         t.add(SerializableItem(1))

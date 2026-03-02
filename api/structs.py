@@ -79,12 +79,12 @@ class Sequence(list, Generic[T]):
             value = []
         if not isinstance(value, list):
             value = list(value) if value is not None else []
-        # Remove consecutive duplicate elements so sequences stay canonical.
+        # Remove consecutive duplicates and wrap duplicate (first equals last).
+        # Do not remove non-consecutive duplicates; a sequence can pass through the same point multiple times.
         deduped: list[T] = []
         for item in value:
             if not deduped or item != deduped[-1]:
                 deduped.append(item)
-        # Remove duplicate at wrap (first equals last).
         while len(deduped) >= 2 and deduped[0] == deduped[-1]:
             deduped.pop()
         super().__init__(deduped)
@@ -293,15 +293,12 @@ class Sequence(list, Generic[T]):
         return Sequence(result)
 
     def serialize(self) -> list[Any]:
-        """Export to list; elements must support serialize() or be serializable.
+        """Export to list; Serializable elements call serialize(), others use hash(item).
         E.g. Sequence([p0, p1]).serialize() -> [p0.serialize(), p1.serialize()]."""
         out: list[Any] = []
         for item in self:
-            if hasattr(item, "serialize") and callable(getattr(item, "serialize")):
-                val = item.serialize()
-                out.append(json.loads(val) if isinstance(val, str) else val)
-            else:
-                out.append(item)
+            val = item.serialize() if isinstance(item, Serializable) else hash(item)
+            out.append(json.loads(val) if isinstance(val, str) else val)
         return out
 
     @classmethod
@@ -385,8 +382,8 @@ class Table(dict[int, Any], Generic[T], Serializable[dict[str, Any]]):
         return result
 
     def serialize(self) -> dict[str, Any]:
-        """Return dict mapping str(hash(item)) -> item.serialize(). E.g. for API/S3 wire format."""
-        return {str(hash(item)): item.serialize() for item in self.values()}
+        """Return dict mapping str(hash(item)) -> serialize(item); Serializable uses serialize(), else hash. E.g. for API/S3 wire format."""
+        return {str(hash(item)): (item.serialize() if isinstance(item, Serializable) else hash(item)) for item in self.values()}
 
     @classmethod
     def unserialize(cls, data: Any) -> Table[T]:
@@ -456,9 +453,9 @@ class Bag(Generic[K, T], Serializable[list[Any]]):
         return self
 
     def serialize(self) -> list[Any]:
-        """Return sorted list of item ids (hash of each item).
+        """Return sorted list: Serializable items call serialize(), others use hash(item).
         Table[Bag[K,T]].serialize() gives dict key id -> list of ids (backward-compatible)."""
-        return [hash(item) for item in sorted(self.adjacent, key=hash)]
+        return [item.serialize() if isinstance(item, Serializable) else hash(item) for item in sorted(self.adjacent, key=hash)]
 
     @classmethod
     def unserialize(cls, data: Any) -> Bag[K, T]:

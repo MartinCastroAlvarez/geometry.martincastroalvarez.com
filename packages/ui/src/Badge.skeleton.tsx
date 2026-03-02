@@ -20,7 +20,7 @@ export const BadgeSkeleton: React.FC<BadgeSkeletonProps> = ({ width = "3rem" }) 
 
     return (
         <div
-            className="rounded-full bg-slate-700 animate-pulse"
+            className="inline-block rounded-full bg-slate-700 animate-pulse"
             style={{ width: wCss, height: "1.25rem" }}
             aria-hidden
         />

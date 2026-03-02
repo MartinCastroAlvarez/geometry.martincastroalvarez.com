@@ -55,7 +55,7 @@ export const AppNav = () => {
             )}
             {isMobile ? <span className="w-full basis-full block" /> : null}
             <LanguageButton />
-            <ThemeButton />
+            {user && <ThemeButton />}
             {isMobile ? <span className="w-full basis-full block" /> : null}
             {user && <Card user={user} sm right={!isMobile} rounded />}
             {isMobile ? <span className="w-full basis-full block" /> : null}

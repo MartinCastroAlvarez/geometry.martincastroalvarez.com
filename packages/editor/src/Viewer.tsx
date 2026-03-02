@@ -4,7 +4,7 @@
  * When interactive is true, pan is enabled and a ViewerToolbar is shown for mode.
  * Default: boundary and obstacles. Stitching: stitched polygon (edges not on boundary/obstacles muted).
  * Ear clipping: ears (all edges equal). Convex: convex components (all edges equal).
- * Visibility: boundary and obstacle edges shown muted; visibility polygon edges (guard to visible points) normal, drawn on top.
+ * Visibility: boundary and obstacle edges shown as edges (normal); visibility polygon edges (guard to visible points) muted.
  * In all modes, a Vertex is shown for each guard.
  */
 
@@ -162,8 +162,8 @@ const ViewerInner = ({
                 ...visEs.map(([a, b]) => [a + nBase, b + nBase] as [number, number]),
             ];
             const edgeMuted = [
-                ...base.edges.map(() => true),
-                ...visEs.map(() => false),
+                ...base.edges.map(() => false),
+                ...visEs.map(() => true),
             ];
             return { vertices, edges, edgeMuted, guardVertices };
         }

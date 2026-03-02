@@ -388,57 +388,55 @@ class ArtGallery(Model):
         stitches_raw = data.get("stitches") or []
         stitches = [Segment.unserialize(stitch) for stitch in stitches_raw] if stitches_raw else []
 
-        if isinstance(ears_raw, dict):
-            ears_table: Table[Ear] = Table()
-            for serialized in ears_raw.values():
-                ears_table.add(Ear.unserialize(serialized))
-            ears = ears_table
-        else:
-            ears = Table.unserialize([Ear.unserialize(ear) for ear in ears_raw])
+        ears_sequence = ears_raw.values() if isinstance(ears_raw, dict) else ears_raw
+        ears = Table.unserialize([Ear.unserialize(ser) for ser in ears_sequence])
 
-        if isinstance(convex_components_raw, dict):
-            convex_table: Table[ConvexComponent] = Table()
-            for serialized in convex_components_raw.values():
-                convex_table.add(ConvexComponent.unserialize(serialized))
-            convex_components = convex_table
-        else:
-            convex_components = Table.unserialize([ConvexComponent.unserialize(cc) for cc in convex_components_raw])
+        cc_sequence = convex_components_raw.values() if isinstance(convex_components_raw, dict) else convex_components_raw
+        convex_components = Table.unserialize([ConvexComponent.unserialize(cc) for cc in cc_sequence])
+
+        def _adjacency_bag(component: ConvexComponent, hashes_list: Any) -> Bag[ConvexComponent, Identifier] | None:
+            if not isinstance(hashes_list, (list, tuple)):
+                return None
+            bag: Bag[ConvexComponent, Identifier] = Bag(component)
+            for h in hashes_list:
+                bag += Identifier(int(h))
+            return bag
 
         adjacency_raw = data.get("adjacency") or {}
-        adjacency_table: Table[Bag[ConvexComponent, Identifier]] = Table()
-        if isinstance(adjacency_raw, dict):
-            for component in convex_components:
-                hashes_list = adjacency_raw.get(str(component.id), [])
-                if isinstance(hashes_list, (list, tuple)):
-                    bag: Bag[ConvexComponent, Identifier] = Bag(component)
-                    for h in hashes_list:
-                        bag += Identifier(int(h))
-                    adjacency_table.add(bag)
+        adjacency_bags = (
+            [b for cc in convex_components for b in [_adjacency_bag(cc, adjacency_raw.get(str(cc.id), []))] if b is not None]
+            if isinstance(adjacency_raw, dict)
+            else []
+        )
+        adjacency_table: Table[Bag[ConvexComponent, Identifier]] = Table.unserialize(adjacency_bags)
+
+        def _visibility_bag(guard: Point, pts_raw: Any) -> Bag[Point, Point] | None:
+            if not isinstance(pts_raw, (list, tuple)):
+                return None
+            vis_bag: Bag[Point, Point] = Bag(guard)
+            for p in pts_raw:
+                vis_bag += Point.unserialize(p)
+            return vis_bag
 
         if isinstance(guards_raw, dict):
-            guards_table: Table[Point] = Table()
-            for serialized in guards_raw.values():
-                guards_table.add(Point.unserialize(serialized))
-            guards = guards_table
-            visibility_table: Table[Bag[Point, Point]] = Table()
-            for k, guard_ser in guards_raw.items():
-                guard = Point.unserialize(guard_ser)
-                pts_raw = (visibility_raw.get(k) or []) if isinstance(visibility_raw, dict) else []
-                if isinstance(pts_raw, (list, tuple)):
-                    vis_bag: Bag[Point, Point] = Bag(guard)
-                    for p in pts_raw:
-                        vis_bag += Point.unserialize(p)
-                    visibility_table.add(vis_bag)
+            guards = Table.unserialize([Point.unserialize(serialized) for serialized in guards_raw.values()])
+            visibility_bags = [
+                b
+                for k, guard_ser in guards_raw.items()
+                for guard in [Point.unserialize(guard_ser)]
+                for pts_raw in [(visibility_raw.get(k) or []) if isinstance(visibility_raw, dict) else []]
+                for b in [_visibility_bag(guard, pts_raw)]
+                if b is not None
+            ]
+            visibility_table: Table[Bag[Point, Point]] = Table.unserialize(visibility_bags)
         else:
             guards = Table.unserialize([Point.unserialize(guard) for guard in guards_raw])
-            visibility_table: Table[Bag[Point, Point]] = Table()
-            if isinstance(visibility_raw, list):
-                for guard, path in zip(list(guards.values()), visibility_raw):
-                    if isinstance(path, (list, tuple)):
-                        vis_bag = Bag(guard)
-                        for p in path:
-                            vis_bag += Point.unserialize(p)
-                        visibility_table.add(vis_bag)
+            visibility_bags = (
+                [b for guard, path in zip(list(guards.values()), visibility_raw) for b in [_visibility_bag(guard, path)] if b is not None]
+                if isinstance(visibility_raw, list)
+                else []
+            )
+            visibility_table = Table.unserialize(visibility_bags)
 
         id_raw = (data.get("id") or "").strip()
         owner_raw = (data.get("owner_job_id") or "").strip()

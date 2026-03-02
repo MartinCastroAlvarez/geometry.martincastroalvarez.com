@@ -452,7 +452,8 @@ class EarClippingStep(SequenceStep):
                     "ear clipping requires a simple polygon."
                 )
 
-            # Remove ear tip from polygon and continue.
+            # Remove ear tip from polygon by index (position), not by point value;
+            # the same point may appear at other indices and must be kept.
             points = Polygon([points[i] for i in range(n) if i != found])
 
         # Add final triangle as last ear (ccw or reversed if cw).
