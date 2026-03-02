@@ -85,7 +85,11 @@ export function edgeKey(
     return `${p1.x},${p1.y}-${p2.x},${p2.y}`;
 }
 
-/** Set of edge keys for all edges of boundary and obstacles (for muted styling in viewer modes). */
+/**
+ * Set of edge keys for all edges of boundary and obstacles (for muted styling in viewer modes).
+ * Keys are direction-invariant (edgeKey), so one Set supports O(1) membership and avoids
+ * quadratic checks when deciding which displayed edges are boundary/obstacle.
+ */
 export function boundaryObstacleEdgeKeys(boundary: Polygon, obstacles: Polygon[]): Set<string> {
     const keys = new Set<string>();
     const addPolygon = (poly: Polygon) => {

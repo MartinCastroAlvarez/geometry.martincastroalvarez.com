@@ -446,7 +446,11 @@ class EarClippingStep(SequenceStep):
                 table += Ear([left, center, right])
                 break
             if found is None:
-                raise EarClippingFailureError(f"No ear found for: {points}")
+                raise EarClippingFailureError(
+                    f"No ear found for: {points}. "
+                    "The polygon may have repeated (non-consecutive) vertices or be self-intersecting; "
+                    "ear clipping requires a simple polygon."
+                )
 
             # Remove ear tip from polygon and continue.
             points = Polygon([points[i] for i in range(n) if i != found])

@@ -129,6 +129,7 @@ const ViewerInner = ({
 
     const { vertices, edges, edgeMuted, guardVertices } = useMemo(() => {
         if (artGallery == null) return EMPTY_STATE;
+        // Set of boundary/obstacle edge keys (direction-invariant) for O(1) muted check; avoids quadratic per-edge scans.
         const boundaryKeys = boundaryObstacleEdgeKeys(artGallery.boundary, artGallery.obstacles);
         const guardVertices: EditorVertex[] = artGallery.guards.map((g, i) => ({
             id: `guard-${i}-${g.x}-${g.y}`,
@@ -136,18 +137,20 @@ const ViewerInner = ({
             y: g.y,
         }));
 
+        const mutedByBoundaryKeys = (vs: EditorVertex[], es: [number, number][]) =>
+            es.map(([a, b]) => !boundaryKeys.has(edgeKey(vs[a], vs[b])));
+
         if (mode === ViewerMode.Stitching && artGallery.stitched != null && artGallery.stitched.points.length > 0) {
             const { vertices: vs, edges: es } = polygonToEditorState(artGallery.stitched);
-            const muted = es.map(([a, b]) => !boundaryKeys.has(edgeKey(vs[a], vs[b])));
-            return { vertices: vs, edges: es, edgeMuted: muted, guardVertices };
+            return { vertices: vs, edges: es, edgeMuted: mutedByBoundaryKeys(vs, es), guardVertices };
         }
         if (mode === ViewerMode.EarClipping && artGallery.ears.length > 0) {
             const { vertices: vs, edges: es } = earsToEditorState(artGallery.ears);
-            return { vertices: vs, edges: es, edgeMuted: es.map(() => false), guardVertices };
+            return { vertices: vs, edges: es, edgeMuted: mutedByBoundaryKeys(vs, es), guardVertices };
         }
         if (mode === ViewerMode.ConvexComponent && artGallery.convex_components.length > 0) {
             const { vertices: vs, edges: es } = convexComponentsToEditorState(artGallery.convex_components);
-            return { vertices: vs, edges: es, edgeMuted: es.map(() => false), guardVertices };
+            return { vertices: vs, edges: es, edgeMuted: mutedByBoundaryKeys(vs, es), guardVertices };
         }
         if (mode === ViewerMode.Visibility && artGallery.visibility.length > 0) {
             const base = artGalleryToEditorState(artGallery);

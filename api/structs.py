@@ -79,7 +79,15 @@ class Sequence(list, Generic[T]):
             value = []
         if not isinstance(value, list):
             value = list(value) if value is not None else []
-        super().__init__(value)
+        # Remove consecutive duplicate elements so sequences stay canonical.
+        deduped: list[T] = []
+        for item in value:
+            if not deduped or item != deduped[-1]:
+                deduped.append(item)
+        # Remove duplicate at wrap (first equals last).
+        while len(deduped) >= 2 and deduped[0] == deduped[-1]:
+            deduped.pop()
+        super().__init__(deduped)
 
     def __getitem__(self, key: int | slice) -> T | Sequence[T]:
         n: int = len(self)

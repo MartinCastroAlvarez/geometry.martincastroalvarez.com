@@ -18,7 +18,7 @@ export interface EdgeProps {
     edgeIndex: number;
     closed?: boolean;
     selected?: boolean;
-    /** When true, edge uses muted color (darker in dark mode, lighter in light) and thicker stroke. Default false. */
+    /** When true, edge uses muted color, reduced opacity, and thicker stroke. Default false. */
     muted?: boolean;
     onClick?: (edgeIndex: number, x: number, y: number) => void;
     /** Canvas scale (zoom); used to keep visual stroke width constant. Default 1. */
@@ -36,7 +36,7 @@ const EdgeComponent = ({ start, end, edgeIndex, selected = false, muted = false,
         <Line
             points={[start.x, start.y, end.x, end.y]}
             stroke={stroke}
-            opacity={1}
+            opacity={muted ? 0.3 : 1}
             strokeWidth={strokeWidth}
             hitStrokeWidth={20}
             lineCap="round"
