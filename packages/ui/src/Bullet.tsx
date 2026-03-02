@@ -1,6 +1,6 @@
 /**
  * List item with an icon and text. Icon sits in a fixed-width column, top-aligned when text wraps.
- * danger shows a red warning icon (same red as Problem); success shows a green circle with tick; otherwise
+ * danger shows a red warning icon (same red as Problem); success shows a circle-with-tick icon in normal text color; otherwise
  * uses default info icon. Forwards the same size/alignment props as Text (xs, sm, lg, etc.).
  *
  * Example:
@@ -17,7 +17,7 @@ export interface BulletProps {
     children: React.ReactNode;
     /** When true, show warning icon in Problem red. */
     danger?: boolean;
-    /** When true, show circle-with-tick icon in green. */
+    /** When true, show circle-with-tick icon in normal text color. */
     success?: boolean;
     xs?: boolean;
     sm?: boolean;
@@ -60,7 +60,7 @@ export const Bullet: React.FC<BulletProps> = ({
 }) => {
     const resolvedIcon =
         danger ? <TriangleAlert size={BULLET_ICON_SIZE} className="shrink-0 text-danger" aria-hidden /> :
-        success ? <CircleCheck size={BULLET_ICON_SIZE} className="shrink-0 text-success" aria-hidden /> :
+        success ? <CircleCheck size={BULLET_ICON_SIZE} className="shrink-0 text-slate-700 dark:text-slate-400" aria-hidden /> :
         defaultIcon;
     return (
         <div className={`geometry-bullet flex gap-1 items-start w-full ${spaced ? "mt-2.5 mb-1.5" : "mt-1.5 mb-0.5"}`}>

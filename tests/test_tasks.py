@@ -106,6 +106,10 @@ class TestStartTask:
         result = task.handler(req)
         # Job stays PENDING until ReportTask runs; execute completed successfully and enqueued report.
         assert result["status"] == Status.PENDING
+        started_at_key = "step:stitching:started_at"
+        assert started_at_key in job.meta
+        assert isinstance(job.meta[started_at_key], str)
+        assert "T" in job.meta[started_at_key]
         mock_tasks_queue.put.assert_called()
         mock_repo.save.assert_called_once()
 
@@ -149,6 +153,8 @@ class TestReportTask:
         parent.children_ids = [Identifier("c1")]
         parent.stdout = {}
         parent.stderr = {}
+        parent.meta = {}
+        parent.step_name = StepName.ART_GALLERY
         child = MagicMock()
         child.is_failed.return_value = False
         child.is_pending.return_value = False
@@ -160,6 +166,10 @@ class TestReportTask:
         result = task.handler(req)
         assert result["status"] == Status.SUCCESS
         assert parent.status == Status.SUCCESS
+        finished_at_key = "step:art-gallery:finished_at"
+        assert finished_at_key in parent.meta
+        assert isinstance(parent.meta[finished_at_key], str)
+        assert "T" in parent.meta[finished_at_key]
         mock_repo.save.assert_called_once()
         mock_queue.put.assert_called_once()
 

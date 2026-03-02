@@ -57,11 +57,9 @@ QUEUE_MAX_RECEIVE_MESSAGES: int = int(os.getenv("QUEUE_MAX_RECEIVE_MESSAGES", "1
 # CORS / origin fallback when request origin is not in allowed list
 DEFAULT_ORIGIN: str = os.getenv("DEFAULT_ORIGIN") or "https://geometry.martincastroalvarez.com"
 
-# Stitching step: performance optimization (see 12 PROTOTYPE.md).
-# When a hole has at least this many valid bridge candidates, we may stop early.
-STITCH_MIN_EDGES_FOR_OPTIMIZATION: int = int(os.getenv("STITCH_MIN_EDGES_FOR_OPTIMIZATION", "10"))
-# Max size of the bucket of shortest candidates; when bucket is full and we have at least min edges, pick best and stop.
-STITCH_MAX_BUCKET_SIZE: int = int(os.getenv("STITCH_MAX_BUCKET_SIZE", "5"))
+# Stitching: max number of valid bridge candidates kept in the bucket
+# before we pick the smallest one by size and stop. Default 5 is empirical.
+STITCH_BUCKET_SIZE: int = int(os.getenv("STITCH_BUCKET_SIZE", "5"))
 
 # Anonymous and test user constants (used by User model)
 ANONYMOUS_EMAIL: str = "nobody@unknown.local"

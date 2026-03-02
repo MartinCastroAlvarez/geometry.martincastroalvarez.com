@@ -20,10 +20,14 @@ All have parse() or value coercion where used in request/response.
 from __future__ import annotations
 
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from exceptions import InvalidActionError
 from exceptions import MethodNotAllowedError
 from exceptions import ValidationError
+
+if TYPE_CHECKING:
+    from attributes import Slug
 
 
 class Action(str, Enum):
@@ -153,6 +157,13 @@ class StepName(str, Enum):
     CONVEX_COMPONENT_OPTIMIZATION = "convex_component_optimization"
     GUARD_PLACEMENT = "guard_placement"
 
+    @property
+    def slug(self) -> Slug:
+        """URL-safe slug for this step name (e.g. art_gallery -> art-gallery)."""
+        from attributes import Slug
+
+        return Slug(self.value)
+
     @classmethod
     def parse(cls, value: str | None) -> StepName:
         """
@@ -163,7 +174,11 @@ class StepName(str, Enum):
         """
         if value is None or (isinstance(value, str) and not value.strip()):
             raise ValidationError("step_name is required and must be a non-empty string")
-        raw: str = value.strip().lower().replace(" ", "_") if isinstance(value, str) else str(value).strip().lower().replace(" ", "_")
+        raw: str = (
+            value.strip().lower().replace(" ", "_").replace("-", "_")
+            if isinstance(value, str)
+            else str(value).strip().lower().replace(" ", "_").replace("-", "_")
+        )
         try:
             return cls(raw)
         except ValueError:

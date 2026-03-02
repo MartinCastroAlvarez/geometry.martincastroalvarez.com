@@ -43,6 +43,7 @@ from exceptions import ValidationError
 from geometry import ConvexComponent
 from geometry import Ear
 from geometry import Polygon
+from geometry import Segment
 from interfaces import Serializable
 from serializers import ArtGalleryDict
 from serializers import JobDict
@@ -315,7 +316,7 @@ class Job(Model):
             "parent_id": str(self.parent_id) if self.parent_id is not None else None,
             "children_ids": [str(c) for c in self.children_ids],
             "status": self.status.value,
-            "step_name": self.step_name.value,
+            "step_name": str(self.step_name.slug),
             "stdin": dict(self.stdin),
             "stdout": dict(self.stdout),
             "meta": dict(self.meta),
@@ -328,8 +329,9 @@ class Job(Model):
 @dataclass
 class ArtGallery(Model):
     """
-    Art gallery with boundary, obstacles, and computed attributes (ears, convex_components, guards, visibility, stitched).
-    owner_job_id links to the job that created it. stitched is the polygon from the stitching step (optional).
+    Art gallery with boundary, obstacles, and computed attributes (ears, convex_components, guards, visibility, stitched, stitches).
+    owner_job_id links to the job that created it. stitched is the polygon from the stitching step; stitches is the list
+    of bridge edges added during stitching (optional).
 
     For example, to load a gallery from job stdout or repository:
     >>> gallery = ArtGallery.unserialize(data)
@@ -350,6 +352,7 @@ class ArtGallery(Model):
     guards: Table[Point] = field(default_factory=Table)
     visibility: Table[Sequence[Point]] = field(default_factory=Table)
     stitched: Polygon = field(default_factory=lambda: Polygon([]))
+    stitches: list[Segment] = field(default_factory=list)
 
     def __str__(self) -> str:
         return f"ArtGallery(id={self.id})"
@@ -360,8 +363,9 @@ class ArtGallery(Model):
     @classmethod
     def unserialize(cls, data: Any) -> ArtGallery:
         """
-        Build ArtGallery from dict. Unserializes boundary, obstacles, ears, guards, visibility, stitched.
-        stitched is optional; accepts key "stitched" or "stiteched"; defaults to empty polygon.
+        Build ArtGallery from dict. Unserializes boundary, obstacles, ears, guards, visibility, stitched, stitches.
+        stitched is optional; accepts key "stitched" or "stiteched"; defaults to empty polygon. stitches is optional list
+        of segments (bridge edges from stitching step).
 
         For example, to build a gallery from publish response:
         >>> gallery = ArtGallery.unserialize({"id": "g1", "boundary": [...], "owner_job_id": "j1", ...})
@@ -379,6 +383,8 @@ class ArtGallery(Model):
         visibility = data.get("visibility") or []
         stitched_raw = data.get("stitched") or data.get("stiteched") or []
         stitched = Polygon.unserialize(stitched_raw) if stitched_raw else Polygon([])
+        stitches_raw = data.get("stitches") or []
+        stitches = [Segment.unserialize(s) for s in stitches_raw] if stitches_raw else []
         return cls(
             id=Identifier(data.get("id")),
             boundary=Polygon.unserialize(boundary),
@@ -392,6 +398,7 @@ class ArtGallery(Model):
             guards=Table.unserialize([Point.unserialize(guard) for guard in guards]),
             visibility=Table.unserialize([Sequence([Point.unserialize(point) for point in points]) for points in visibility]),
             stitched=stitched,
+            stitches=stitches,
         )
 
     def serialize(self) -> ArtGalleryDict:
@@ -408,4 +415,5 @@ class ArtGallery(Model):
             "guards": self.guards.serialize(),
             "visibility": self.visibility.serialize(),
             "stitched": self.stitched.serialize(),
+            "stitches": [s.serialize() for s in self.stitches],
         }

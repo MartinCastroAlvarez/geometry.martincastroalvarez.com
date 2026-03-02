@@ -391,6 +391,41 @@ class JobStdoutMissingGeometryError(ValidationError):
         super().__init__(message)
 
 
+class JobStdoutMissingStitchedError(ValidationError):
+    """Job stdout is missing stitched polygon or stitches; cannot publish gallery."""
+
+    def __init__(self, message: str = "Job stdout must contain stitched and stitches to publish gallery"):
+        super().__init__(message)
+
+
+class GalleryHasNoBoundaryError(ValidationError):
+    """Gallery has no boundary; cannot publish."""
+
+    def __init__(self, message: str = "Gallery has no boundary; cannot publish"):
+        super().__init__(message)
+
+
+class GalleryHasNoStitchedError(ValidationError):
+    """Gallery has no stitched polygon; cannot publish."""
+
+    def __init__(self, message: str = "Gallery has no stitched polygon; cannot publish"):
+        super().__init__(message)
+
+
+class GalleryHasNoStitchesError(ValidationError):
+    """Gallery has no stitches; cannot publish."""
+
+    def __init__(self, message: str = "Gallery has no stitches; cannot publish"):
+        super().__init__(message)
+
+
+class GalleryHasStitchesWithoutObstaclesError(ValidationError):
+    """Gallery has stitches but no obstacles; invalid state."""
+
+    def __init__(self, message: str = "Gallery has stitches but no obstacles; invalid state"):
+        super().__init__(message)
+
+
 class UserNotAuthenticatedError(UnauthorizedError):
     """User must be authenticated."""
 

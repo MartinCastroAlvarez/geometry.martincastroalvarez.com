@@ -428,6 +428,13 @@ class TestTimestamp:
         d = ts.to_date()
         assert d.year == 2025 and d.month == 1 and d.day == 1
 
+    def test_to_iso(self):
+        from attributes import Timestamp
+
+        ts = Timestamp("2025-01-01T12:00:00.000000Z")
+        assert ts.to_iso() == "2025-01-01T12:00:00.000000Z"
+        assert isinstance(ts.to_iso(), str)
+
     def test_now(self):
         from attributes import Timestamp
 

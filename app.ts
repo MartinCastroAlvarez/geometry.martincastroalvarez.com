@@ -164,10 +164,12 @@ class GeometryStack extends Stack {
       logRetention: logs.RetentionDays.ONE_DAY,
     })
 
+    // Batch size 1: polygon optimization tasks can take longer and would keep other tasks in the same batch waiting
+    // Low maxConcurrency is intentional to avoid costs; increase as the system scales.
     workerHandler.addEventSource(new lambda_event_sources.SqsEventSource(geometryQueue, {
-      batchSize: 3,
+      batchSize: 1,
       maxBatchingWindow: Duration.seconds(300),
-      maxConcurrency: 2,
+      maxConcurrency: 20,
     }))
 
     const api = new apigateway.RestApi(this, 'GeometryApi', {

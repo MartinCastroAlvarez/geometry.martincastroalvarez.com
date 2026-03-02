@@ -46,8 +46,7 @@ from geometry.walk import Walk
 from models import Job
 from models import User
 from repositories import JobsRepository
-from settings import STITCH_MAX_BUCKET_SIZE
-from settings import STITCH_MIN_EDGES_FOR_OPTIMIZATION
+from settings import STITCH_BUCKET_SIZE
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +97,7 @@ class Step(ABC):
         }
         cls: Type[Step] | None = step_class_by_name.get(step_name)
         if cls is None:
-            raise StepNotHandledError(f"Step cannot be handled: {step_name.value}")
+            raise StepNotHandledError(f"Step cannot be handled: {step_name.slug}")
         return cls
 
     @abstractmethod
@@ -194,7 +193,6 @@ class ArtGalleryStep(CoordinatorStep):
     def run(self, **kwargs: Any) -> dict[str, Any]:
         self.spawn()
         return {
-            "step:art_gallery": "success",
             "boundary": self.job.stdin.get("boundary"),
             "obstacles": self.job.stdin.get("obstacles"),
         }
@@ -274,7 +272,7 @@ class ValidationPolygonStep(SequenceStep):
         self.validate_orientation()
         self.validate_containment()
         self.validate_intersections()
-        return {"step:validate_polygons": "success"}
+        return {}
 
 
 class StitchingStep(SequenceStep):
@@ -282,14 +280,14 @@ class StitchingStep(SequenceStep):
     Stitching step: merges boundary and obstacles into a single polygon (stitched)
     by sorting obstacles by rightmost vertex and bridging each to the current outer
     polygon. Same logic as lab ArtGallery.points. Idempotent: same job and inputs
-    yield the same stitched polygon. Emits "stitched" (serialized Polygon) in stdout.
+    yield the same stitched polygon. Emits "stitched" (serialized Polygon) and
+    "stitches" (list of serialized bridge Segment) in stdout.
 
-    Performance optimization (see docs 3 BACKEND.md and 12 PROTOTYPE.md): when a hole
-    is connected to the polygon by at least STITCH_MIN_EDGES_FOR_OPTIMIZATION valid
-    candidate bridges, we maintain a bucket of the shortest STITCH_MAX_BUCKET_SIZE
-    candidates. Once we have that many valid candidates and the bucket is full, we
-    pick the best (shortest) from the bucket and stop iterating over the rest of the
-    polygon, avoiding O(n) checks for every vertex when many short bridges exist.
+    Performance optimization (see docs 3 BACKEND.md and 12 PROTOTYPE.md): we iterate
+    polygon points starting from the rightmost (using Sequence shift from structs.py;
+    one O(n) rotation per obstacle, cheap). We keep a bucket of the shortest
+    STITCH_BUCKET_SIZE valid bridges; once the bucket is full we pick the smallest
+    by size and stop, avoiding full O(n) checks when good short bridges exist.
     """
 
     def __init__(self, job: Job, user: User) -> None:
@@ -307,27 +305,27 @@ class StitchingStep(SequenceStep):
         self.boundary = Polygon.unserialize(self.job.stdin.get("boundary"))
         self.obstacles = [Polygon.unserialize(obstacle) for obstacle in (self.job.stdin.get("obstacles") or [])]
 
-        # No obstacles: stitched result is the boundary; return immediately.
+        # No obstacles: stitched result is the boundary; no bridge edges added.
         if not self.obstacles:
             self.points = self.boundary
-            return {"step:stitching": "success", "stitched": self.points.serialize()}
+            return {"stitched": self.points.serialize(), "stitches": []}
 
         # Sort obstacles by rightmost vertex (desc) and init working polygon and its edges.
         self.sort()
         logger.info("Stitching %d obstacles to boundary (%d points).", len(self.obstacles), len(self.boundary))
         points: Polygon = Polygon(list(self.boundary))
         edges: list[Segment] = list(points.edges)
+        stitches: list[Segment] = []
 
         for obstacle in self.obstacles:
             # Normalize obstacle to CW and take rightmost vertex as bridge anchor.
             obstacle_points: Polygon = obstacle if obstacle.is_cw() else Polygon(list(~obstacle))
             anchor: Point = obstacle_points.rightmost
             bridge: Segment | None = None
-            total_valid: int = 0
-            bucket: list[Segment] = []  # shortest STITCH_MAX_BUCKET_SIZE candidates for early-exit
+            bucket: list[Segment] = []  # up to STITCH_BUCKET_SIZE shortest candidates; when full, pick smallest and stop
 
-            # Find shortest valid bridge from current polygon to anchor (inside boundary, no crossings).
-            for candidate in points:
+            # Start iteration from rightmost point (shift is O(n) once per obstacle; see 3 BACKEND.md).
+            for candidate in points << points.rightmost:
                 if candidate == anchor:
                     continue
                 if candidate.x < anchor.x or candidate.y < anchor.y:
@@ -346,12 +344,10 @@ class StitchingStep(SequenceStep):
                     continue
                 if any(edge.intersects(segment) for edge in edges if not edge.connects(segment)):
                     continue
-                total_valid += 1
                 bucket.append(segment)
                 bucket.sort(key=lambda s: s.size)
-                if len(bucket) > STITCH_MAX_BUCKET_SIZE:
-                    bucket = bucket[:STITCH_MAX_BUCKET_SIZE]
-                if total_valid >= STITCH_MIN_EDGES_FOR_OPTIMIZATION and len(bucket) >= STITCH_MAX_BUCKET_SIZE:
+                bucket = bucket[:STITCH_BUCKET_SIZE]
+                if len(bucket) >= STITCH_BUCKET_SIZE:
                     bridge = bucket[0]
                     break
                 if bridge is None or segment.size < bridge.size:
@@ -368,6 +364,7 @@ class StitchingStep(SequenceStep):
                 raise StitchWinnerSubsequenceError("Winner is a subsequence of obstacle; cannot stitch")
 
             # Rotate polygon so vertex is last, obstacle so anchor is first; require CCW/CW; merge and update.
+            stitches.append(bridge)
             left: Polygon = Polygon(list(points >> vertex))
             right: Polygon = Polygon(list(obstacle_points << anchor))
             if not left.is_ccw():
@@ -378,11 +375,11 @@ class StitchingStep(SequenceStep):
             points = Polygon(merged)
             edges = list(points.edges)
 
-        # Ensure final polygon is CCW; store and return serialized stitched polygon.
+        # Ensure final polygon is CCW; store and return serialized stitched polygon and stitches.
         if not points.is_ccw():
             points = Polygon(list(~points))
         self.points = points
-        return {"step:stitching": "success", "stitched": self.points.serialize()}
+        return {"stitched": self.points.serialize(), "stitches": [s.serialize() for s in stitches]}
 
 
 class EarClippingStep(SequenceStep):
@@ -392,8 +389,7 @@ class EarClippingStep(SequenceStep):
     """
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
-        out: dict[str, Any] = {"step:ear_clipping": "success"}
-        return out
+        return {}
 
 
 class ConvexComponentOptimizationStep(SequenceStep):
@@ -403,8 +399,7 @@ class ConvexComponentOptimizationStep(SequenceStep):
     """
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
-        out: dict[str, Any] = {"step:convex_component_optimization": "success"}
-        return out
+        return {}
 
 
 class GuardPlacementStep(SequenceStep):
@@ -414,5 +409,4 @@ class GuardPlacementStep(SequenceStep):
     """
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
-        out: dict[str, Any] = {"step:guard_placement": "success"}
-        return out
+        return {}

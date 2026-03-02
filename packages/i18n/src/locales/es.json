@@ -35,6 +35,7 @@
     "failedToFetch": "Error de conexión",
     "serviceUnavailable": "Servicio no disponible temporalmente",
     "publishFailed": "No se pudo publicar la galería. Inténtalo de nuevo.",
+    "publishNoStitches": "El polígono no pudo conectar los obstáculos con el polígono exterior.",
     "deleteFailed": "No se pudo eliminar el trabajo. Inténtalo de nuevo."
   },
   "nav": {
@@ -89,7 +90,19 @@
     "clearConfirm": "Esto va a borrar todos los vértices y aristas del canvas. Esta acción no se puede deshacer.",
     "addVertices": "Agregá {{count}} vértice más para cerrar",
     "addVerticesPlural": "Agregá {{count}} vértices más para cerrar",
-    "clickToClose": "Hacé click cerca del primer punto (verde) para cerrar"
+    "clickToClose": "Hacé click cerca del primer punto (verde) para cerrar",
+    "tooltipConnect": "Agregar vértices conectados por aristas",
+    "tooltipAdd": "Agregar vértices",
+    "tooltipErase": "Borrar",
+    "tooltipClear": "Limpiar",
+    "tooltipZoomOut": "Alejar",
+    "tooltipMove": "Mover",
+    "tooltipZoomIn": "Acercar",
+    "tooltipViewerDefault": "Polígono (borde y obstáculos)",
+    "tooltipViewerEarClipping": "Triangulación",
+    "tooltipViewerConvexComponent": "Componentes convexos",
+    "tooltipViewerStitching": "Unión de polígono y obstáculos",
+    "tooltipViewerVisibility": "Cobertura de guardias"
   },
   "common": {
     "defaultConfirmMessage": "¿Estás seguro?",

@@ -12,7 +12,7 @@ import { formatDistanceToNow } from "date-fns";
 import { enUS, es } from "date-fns/locale";
 import { Page, Container, Title, Text, Badge, Badges, Inspector, Input, Toolbar, Button, Problem, Confirm, Milestones, Milestone, MilestonesSkeleton, useDevice, useDebounce } from "@geometry/ui";
 import { Viewer } from "@geometry/editor";
-import { useJob, useJobChildren, useUpdateJob, usePublish, useDeleteJob, useSession } from "@geometry/data";
+import { useJob, useJobChildren, useUpdateJob, usePublish, useDeleteJob, useSession, type ApiErrorResponse } from "@geometry/data";
 import { Status } from "@geometry/domain";
 import { useAnalytics, GoogleAnalyticsActions, GoogleAnalyticsCategories } from "@geometry/analytics";
 import { Language, useLocale } from "@geometry/i18n";
@@ -103,7 +103,13 @@ export const JobPage = () => {
         if (!id) return;
         publishMutation.mutate(id, {
             onSuccess: () => navigate("/"),
-            onError: () => setPublishError(t("errors.publishFailed")),
+            onError: (error: Error & { apiError?: ApiErrorResponse["error"] }) => {
+                const msg =
+                    error.apiError?.type === "GalleryHasNoStitchesError"
+                        ? t("errors.publishNoStitches")
+                        : t("errors.publishFailed");
+                setPublishError(msg);
+            },
         });
     }, [id, publishMutation, navigate, t]);
 
@@ -208,6 +214,11 @@ export const JobPage = () => {
                     </Badges>
                 </Container>
                 <Container size={isMobile ? 12 : 6} center={isMobile} right={!isMobile}>
+                    {(publishError || deleteError) && (
+                        <Problem align={isMobile ? "center" : ("right" as const)} className="mb-2">
+                            {publishError ?? deleteError}
+                        </Problem>
+                    )}
                     <Toolbar right={!isMobile} center={isMobile}>
                         {job!.status === Status.SUCCESS && (
                             <Button
@@ -237,11 +248,6 @@ export const JobPage = () => {
                             {t("jobs.job.delete")}
                         </Button>
                     </Toolbar>
-                    {(publishError || deleteError) && (
-                        <Problem align={isMobile ? "center" : ("right" as const)} className="mt-2">
-                            {publishError ?? deleteError}
-                        </Problem>
-                    )}
                 </Container>
             </Container>
             <Container padded spaced>
@@ -268,7 +274,7 @@ export const JobPage = () => {
                             <Milestones>
                                 {childJobs.map((child) => (
                                     <Milestone key={child.id} completed={child.status === Status.SUCCESS}>
-                                        {t(`jobs.steps.${child.step_name}`) || child.step_name}
+                                        {t(`jobs.steps.${child.step_name.replace(/-/g, "_")}`) || child.step_name}
                                     </Milestone>
                                 ))}
                             </Milestones>

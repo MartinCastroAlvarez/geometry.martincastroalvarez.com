@@ -1,6 +1,7 @@
 """Tests for enums package."""
 
 import pytest
+from attributes import Slug
 from enums import Action
 from enums import LogLevel
 from enums import Method
@@ -108,3 +109,8 @@ class TestStepName:
     def test_parse_valid(self):
         assert StepName.parse("ear_clipping") == StepName.EAR_CLIPPING
         assert StepName.parse("ART_GALLERY") == StepName.ART_GALLERY
+
+    def test_slug(self):
+        assert isinstance(StepName.ART_GALLERY.slug, Slug)
+        assert StepName.ART_GALLERY.slug == "art-gallery"
+        assert StepName.CONVEX_COMPONENT_OPTIMIZATION.slug == "convex-component-optimization"

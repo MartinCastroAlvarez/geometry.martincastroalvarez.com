@@ -41,6 +41,7 @@ from exceptions import ValidationError
 from settings import DEFAULT_ORIGIN
 from settings import DEFAULT_TITLE_MAX_LENGTH
 from settings import MAX_LIMIT
+from slugify import slugify
 
 
 class Path(str):
@@ -180,6 +181,10 @@ class Timestamp(str):
         """Convert this Timestamp to a date."""
         return self.to_datetime().date()
 
+    def to_iso(self) -> str:
+        """Return the ISO 8601 string representation of this timestamp."""
+        return str(self)
+
 
 class Countdown(int):
     """
@@ -279,8 +284,7 @@ class Slug(str):
         raw: str = value.strip()
         if not raw:
             raise ValidationError("Slug must be a non-empty string")
-        lower: str = raw.lower()
-        normalized: str = re.sub(r"[^a-z0-9]+", "-", lower).strip("-") or "x"
+        normalized: str = slugify(raw, separator="-", lowercase=True) or "x"
         return super().__new__(cls, normalized)
 
 

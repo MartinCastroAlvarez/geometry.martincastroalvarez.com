@@ -65,3 +65,4 @@ class ArtGalleryDict(ModelDict):
     guards: dict[str, Any]
     visibility: dict[str, Any]
     stitched: list[Any]
+    stitches: list[Any]

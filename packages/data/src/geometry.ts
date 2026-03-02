@@ -15,6 +15,7 @@ import { parseSummaryFromApi, type Summary } from "@geometry/domain";
 import { GEOMETRY_API_URL } from "./constants";
 import { toJobPayloadWire, toPolygonPayloadWire } from "./adapters";
 import type {
+    ApiErrorResponse,
     ListResponse,
     DetailsResponse,
     GeometryApiJob,
@@ -51,13 +52,19 @@ const requestOrThrow = async (
             throw new Error("SERVICE_UNAVAILABLE");
         }
         let message = `${response.status} ${response.statusText}`;
+        let apiError: ApiErrorResponse["error"] | undefined;
         try {
-            const body = (await response.json()) as { error?: { message?: string } };
+            const body = (await response.json()) as ApiErrorResponse | { error?: { message?: string } };
             if (body?.error?.message) message = body.error.message;
+            if (body?.error && "type" in body.error && "code" in body.error) {
+                apiError = body.error as ApiErrorResponse["error"];
+            }
         } catch {
             // ignore JSON parse failure, use status text
         }
-        throw new Error(message);
+        const err = new Error(message) as Error & { apiError?: ApiErrorResponse["error"] };
+        err.apiError = apiError;
+        throw err;
     }
     return response;
 };

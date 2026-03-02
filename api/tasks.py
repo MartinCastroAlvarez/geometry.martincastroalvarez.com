@@ -32,6 +32,7 @@ from typing import NotRequired
 
 from attributes import Email
 from attributes import Identifier
+from attributes import Timestamp
 from controllers import Controller
 from controllers import ControllerRequest
 from controllers import ControllerResponse
@@ -40,6 +41,7 @@ from enums import Status
 from exceptions import CoordinatorStepRequiresChildrenError
 from exceptions import MonitorStepRequiresChildrenError
 from exceptions import ParallelStepRequiresParentError
+from exceptions import RecordNotFoundError
 from exceptions import SequenceStepJobNotInSiblingsError
 from exceptions import SequenceStepRequiresParentError
 from logger import get_logger
@@ -126,7 +128,10 @@ class Task(Controller):
         payload: dict[str, Any] = body if body is not None else {}
         validated: TaskRequest = self.validate(payload)
         self.user: User = User(email=validated["user_email"])
-        self.job: Job = self.repository.get(validated["job_id"])
+        try:
+            self.job: Job = self.repository.get(validated["job_id"])
+        except RecordNotFoundError:
+            return {"status": Status.FAILED}
 
         # If the job is already failed, log and return.
         if self.job.is_failed():
@@ -180,6 +185,10 @@ class StartTask(Task):
             self.report()
             return {"status": Status.SUCCESS, "job_id": self.job.id}
 
+        started_at_key: str = f"step:{self.job.step_name.slug}:started_at"
+        if started_at_key not in self.job.meta:
+            self.job.meta[started_at_key] = Timestamp.now().to_iso()
+
         meta: dict[str, Any] = validated_input.get("meta") or {}
         step: Step = Step.of(self.job.step_name)(job=self.job, user=self.user)
         try:
@@ -188,9 +197,8 @@ class StartTask(Task):
             self.job.stdout.update(stdout)
         except Exception as error:
             self.job.status = Status.FAILED
-            self.job.stderr[f"error:{self.job.step_name.value}"] = str(error)
-            self.job.stderr[f"type:{self.job.step_name.value}"] = error.__class__.__name__
-            self.job.stderr[f"step:{self.job.step_name.value}"] = self.job.step_name.value
+            self.job.stderr[f"error:{self.job.step_name.slug}:message"] = str(error)
+            self.job.stderr[f"error:{self.job.step_name.slug}:type"] = error.__class__.__name__
             logger.error("StartTask.execute() | step failed job_id=%s step_name=%s error=%s", self.job.id, self.job.step_name, error)
         self.repository.save(self.job)
         self.broadcast(step)
@@ -299,6 +307,9 @@ class ReportTask(Task):
             pass
         else:
             self.job.status = Status.SUCCESS
+            finished_at_key: str = f"step:{self.job.step_name.slug}:finished_at"
+            if finished_at_key not in self.job.meta:
+                self.job.meta[finished_at_key] = Timestamp.now().to_iso()
             logger.info("ReportTask.execute() | job completed job_id=%s status=SUCCESS", self.job.id)
 
         self.repository.save(self.job)

@@ -46,7 +46,6 @@ class TestSimpleSteps:
         )
         step = StitchingStep(job=job, user=_user())
         out = step.run()
-        assert out["step:stitching"] == "success"
         assert "stitched" in out
         assert len(out["stitched"]) == 4
         assert out["stitched"][0] in ([0, 0], ["0", "0"])
@@ -59,22 +58,22 @@ class TestSimpleSteps:
         )
         step = ValidationPolygonStep(job=job, user=_user())
         out = step.run()
-        assert out == {"step:validate_polygons": "success"}
+        assert out == {}
 
     def test_ear_clipping_step_run(self):
         job = Job(id=Identifier("j1"), step_name=StepName.EAR_CLIPPING)
         step = EarClippingStep(job=job, user=_user())
-        assert step.run() == {"step:ear_clipping": "success"}
+        assert step.run() == {}
 
     def test_convex_component_optimization_step_run(self):
         job = Job(id=Identifier("j1"), step_name=StepName.CONVEX_COMPONENT_OPTIMIZATION)
         step = ConvexComponentOptimizationStep(job=job, user=_user())
-        assert step.run() == {"step:convex_component_optimization": "success"}
+        assert step.run() == {}
 
     def test_guard_placement_step_run(self):
         job = Job(id=Identifier("j1"), step_name=StepName.GUARD_PLACEMENT)
         step = GuardPlacementStep(job=job, user=_user())
-        assert step.run() == {"step:guard_placement": "success"}
+        assert step.run() == {}
 
 
 class TestArtGalleryStep:
@@ -91,7 +90,6 @@ class TestArtGalleryStep:
 
         out = step.run()
 
-        assert out["step:art_gallery"] == "success"
         assert out.get("boundary") == []
         assert len(job.children_ids) == 5
         mock_repo.save.assert_called()
@@ -107,5 +105,5 @@ class TestArtGalleryStep:
 
         out = step.run()
 
-        assert out == {"step:art_gallery": "success", "boundary": None, "obstacles": None}
+        assert out == {"boundary": None, "obstacles": None}
         mock_repo.save.assert_not_called()

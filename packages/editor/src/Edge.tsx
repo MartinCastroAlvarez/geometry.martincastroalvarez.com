@@ -1,12 +1,10 @@
 /**
  * Single edge line between two vertices; same color as Vertex (theme --color-polygon), no border.
  *
- * Context: Konva Line; stroke from useTheme().getColor (theme.css). When stitched is true,
- * the edge uses --color-edge-stitched (theme-specific: subtle in dark, lighter in light).
+ * Context: Konva Line; stroke from useTheme().getColor (theme.css).
  *
  * Example:
  *   <Edge start={v1} end={v2} edgeIndex={i} onClick={handleEdgeClick} />
- *   <Edge start={v1} end={v2} edgeIndex={i} stitched scale={scale} />
  */
 
 import { memo, useState } from "react";
@@ -20,24 +18,25 @@ export interface EdgeProps {
     edgeIndex: number;
     closed?: boolean;
     selected?: boolean;
-    /** When true, edge is drawn dimmer and thinner (stitched polygon edges not on boundary/obstacles). */
-    stitched?: boolean;
+    /** When true, edge is thinner and less bright. Default false. */
+    muted?: boolean;
     onClick?: (edgeIndex: number, x: number, y: number) => void;
     /** Canvas scale (zoom); used to keep visual stroke width constant. Default 1. */
     scale?: number;
 }
 
-const EdgeComponent = ({ start, end, edgeIndex, selected = false, stitched = false, onClick, scale = 1 }: EdgeProps) => {
+const EdgeComponent = ({ start, end, edgeIndex, selected = false, muted = false, onClick, scale = 1 }: EdgeProps) => {
     const { getColor } = useTheme();
     const [isHovered, setIsHovered] = useState(false);
-    const baseStrokeWidth = stitched ? 1 : selected ? 4 : isHovered ? 3 : 2;
+    const baseStrokeWidth = muted ? (selected ? 2 : 1) : selected ? 4 : isHovered ? 3 : 2;
     const strokeWidth = baseStrokeWidth / scale;
-    const stroke = stitched ? getColor("--color-edge-stitched") : getColor("--color-polygon");
+    const stroke = getColor("--color-polygon");
 
     return (
         <Line
             points={[start.x, start.y, end.x, end.y]}
             stroke={stroke}
+            opacity={muted ? 0.5 : 1}
             strokeWidth={strokeWidth}
             hitStrokeWidth={20}
             lineCap="round"

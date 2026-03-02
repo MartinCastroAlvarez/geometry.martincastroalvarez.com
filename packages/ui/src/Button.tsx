@@ -14,6 +14,7 @@
 import React, { useCallback, useState } from "react";
 import Confirm from "./Confirm";
 import { Container } from "./Container";
+import { Tooltip } from "./Tooltip";
 import { useLocale } from "@geometry/i18n";
 import { Theme, useTheme } from "@geometry/theme";
 
@@ -47,10 +48,14 @@ interface ButtonProps {
     lg?: boolean;
     /** When true, uses a gradient purple carbon background. */
     primary?: boolean;
+    /** When true, shows the same border as hover (e.g. for selected toolbar buttons). */
+    active?: boolean;
     disabled?: boolean;
     icon?: React.ReactNode;
     confirm?: boolean | string;
     "aria-label"?: string;
+    /** Optional tooltip shown on hover. */
+    tooltip?: React.ReactNode;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -60,10 +65,12 @@ export const Button: React.FC<ButtonProps> = ({
     sm = false,
     lg = false,
     primary = false,
+    active = false,
     disabled = false,
     icon,
     confirm,
     "aria-label": ariaLabel,
+    tooltip,
 }) => {
     const { t } = useLocale();
     const { theme } = useTheme();
@@ -75,9 +82,11 @@ export const Button: React.FC<ButtonProps> = ({
     const activeBg = isLight ? "active:bg-slate-300" : "active:bg-slate-600";
 
     const activeBorder = isLight ? "active:border-slate-300" : "active:border-slate-600";
+    const hoverBorderClass = "hover:border-primary";
+    const activePropBorderClass = active ? "!border-primary" : "";
     const baseClasses = primary
         ? `appearance-none inline-flex flex-row items-center justify-center gap-2 font-medium rounded-lg transition-all duration-200 focus:outline-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer border border-transparent bg-gradient-primary text-white hover:border-transparent ${activeBg} active:scale-[0.98]`
-        : `appearance-none inline-flex flex-row items-center justify-center gap-2 font-medium rounded-lg transition-all duration-200 focus:outline-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer border border-slate-400 dark:border-slate-600 bg-transparent text-slate-700 dark:text-slate-100 hover:text-slate-900 dark:hover:text-slate-100 hover:border-primary ${activeBg} ${activeBorder} active:text-slate-900 dark:active:text-slate-100 active:scale-[0.98]`;
+        : `appearance-none inline-flex flex-row items-center justify-center gap-2 font-medium rounded-lg transition-all duration-200 focus:outline-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer border border-slate-400 dark:border-slate-600 bg-transparent text-slate-700 dark:text-slate-100 hover:text-slate-900 dark:hover:text-slate-100 ${hoverBorderClass} ${activePropBorderClass} ${activeBg} ${activeBorder} active:text-slate-900 dark:active:text-slate-100 active:scale-[0.98]`;
 
     const getSizeClasses = (): string => {
         if (xs) return "py-0.5 px-1.5 text-[11px]";
@@ -115,20 +124,24 @@ export const Button: React.FC<ButtonProps> = ({
         return t("common.defaultConfirmMessage");
     };
 
+    const buttonEl = (
+        <button
+            type="button"
+            onClick={handleClick}
+            disabled={disabled}
+            className={`geometry-button ${combinedClasses}`.trim()}
+            aria-label={ariaLabel}
+        >
+            <span className={`flex flex-row flex-nowrap items-center ${innerGapClass}`}>
+                {icon && <span className="flex shrink-0 [&_svg]:inline-block [&_svg]:align-middle">{cloneIconWithColor(icon)}</span>}
+                {children && <span>{children}</span>}
+            </span>
+        </button>
+    );
+
     return (
         <>
-            <button
-                type="button"
-                onClick={handleClick}
-                disabled={disabled}
-                className={`geometry-button ${combinedClasses}`.trim()}
-                aria-label={ariaLabel}
-            >
-                <span className={`flex flex-row flex-nowrap items-center ${innerGapClass}`}>
-                    {icon && <span className="flex shrink-0 [&_svg]:inline-block [&_svg]:align-middle">{cloneIconWithColor(icon)}</span>}
-                    {children && <span>{children}</span>}
-                </span>
-            </button>
+            {tooltip ? <Tooltip title={tooltip}>{buttonEl}</Tooltip> : buttonEl}
             {confirm && (
                 <Confirm isOpen={showConfirm} message={getConfirmMessage()} onConfirm={handleConfirm} onCancel={handleCancel} />
             )}

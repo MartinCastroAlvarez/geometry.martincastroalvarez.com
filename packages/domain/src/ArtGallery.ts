@@ -1,15 +1,15 @@
 /**
  * ArtGallery and ArtGalleryDict: gallery geometry aligned with API (boundary, obstacles, ears,
- * convex_components, guards, visibility, stitched).
+ * convex_components, guards, visibility, stitched, stitches).
  *
  * Context: Immutable boundary Polygon, obstacles[], guards[]; optional ears, convex_components,
- * visibility, stitched from API. fromDict/toDict for API. Mutations (addObstacle, removeLastObstacle,
- * setBoundary, addGuard) return new instances.
+ * visibility, stitched, stitches from API. stitches is the list of bridge edges from the stitching step.
+ * fromDict/toDict for API. Mutations (addObstacle, removeLastObstacle, setBoundary, addGuard) return new instances.
  *
  * Example:
  *   const g = ArtGallery.fromDict({ boundary: {...}, obstacles: [], guards: [] });
  *   g.addObstacle(obstacle).addGuard(guard);  g.toDict();
- *   const withStitched = ArtGallery.fromDict({ ...d, stitched: { points: [...] } });
+ *   const withStitched = ArtGallery.fromDict({ ...d, stitched: { points: [...] }, stitches: [[[0,0],[1,0]]] });
  */
 import { ConvexComponent } from './ConvexComponent';
 import { Ear } from './Ear';
@@ -22,6 +22,8 @@ export interface ArtGalleryDict {
     guards: PointDict[];
     /** Optional stitched polygon from the stitching step (API). */
     stitched?: PolygonDict;
+    /** Optional list of bridge edges from the stitching step; each segment is two points (PointDict or [x,y]). */
+    stitches?: Array<[PointDict | number[], PointDict | number[]] | Array<PointDict | number[]>>;
     /** Optional ears from ear-clipping (API; table or array; values may be PolygonDict or list of coords). */
     ears?: PolygonDict[] | Record<string, PolygonDict | number[][] | unknown>;
     /** Optional convex components from decomposition (API; table or array; values may be PolygonDict or list of coords). */
@@ -37,6 +39,8 @@ export class ArtGallery {
         public readonly guards: Point[] = [],
         /** Optional stitched polygon from the API (edges not on boundary/obstacles). */
         public readonly stitched?: Polygon,
+        /** Optional list of bridge edges from the stitching step; each segment is [Point, Point]. */
+        public readonly stitches: [Point, Point][] = [],
         /** Optional ears from ear-clipping (triangular components). */
         public readonly ears: Ear[] = [],
         /** Optional convex components from decomposition. */
@@ -76,11 +80,23 @@ export class ArtGallery {
         const visibility: Point[][] = (dict.visibility ?? []).map((path) =>
             path.map(Point.fromDict)
         );
+        const rawStitches = dict.stitches ?? [];
+        const stitches: [Point, Point][] = rawStitches.map((seg: unknown) => {
+            const s = Array.isArray(seg) && seg.length >= 2 ? seg : [];
+            const a = s[0];
+            const b = s[1];
+            const toPoint = (p: unknown): Point =>
+                Array.isArray(p) && p.length >= 2
+                    ? new Point(Number(p[0]), Number(p[1]))
+                    : Point.fromDict(p as PointDict);
+            return [toPoint(a), toPoint(b)];
+        });
         return new ArtGallery(
             Polygon.fromDict(dict.boundary),
             dict.obstacles.map(Polygon.fromDict),
             dict.guards.map(Point.fromDict),
             stitched,
+            stitches,
             ears,
             convex_components,
             visibility
@@ -95,6 +111,9 @@ export class ArtGallery {
         };
         if (this.stitched != null && this.stitched.points.length > 0) {
             out.stitched = this.stitched.toDict();
+        }
+        if (this.stitches.length > 0) {
+            out.stitches = this.stitches.map(([a, b]) => [a.toDict(), b.toDict()]);
         }
         if (this.ears.length > 0) {
             out.ears = this.ears.map((e) => e.toDict());
@@ -114,6 +133,7 @@ export class ArtGallery {
             [...this.obstacles, obstacle],
             this.guards,
             this.stitched,
+            this.stitches,
             this.ears,
             this.convex_components,
             this.visibility
@@ -127,6 +147,7 @@ export class ArtGallery {
             this.obstacles.slice(0, -1),
             this.guards,
             this.stitched,
+            this.stitches,
             this.ears,
             this.convex_components,
             this.visibility
@@ -139,6 +160,7 @@ export class ArtGallery {
             this.obstacles,
             this.guards,
             this.stitched,
+            this.stitches,
             this.ears,
             this.convex_components,
             this.visibility
@@ -151,6 +173,7 @@ export class ArtGallery {
             this.obstacles,
             [...this.guards, guard],
             this.stitched,
+            this.stitches,
             this.ears,
             this.convex_components,
             this.visibility

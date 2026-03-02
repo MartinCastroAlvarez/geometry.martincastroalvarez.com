@@ -18,7 +18,12 @@ export interface InspectorProps {
     data: object;
     /** Max height of the JSON view container in pixels; overflow scrolls on the y-axis. Default 300. */
     size?: number;
+    /** Max string length before collapsing in the JSON view. Default 25. */
+    maxLength?: number;
 }
+
+/** Default max string length before collapsing in the JSON inspector. */
+const DEFAULT_INSPECTOR_MAX_LENGTH = 25;
 
 /** react-json-view base16 theme: light theme (dark text) for light mode, dark theme (light text) for dark mode. */
 const JSON_VIEW_THEME_LIGHT = "bright";
@@ -27,7 +32,11 @@ const JSON_VIEW_THEME_DARK = "monokai";
 /** Data attribute for light-mode inspector; apps should add CSS so inner text uses theme color. */
 export const INSPECTOR_LIGHT_ATTR = "data-inspector-light";
 
-export const Inspector: React.FC<InspectorProps> = ({ data, size = 300 }) => {
+export const Inspector: React.FC<InspectorProps> = ({
+    data,
+    size = 300,
+    maxLength = DEFAULT_INSPECTOR_MAX_LENGTH
+}) => {
     const { theme, getColor } = useTheme();
     const isLight = theme === Theme.Light;
     return (
@@ -49,7 +58,7 @@ export const Inspector: React.FC<InspectorProps> = ({ data, size = 300 }) => {
                     enableClipboard
                     displayDataTypes
                     collapsed={false}
-                    collapseStringsAfterLength={50}
+                    collapseStringsAfterLength={maxLength}
                     style={{
                         margin: 0,
                         padding: 10,

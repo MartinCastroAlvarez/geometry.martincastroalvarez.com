@@ -1,20 +1,20 @@
 /**
  * Display-only viewer for an ArtGallery: grid background and edges (no vertices).
  * When artGallery is null or undefined, the grid is shown but no polygon (empty state).
- * When the gallery has stitched, edges that are only in the stitched polygon (not on
- * boundary or obstacles) are drawn with a dimmer stroke.
- *
- * Context: Same layout as Editor (Grid, Stage, Layer) but display-only. Used on job
- * and gallery pages to show boundary and obstacles. When interactive is true, pan is enabled.
+ * When interactive is true, pan is enabled and a ViewerToolbar is shown for mode (polygon vs stitching).
+ * Default mode: boundary and obstacles only. Stitching mode: only the stitches (bridge edges from API).
  */
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Stage, Layer } from "react-konva";
 import type { ArtGallery } from "@geometry/domain";
-import { artGalleryToEditorState } from "./adapters";
+import { Container, useDevice } from "@geometry/ui";
+import { artGalleryToEditorState, stitchesToEditorState } from "./adapters";
 import type { EditorVertex } from "./types";
 import { Edge } from "./Edge";
 import { Grid } from "./Grid";
+import { ViewerMode } from "./ViewerMode";
+import { ViewerToolbar } from "./ViewerToolbar";
 
 const FIT_PADDING = 16;
 
@@ -44,8 +44,8 @@ export const Viewer = ({
 const EMPTY_STATE: {
     vertices: EditorVertex[];
     edges: [number, number][];
-    stitchedEdgeIndices: number[];
-} = { vertices: [], edges: [], stitchedEdgeIndices: [] };
+    stitchEdgeStartIndex: number;
+} = { vertices: [], edges: [], stitchEdgeStartIndex: 0 };
 
 function computeFitTransform(
     vertices: EditorVertex[],
@@ -111,22 +111,42 @@ const ViewerInner = ({
         return () => ro.disconnect();
     }, []);
 
-    const { vertices, edges, stitchedEdgeIndices } = useMemo(
-        () => (artGallery != null ? artGalleryToEditorState(artGallery) : EMPTY_STATE),
-        [artGallery]
-    );
+    const [mode, setMode] = useState<ViewerMode>(ViewerMode.Default);
+    const { isMobile } = useDevice();
 
-    const stitchedSet = useMemo(
-        () => new Set(stitchedEdgeIndices),
-        [stitchedEdgeIndices]
-    );
+    const { vertices, edges, stitchEdgeStartIndex } = useMemo(() => {
+        if (artGallery == null) return EMPTY_STATE;
+        const base = artGalleryToEditorState(artGallery);
+        if (mode === ViewerMode.Stitching && artGallery.stitches.length > 0) {
+            const stitch = stitchesToEditorState(artGallery.stitches);
+            const nBase = base.vertices.length;
+            const mergedVertices = [...base.vertices, ...stitch.vertices];
+            const mergedEdges: [number, number][] = [
+                ...base.edges,
+                ...stitch.edges.map(([a, b]) => [a + nBase, b + nBase] as [number, number]),
+            ];
+            return {
+                vertices: mergedVertices,
+                edges: mergedEdges,
+                stitchEdgeStartIndex: base.edges.length,
+            };
+        }
+        return {
+            ...base,
+            stitchEdgeStartIndex: base.edges.length,
+        };
+    }, [artGallery, mode]);
 
     const allEdges = useMemo(
         () =>
             edges
                 .filter(([a, b]) => a < vertices.length && b < vertices.length)
-                .map(([a, b], i) => ({ start: vertices[a], end: vertices[b], stitched: stitchedSet.has(i) })),
-        [vertices, edges, stitchedSet]
+                .map(([a, b], i) => ({
+                    start: vertices[a],
+                    end: vertices[b],
+                    isStitch: i >= stitchEdgeStartIndex,
+                })),
+        [vertices, edges, stitchEdgeStartIndex]
     );
 
     const fitTransform = useMemo(
@@ -198,6 +218,13 @@ const ViewerInner = ({
                 width: "100%",
             }}
         >
+            {interactive && (
+                <div style={{ flexShrink: 0, padding: "0 0 0.75rem 0" }}>
+                    <Container middle spaced name="geometry-viewer-toolbar">
+                        <ViewerToolbar mode={mode} onModeChange={setMode} alignRight={!isMobile} />
+                    </Container>
+                </div>
+            )}
             <div
                 ref={containerRef}
                 style={{ flex: 1, minHeight: 0, overflow: "hidden", width: "100%" }}
@@ -241,13 +268,13 @@ const ViewerInner = ({
                                 scaleX={layerScale}
                                 scaleY={layerScale}
                             >
-                                {allEdges.map(({ start, end, stitched }, i) => (
+                                {allEdges.map(({ start, end, isStitch }, i) => (
                                     <Edge
                                         key={`edge-${i}`}
                                         start={start}
                                         end={end}
                                         edgeIndex={i}
-                                        stitched={stitched}
+                                        muted={mode === ViewerMode.Stitching && isStitch}
                                         scale={scale * layerScale}
                                     />
                                 ))}

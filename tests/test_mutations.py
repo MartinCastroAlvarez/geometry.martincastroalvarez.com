@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 from attributes import Email
 from attributes import Identifier
-from exceptions import JobStdoutMissingGeometryError
+from exceptions import GalleryHasNoBoundaryError
 from exceptions import UnauthorizedError
 from exceptions import ValidationError
 from models import User
@@ -164,6 +164,8 @@ class TestJobUpdateMutation:
             "boundary": [[0, 0], [1, 0], [1, 1], [0, 1]],
             "obstacles": {},
             "guards": {},
+            "stitched": [[0, 0], [1, 0], [1, 1], [0, 1]],
+            "stitches": [],
         }
         job.created_at = "2024-01-01T12:00:00"
         job.updated_at = "2024-01-01T12:00:00"
@@ -204,6 +206,8 @@ class TestArtGalleryPublishMutation:
             "boundary": [[0, 0], [1, 0], [1, 1], [0, 1]],
             "obstacles": {},
             "guards": {},
+            "stitched": [[0, 0], [1, 0], [1, 1], [0, 1]],
+            "stitches": [],
         }
         job.meta = {"title": "My Gallery"}
         job.created_at = "2024-01-01T12:00:00"
@@ -246,5 +250,5 @@ class TestArtGalleryPublishMutation:
         job.updated_at = "2024-01-01T12:00:00"
         mock_job_repo.get.return_value = job
         handler = ArtGalleryPublishMutation(user=user)
-        with pytest.raises(JobStdoutMissingGeometryError, match="no boundary or obstacles"):
+        with pytest.raises(GalleryHasNoBoundaryError, match="no boundary"):
             handler.execute({"job_id": Identifier("j1")})

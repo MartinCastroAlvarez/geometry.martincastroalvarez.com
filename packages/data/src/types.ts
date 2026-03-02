@@ -55,6 +55,8 @@ export interface ApiArtGallery {
     visibility?: Record<string, ApiPoint[]>;
     /** Optional stitched polygon (list of points or { points } from API). */
     stitched?: ApiPolygon | Array<{ x: number; y: number } | [number, number]>;
+    /** Optional list of bridge edges from stitching step; each segment is [[x,y],[x,y]]. */
+    stitches?: Array<Array<{ x: number; y: number } | [number, number]>>;
     created_at: string;
     updated_at: string;
 }

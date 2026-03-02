@@ -110,7 +110,19 @@ export function artGalleryFromPolygonData(_jobId: string, data: Record<string, u
         }
         if (points.length >= 2) stitched = new Polygon(points);
     }
-    return new ArtGallery(boundary, obstacles, [], stitched, [], [], []);
+    const rawStitches = data.stitches;
+    const stitches: [Point, Point][] = Array.isArray(rawStitches)
+        ? rawStitches
+              .map((seg: unknown) => {
+                  if (!Array.isArray(seg) || seg.length < 2) return null;
+                  const p0 = parsePoint(seg[0]);
+                  const p1 = parsePoint(seg[1]);
+                  if (!p0 || !p1) return null;
+                  return [new Point(p0.x, p0.y), new Point(p1.x, p1.y)] as [Point, Point];
+              })
+              .filter((x): x is [Point, Point] => x != null)
+        : [];
+    return new ArtGallery(boundary, obstacles, [], stitched, stitches, [], [], []);
 }
 
 export const toDomainJob = (api: ApiJob): Job => {
@@ -144,6 +156,7 @@ export const toDomainArtGallery = (api: ApiArtGallery): Gallery => {
         ...(api.ears != null && { ears: api.ears as ArtGalleryDict['ears'] }),
         ...(api.convex_components != null && { convex_components: api.convex_components as ArtGalleryDict['convex_components'] }),
         ...(api.visibility != null && { visibility: Object.values(api.visibility) }),
+        ...(api.stitches != null && { stitches: api.stitches as ArtGalleryDict["stitches"] }),
     });
     return {
         id: api.id,
@@ -238,6 +251,7 @@ export const fromApiArtGallery = (raw: unknown): ApiArtGallery => {
         guards,
         visibility: (d.visibility as Record<string, { x: number; y: number }[]>) ?? {},
         stitched: stitchedRaw != null ? (stitchedRaw as ApiArtGallery["stitched"]) : undefined,
+        stitches: (d.stitches as ApiArtGallery["stitches"]) ?? undefined,
         created_at: String(d.created_at ?? ""),
         updated_at: String(d.updated_at ?? ""),
     };

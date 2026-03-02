@@ -35,6 +35,7 @@
     "failedToFetch": "Connection error",
     "serviceUnavailable": "Service temporarily unavailable",
     "publishFailed": "Failed to publish the gallery. Please try again.",
+    "publishNoStitches": "The polygon failed to connect the obstacles with the outer polygon.",
     "deleteFailed": "Failed to delete the job. Please try again."
   },
   "nav": {
@@ -89,7 +90,19 @@
     "clearConfirm": "This will remove all vertices and edges from the canvas. This action cannot be undone.",
     "addVertices": "Add {{count}} more vertex to close",
     "addVerticesPlural": "Add {{count}} more vertices to close",
-    "clickToClose": "Click near the first point (green) to close"
+    "clickToClose": "Click near the first point (green) to close",
+    "tooltipConnect": "Add vertices connected by edges",
+    "tooltipAdd": "Add vertices",
+    "tooltipErase": "Erase",
+    "tooltipClear": "Clear",
+    "tooltipZoomOut": "Zoom out",
+    "tooltipMove": "Move",
+    "tooltipZoomIn": "Zoom in",
+    "tooltipViewerDefault": "Polygon (boundary and obstacles)",
+    "tooltipViewerEarClipping": "Triangulation",
+    "tooltipViewerConvexComponent": "Convex components",
+    "tooltipViewerStitching": "Stitching",
+    "tooltipViewerVisibility": "Guard coverage"
   },
   "common": {
     "defaultConfirmMessage": "Are you sure?",

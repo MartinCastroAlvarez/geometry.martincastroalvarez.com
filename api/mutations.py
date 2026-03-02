@@ -35,8 +35,11 @@ from controllers import ControllerResponse
 from controllers import PrivateControllerMixin
 from enums import Action
 from exceptions import BoundaryRequiredError
+from exceptions import GalleryHasNoBoundaryError
+from exceptions import GalleryHasNoStitchedError
+from exceptions import GalleryHasNoStitchesError
+from exceptions import GalleryHasStitchesWithoutObstaclesError
 from exceptions import JobNotFinishedToPublishError
-from exceptions import JobStdoutMissingGeometryError
 from exceptions import MetaKeysMustBeStringsError
 from exceptions import MetaMustBeDictError
 from exceptions import MetaRequiredError
@@ -291,13 +294,6 @@ class ArtGalleryPublishMutation(PrivateControllerMixin, Mutation):
         job = JobsRepository(user=self.user).get(validated_input["job_id"])
         if not job.is_finished():
             raise JobNotFinishedToPublishError("Job must be successfully finished to publish")
-        stdout = job.stdout or {}
-        boundary_raw = stdout.get("boundary") or stdout.get("boundaries") or []
-        obstacles_raw = stdout.get("obstacles") or stdout.get("holes") or []
-        has_boundary = isinstance(boundary_raw, list) and len(boundary_raw) >= 3
-        has_obstacles = isinstance(obstacles_raw, (list, dict)) and len(obstacles_raw) > 0
-        if not has_boundary and not has_obstacles:
-            raise JobStdoutMissingGeometryError("Job stdout has no boundary or obstacles; cannot publish gallery")
 
         # Build the gallery from the job stdout.
         gallery: ArtGallery = ArtGallery.unserialize(
@@ -310,6 +306,18 @@ class ArtGalleryPublishMutation(PrivateControllerMixin, Mutation):
                 "updated_at": str(job.updated_at),
             }
         )
+
+        # Validate gallery shape after unserialize.
+        if not gallery.boundary or len(gallery.boundary) == 0:
+            raise GalleryHasNoBoundaryError("Gallery has no boundary; cannot publish")
+        if not gallery.stitched or len(gallery.stitched) == 0:
+            raise GalleryHasNoStitchedError("Gallery has no stitched polygon; cannot publish")
+        has_obstacles = len(gallery.obstacles) > 0
+        if has_obstacles:
+            if not gallery.stitches:
+                raise GalleryHasNoStitchesError("Gallery has no stitches; cannot publish")
+        elif gallery.stitches:
+            raise GalleryHasStitchesWithoutObstaclesError("Gallery has stitches but no obstacles; invalid state")
 
         # Save the gallery.
         ArtGalleryRepository().save(gallery)

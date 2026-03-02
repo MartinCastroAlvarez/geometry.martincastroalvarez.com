@@ -11,7 +11,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Stage, Layer } from "react-konva";
 import { ArtGallery, Polygon } from "@geometry/domain";
 import { useLocale } from "@geometry/i18n";
-import { Container } from "@geometry/ui";
+import { Container, useDevice } from "@geometry/ui";
 import { EditorTooltip } from "./EditorTooltip";
 import type { EditorVertex } from "./types";
 import { artGalleryToEditorState, editorVerticesToPolygon } from "./adapters";
@@ -78,8 +78,6 @@ export const Editor = ({
     const [selectedEdgeIndex, setSelectedEdgeIndex] = useState<number | null>(null);
     const [mode, setMode] = useState<EditorMode>(EditorMode.Connect);
     const [pan, setPan] = useState({ x: 0, y: 0 });
-    const [pointerOverEditor, setPointerOverEditor] = useState(false);
-    const [modifierKeyHeld, setModifierKeyHeld] = useState(false);
     const initialFitAppliedRef = useRef(false);
     const hadInitialContentRef = useRef(false);
     const containerMeasuredRef = useRef(false);
@@ -89,6 +87,7 @@ export const Editor = ({
     const containerRef = useRef<HTMLDivElement>(null);
     const stageWrapperRef = useRef<HTMLDivElement>(null);
     const { t } = useLocale();
+    const { isMobile } = useDevice();
 
     const [containerSize, setContainerSize] = useState({ width, height });
     useEffect(() => {
@@ -103,22 +102,6 @@ export const Editor = ({
         });
         ro.observe(el);
         return () => ro.disconnect();
-    }, []);
-
-    // Alt (Windows) or Command (Mac): temporary MOVE mode while key is held and pointer is over the editor.
-    useEffect(() => {
-        const onKeyDown = (e: KeyboardEvent) => {
-            if (e.key === "Alt" || e.key === "Meta") setModifierKeyHeld(true);
-        };
-        const onKeyUp = (e: KeyboardEvent) => {
-            if (e.key === "Alt" || e.key === "Meta") setModifierKeyHeld(false);
-        };
-        window.addEventListener("keydown", onKeyDown);
-        window.addEventListener("keyup", onKeyUp);
-        return () => {
-            window.removeEventListener("keydown", onKeyDown);
-            window.removeEventListener("keyup", onKeyUp);
-        };
     }, []);
 
     // Remember if we mounted with content (e.g. Edit from job) so we only fit in that case.
@@ -144,10 +127,8 @@ export const Editor = ({
         setScale(fitScale);
     }, [vertices.length, containerSize.width, containerSize.height]);
 
-    const effectiveMode =
-        modifierKeyHeld && pointerOverEditor ? EditorMode.Move : mode;
     const stageCursor =
-        effectiveMode === EditorMode.Move ? (isPanning ? "grabbing" : "grab") : effectiveMode === EditorMode.Erase ? "cell" : "crosshair";
+        mode === EditorMode.Move ? (isPanning ? "grabbing" : "grab") : mode === EditorMode.Erase ? "cell" : "crosshair";
     useEffect(() => {
         const id = requestAnimationFrame(() => {
             const canvas = stageWrapperRef.current?.querySelector("canvas");
@@ -262,7 +243,7 @@ export const Editor = ({
 
     const handleStageMouseDown = useCallback(
         (e: { target: { getStage: () => unknown }; evt?: MouseEvent }) => {
-            if (effectiveMode !== EditorMode.Move) return;
+            if (mode !== EditorMode.Move) return;
             const stage = e.target.getStage();
             if (!stage || e.target !== stage) return;
             const evt = e.evt;
@@ -276,7 +257,7 @@ export const Editor = ({
             };
             setIsPanning(true);
         },
-        [effectiveMode, pan.x, pan.y]
+        [mode, pan.x, pan.y]
     );
 
     useEffect(() => {
@@ -302,24 +283,16 @@ export const Editor = ({
         };
     }, [isPanning]);
 
-    // Release pan when modifier key is released so we don't get stuck in panning state.
-    useEffect(() => {
-        if (!modifierKeyHeld && isPanning) {
-            panStartRef.current = null;
-            setIsPanning(false);
-        }
-    }, [modifierKeyHeld, isPanning]);
-
     const handleStageClick = useCallback(
         (e: { target: { getStage: () => unknown } }) => {
-            if (effectiveMode === EditorMode.Erase || effectiveMode === EditorMode.Move) return;
+            if (mode === EditorMode.Erase || mode === EditorMode.Move) return;
             const stage = e.target.getStage();
             if (!stage || e.target !== stage) return;
             const pos = (stage as { getPointerPosition: () => { x: number; y: number } | null }).getPointerPosition?.();
             if (!pos) return;
-            addVertexAt({ x: pos.x - pan.x, y: pos.y - pan.y }, effectiveMode === EditorMode.Connect);
+            addVertexAt({ x: pos.x - pan.x, y: pos.y - pan.y }, mode === EditorMode.Connect);
         },
-        [addVertexAt, effectiveMode, pan.x, pan.y]
+        [addVertexAt, mode, pan.x, pan.y]
     );
 
     const removeVertexAt = useCallback((index: number) => {
@@ -348,11 +321,11 @@ export const Editor = ({
 
     const handleVertexClick = useCallback(
         (index: number) => {
-            if (effectiveMode === EditorMode.Erase) {
+            if (mode === EditorMode.Erase) {
                 removeVertexAt(index);
                 return;
             }
-            if (effectiveMode === EditorMode.Move) return;
+            if (mode === EditorMode.Move) return;
             setSelectedEdgeIndex(null);
             if (activeIndex === index) {
                 console.log("[Editor] action: vertexClick deselect", { index });
@@ -373,16 +346,16 @@ export const Editor = ({
             setActiveIndex(index);
             containerRef.current?.focus();
         },
-        [effectiveMode, activeIndex, edges, removeVertexAt]
+        [mode, activeIndex, edges, removeVertexAt]
     );
 
     const handleEdgeClick = useCallback(
         (edgeIndex: number, x: number, y: number) => {
-            if (effectiveMode === EditorMode.Erase) {
+            if (mode === EditorMode.Erase) {
                 removeEdgeAt(edgeIndex);
                 return;
             }
-            if (effectiveMode === EditorMode.Move) return;
+            if (mode === EditorMode.Move) return;
             if (selectedEdgeIndex === edgeIndex) {
                 const [a, b] = edges[edgeIndex];
                 const newIndex = vertices.length;
@@ -409,7 +382,7 @@ export const Editor = ({
             }
             containerRef.current?.focus();
         },
-        [effectiveMode, selectedEdgeIndex, edges, vertices.length, removeEdgeAt, pan.x, pan.y]
+        [mode, selectedEdgeIndex, edges, vertices.length, removeEdgeAt, pan.x, pan.y]
     );
 
     const handleVertexDrag = useCallback((index: number, x: number, y: number) => {
@@ -553,8 +526,6 @@ export const Editor = ({
                         )}
                         <div
                             ref={stageWrapperRef}
-                            onMouseEnter={() => setPointerOverEditor(true)}
-                            onMouseLeave={() => setPointerOverEditor(false)}
                             style={{
                                 position: "absolute",
                                 left: 0,
@@ -612,7 +583,7 @@ export const Editor = ({
             </div>
             {vertices.length > 0 && (
                 <div style={{ flexShrink: 0, padding: "0.75rem 0" }}>
-                    <Container middle spaced right name="geometry-editor-toolbar">
+                    <Container middle spaced left={!isMobile} center={isMobile} name="geometry-editor-toolbar">
                         <EditorToolbar
                             mode={mode}
                             onModeChange={setMode}
