@@ -578,6 +578,7 @@ class GuardPlacementStep(SequenceStep):
         if hash(guard) not in self.component_id_by_point:
             raise GuardNotInComponentIdByPointError("Guard not in component_id_by_point; invalid state (prepare() not run or guard not a vertex).")
 
+        # Record the components that are already visible due to being a vertex of the guard's component.
         explored: set[Identifier] = set(self.component_id_by_point[guard].items)
         explorable: set[Identifier] = {
             adj_id for component_id in explored for adj_id in self.gallery.adjacency[self.gallery.convex_components[component_id]].items
