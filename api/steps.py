@@ -420,9 +420,40 @@ class EarClippingStep(SequenceStep):
     Complexity: O(n^3), n = number of vertices of the stitched polygon.
     """
 
+    @staticmethod
+    def _has_repeated_positions(points: Polygon) -> bool:
+        seen: set[tuple[Decimal, Decimal]] = set()
+        for i in range(len(points)):
+            key = (points[i].x, points[i].y)
+            if key in seen:
+                return True
+            seen.add(key)
+        return False
+
+    @staticmethod
+    def _diagonal_inside_allowing_vertex_touch(polygon: Polygon, diagonal: Segment) -> bool:
+        """True if diagonal is inside polygon, allowing touch at polygon vertices (for repeated-vertex polygons)."""
+        if not polygon.box.contains(diagonal, inclusive=True):
+            return False
+        if not polygon.contains(diagonal[0], inclusive=True) or not polygon.contains(diagonal[1], inclusive=True):
+            return False
+        if not polygon.contains(diagonal.midpoint, inclusive=True):
+            return False
+        for edge in polygon.edges:
+            if edge.connects(diagonal):
+                continue
+            if not edge.intersects(diagonal, inclusive=True):
+                continue
+            if diagonal.contains(edge[0], inclusive=True) or diagonal.contains(edge[1], inclusive=True):
+                continue
+            return False
+        return True
+
     def run(self, **kwargs: Any) -> dict[str, Any]:
         gallery: ArtGallery = ArtGallery.unserialize(self.job.stdout)
         points: Polygon = gallery.stitched
+        if not points.is_ccw():
+            points = Polygon(list(reversed(points)))
         table: Table[Ear] = Table()
         logger.info("EarClippingStep.run() | job.id=%s vertices=%s", self.job.id, len(points))
 
@@ -441,10 +472,26 @@ class EarClippingStep(SequenceStep):
                 if not walk.is_ccw():
                     continue
                 diagonal: Segment = left.to(right)
-                if not titanic.contains(diagonal, inclusive=True):
+                diagonal_ok: bool = titanic.contains(diagonal, inclusive=True)
+                if not diagonal_ok and self._has_repeated_positions(points):
+                    diagonal_ok = self._diagonal_inside_allowing_vertex_touch(titanic, diagonal)
+                if not diagonal_ok:
                     continue
                 triangle: Polygon = Polygon([left, center, right])
-                if any(triangle.contains(points[k], inclusive=False) for k in range(n) if k not in ((j - 1) % n, j, (j + 1) % n)):
+                triangle_positions: set[tuple[Decimal, Decimal]] = {(left.x, left.y), (center.x, center.y), (right.x, right.y)}
+
+                def on_ear_edge(p: Point) -> bool:
+                    return (
+                        left.to(center).contains(p, inclusive=True)
+                        or center.to(right).contains(p, inclusive=True)
+                        or right.to(left).contains(p, inclusive=True)
+                    )
+
+                if any(
+                    triangle.contains(points[k], inclusive=False)
+                    for k in range(n)
+                    if k not in ((j - 1) % n, j, (j + 1) % n) and (points[k].x, points[k].y) not in triangle_positions and not on_ear_edge(points[k])
+                ):
                     continue
                 found = j
                 table += Ear([left, center, right])
@@ -462,6 +509,8 @@ class EarClippingStep(SequenceStep):
             # Remove ear tip from polygon by index (position), not by point value;
             # the same point may appear at other indices and must be kept.
             points = Polygon([points[i] for i in range(n) if i != found])
+            if not points.is_ccw():
+                points = Polygon(list(reversed(points)))
 
         # Add final triangle as last ear (ccw or reversed if cw).
         if len(points) == 3:

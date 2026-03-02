@@ -212,13 +212,21 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[Serialized
                 return False
             if not self.contains(obj[1], inclusive=inclusive):
                 return False
-            if not self.contains(obj.midpoint, inclusive=inclusive):
-                return False
             for edge in self.edges:
                 if edge.connects(obj):
                     continue
-                if edge.intersects(obj, inclusive=True):
-                    return False
+                if not edge.intersects(obj, inclusive=True):
+                    continue
+                if obj.contains(edge[0], inclusive=True) or obj.contains(edge[1], inclusive=True):
+                    continue
+                return False
+            endpoints_on_boundary: bool = inclusive and (
+                any(e.contains(obj[0], inclusive=True) for e in self.edges) and any(e.contains(obj[1], inclusive=True) for e in self.edges)
+            )
+            if endpoints_on_boundary:
+                return True
+            if not self.contains(obj.midpoint, inclusive=inclusive):
+                return False
             return True
 
         if isinstance(obj, Polygon):
@@ -232,9 +240,9 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[Serialized
         Context
         -------
         Uses horizontal ray casting to the right; odd number of edge crossings
-        means inside, even means outside. Degenerate (y on edge) handled by
-        consistent ordering. Only used when point is inside the bounding box
-        and not on any edge.
+        means inside, even means outside. Uses half-open y-interval [a.y, b.y)
+        per edge so a point on a vertex is counted once (matches lab polygon.contains).
+        Only used when point is inside the bounding box and not on any edge.
 
         Example
         -------
@@ -253,7 +261,7 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[Serialized
             b: Point = self[i + 1]
             if a.y > b.y:
                 a, b = b, a
-            if point.y < a.y or point.y > b.y:
+            if point.y < a.y or point.y >= b.y:
                 continue
             if a.y == b.y:
                 continue

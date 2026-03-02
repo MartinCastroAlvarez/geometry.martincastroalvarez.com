@@ -8,10 +8,11 @@
  * In all modes, a Vertex is shown for each guard.
  */
 
+import type { ReactNode } from "react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Stage, Layer } from "react-konva";
 import type { ArtGallery } from "@geometry/domain";
-import { Container, useDevice } from "@geometry/ui";
+import { Container, Tooltip, useDevice } from "@geometry/ui";
 import {
     artGalleryToEditorState,
     boundaryObstacleEdgeKeys,
@@ -132,6 +133,11 @@ const ViewerInner = ({
     }, []);
 
     const [mode, setMode] = useState<ViewerMode>(ViewerMode.Default);
+    const [vertexTooltip, setVertexTooltip] = useState<{
+        content: ReactNode;
+        x: number;
+        y: number;
+    } | null>(null);
     const { isMobile } = useDevice();
 
     const { vertices, edges, edgeMuted, guardVertices } = useMemo(() => {
@@ -338,11 +344,30 @@ const ViewerInner = ({
                                             draggable={false}
                                             scale={scale * layerScale}
                                             size="lg"
+                                            tooltip={`(${vertex.x}, ${vertex.y})`}
+                                            onTooltipShow={(content, x, y) => setVertexTooltip({ content, x, y })}
+                                            onTooltipHide={() => setVertexTooltip(null)}
                                         />
                                     ))}
                             </Layer>
                         </Stage>
                     </div>
+                    {vertexTooltip && (
+                        <Tooltip title={vertexTooltip.content}>
+                            <div
+                                role="presentation"
+                                aria-hidden
+                                style={{
+                                    position: "fixed",
+                                    left: vertexTooltip.x,
+                                    top: vertexTooltip.y,
+                                    width: 2,
+                                    height: 2,
+                                    zIndex: 10,
+                                }}
+                            />
+                        </Tooltip>
+                    )}
                 </div>
             </div>
         </div>

@@ -2,15 +2,15 @@
  * Home page (landing): list of published art galleries in a Pinterest-style masonry.
  *
  * Context: Fetches galleries via useArtGalleries from @geometry/data. Displays each as a Pin:
- * Viewer (non-interactive) + Title only; clicking navigates to /:id. Pinterest random=true
- * assigns each Pin a size (Pinterest handles padded/spaced; no Container wrapper needed).
+ * Viewer (non-interactive) + title row (title truncated + 4 stats); clicking navigates to /:id.
  */
 import { useNavigate } from "react-router-dom";
 import type { Gallery } from "@geometry/domain";
-import { Page, Container, Title, Text, Pinterest, Pin } from "@geometry/ui";
+import { Page, Container, Title, Text, Pinterest, Pin, useDevice } from "@geometry/ui";
 import { Viewer } from "@geometry/editor";
 import { useArtGalleries, useSession } from "@geometry/data";
 import { useLocale } from "@geometry/i18n";
+import { CircleDotDashed, UserStar } from "lucide-react";
 import { HomePageSkeleton } from "../skeletons";
 
 const DEFAULT_CELL_HEIGHT = 240;
@@ -23,10 +23,13 @@ interface CellProps {
 const Cell = ({ gallery, height = DEFAULT_CELL_HEIGHT }: CellProps) => {
     const navigate = useNavigate();
     const { t } = useLocale();
+    const { isMobile } = useDevice();
     const title =
         typeof gallery.title === "string" && gallery.title.trim()
             ? String(gallery.title)
             : t("editor.untitledGallery");
+    const stitchedPointsCount = gallery.artGallery.stitched?.points?.length ?? 0;
+    const guardsCount = gallery.artGallery.guards.length;
 
     return (
         <div
@@ -39,7 +42,25 @@ const Cell = ({ gallery, height = DEFAULT_CELL_HEIGHT }: CellProps) => {
         >
             <Viewer artGallery={gallery.artGallery} size={height} />
             <div className="pt-2">
-                <Title left truncate>{title}</Title>
+                <Container spaced>
+                    <Container size={isMobile ? 12 : 6} left>
+                        <Title left truncate>{title}</Title>
+                    </Container>
+                    <Container size={isMobile ? 12 : 6} left center>
+                        <Container size={6} left center>
+                            <div className="flex items-center gap-1.5">
+                                <CircleDotDashed size={16} className="shrink-0 text-slate-600 dark:text-slate-400" aria-hidden />
+                                <Title sm left>{stitchedPointsCount}</Title>
+                            </div>
+                        </Container>
+                        <Container size={6} left center>
+                            <div className="flex items-center gap-1.5">
+                                <UserStar size={20} className="shrink-0 text-slate-600 dark:text-slate-400" aria-hidden />
+                                <Title sm left>{guardsCount}</Title>
+                            </div>
+                        </Container>
+                    </Container>
+                </Container>
             </div>
         </div>
     );

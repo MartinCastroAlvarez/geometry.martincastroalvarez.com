@@ -1,6 +1,6 @@
 """
 Test that api/steps.py runs the full pipeline for lab/example10.py gallery (serrated polygon built in loop, no holes).
-Expects 4 guards for sufficient coverage.
+Expects 12 guards for sufficient coverage.
 """
 
 from attributes import Email
@@ -35,7 +35,7 @@ def _example10_polygon():
 EXAMPLE10_STDIN = {"boundary": _example10_polygon(), "obstacles": []}
 
 
-def test_example10_full_pipeline_requires_four_guards():
+def test_example10_full_pipeline_requires_twelve_guards():
     stdout = {}
     job_validate = Job(id=Identifier("ex10-v"), step_name=StepName.VALIDATE_POLYGONS, stdin=dict(EXAMPLE10_STDIN))
     stdout.update(ValidationPolygonStep(job=job_validate, user=_user()).run())
@@ -47,5 +47,5 @@ def test_example10_full_pipeline_requires_four_guards():
     stdout.update(ConvexComponentOptimizationStep(job=job_convex, user=_user()).run())
     job_guard = Job(id=Identifier("ex10-g"), step_name=StepName.GUARD_PLACEMENT, stdin=dict(EXAMPLE10_STDIN), stdout=dict(stdout))
     guard_out = GuardPlacementStep(job=job_guard, user=_user()).run()
-    assert len(guard_out["guards"]) == 4, f"Example10 expects 4 guards; got {len(guard_out['guards'])}"
+    assert len(guard_out["guards"]) == 12, f"Example10 expects 12 guards; got {len(guard_out['guards'])}"
     assert len(guard_out["visibility"]) == len(guard_out["guards"])

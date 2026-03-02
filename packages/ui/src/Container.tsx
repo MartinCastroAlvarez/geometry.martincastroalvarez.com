@@ -33,6 +33,8 @@ export interface ContainerProps {
     right?: boolean;
     middle?: boolean;
     bottom?: boolean;
+    /** When true, applies animate-pulse for a subtle loading/processing indicator. */
+    pulse?: boolean;
     children?: React.ReactNode;
     onMouseEnter?: React.MouseEventHandler<HTMLDivElement>;
     onMouseLeave?: React.MouseEventHandler<HTMLDivElement>;
@@ -77,6 +79,7 @@ export const Container = forwardRef<HTMLDivElement, ContainerProps>(({
     right = false,
     middle = false,
     bottom = false,
+    pulse = false,
     children,
     onMouseEnter, onMouseLeave, onMouseMove, onMouseDown, onMouseUp,
     onClick, onDoubleClick, onContextMenu,
@@ -117,6 +120,7 @@ export const Container = forwardRef<HTMLDivElement, ContainerProps>(({
     if (spaced) classes.push("gap-2");
     if (rounded) classes.push("rounded-xl");
     if (solid) classes.push("bg-slate-900", "text-slate-100");
+    if (pulse) classes.push("animate-pulse");
     if (left) classes.push("text-left");
     else if (right) classes.push("text-right");
     else if (center) classes.push("text-center");

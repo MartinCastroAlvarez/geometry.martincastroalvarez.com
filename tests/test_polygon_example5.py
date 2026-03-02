@@ -1,6 +1,6 @@
 """
 Test that api/steps.py runs the full pipeline for lab/example5.py gallery (20 vertices, 3 valid holes).
-Expects 4 guards for sufficient coverage.
+Expects 5 guards for sufficient coverage.
 """
 
 from attributes import Email
@@ -50,7 +50,7 @@ EXAMPLE5_STDIN = {
 }
 
 
-def test_example5_full_pipeline_requires_four_guards():
+def test_example5_full_pipeline_requires_five_guards():
     stdout = {}
     job_validate = Job(id=Identifier("ex5-v"), step_name=StepName.VALIDATE_POLYGONS, stdin=dict(EXAMPLE5_STDIN))
     stdout.update(ValidationPolygonStep(job=job_validate, user=_user()).run())
@@ -62,5 +62,5 @@ def test_example5_full_pipeline_requires_four_guards():
     stdout.update(ConvexComponentOptimizationStep(job=job_convex, user=_user()).run())
     job_guard = Job(id=Identifier("ex5-g"), step_name=StepName.GUARD_PLACEMENT, stdin=dict(EXAMPLE5_STDIN), stdout=dict(stdout))
     guard_out = GuardPlacementStep(job=job_guard, user=_user()).run()
-    assert len(guard_out["guards"]) == 4, f"Example5 expects 4 guards; got {len(guard_out['guards'])}"
+    assert len(guard_out["guards"]) == 5, f"Example5 expects 5 guards; got {len(guard_out['guards'])}"
     assert len(guard_out["visibility"]) == len(guard_out["guards"])

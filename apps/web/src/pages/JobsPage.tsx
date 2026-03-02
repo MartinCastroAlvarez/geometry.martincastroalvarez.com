@@ -19,7 +19,7 @@ import { Page, Container, Title, Badge, useDevice } from "@geometry/ui";
 import { Viewer } from "@geometry/editor";
 import { useJobs, useSession } from "@geometry/data";
 import { useLocale } from "@geometry/i18n";
-import { Clock, TriangleAlert } from "lucide-react";
+import { Clock, TriangleAlert, CircleDotDashed, UserStar } from "lucide-react";
 import { JobsPageSkeleton } from "../skeletons";
 import { getDisplayStatus } from "../utils/jobStatus";
 
@@ -32,33 +32,52 @@ interface CellProps {
 const Cell = ({ job }: CellProps) => {
     const navigate = useNavigate();
     const { t } = useLocale();
+    const { isMobile } = useDevice();
     const title =
         typeof job.meta?.title === "string" && job.meta.title.trim()
             ? String(job.meta.title)
             : t("editor.untitledGallery");
     const displayStatus = getDisplayStatus(job);
+    const isSuccess = displayStatus === Status.SUCCESS && job.artGallery != null;
+    const stitchedPointsCount = job.artGallery?.stitched?.points?.length ?? 0;
+    const guardsCount = job.artGallery?.guards?.length ?? 0;
 
     return (
-        <Container padded spaced rounded left onClick={() => navigate(`/jobs/${job.id}`)}>
+        <Container padded spaced rounded left pulse={displayStatus === Status.PENDING} onClick={() => navigate(`/jobs/${job.id}`)}>
             <Container size={12}>
                 <Viewer artGallery={job.artGallery ?? undefined} size={VIEWER_HEIGHT} vertices />
             </Container>
-            <Container size={8} left>
+            <Container size={isMobile ? 12 : 6} left>
                 <Title left truncate>{title}</Title>
             </Container>
-            {displayStatus !== Status.SUCCESS && (
-                <Container size={4} right>
-                    <Badge danger={displayStatus === Status.FAILED}>
-                        {displayStatus === Status.FAILED ? (
-                            <TriangleAlert size={16} aria-label={t(`jobs.status.${displayStatus}`)} />
-                        ) : displayStatus === Status.PENDING ? (
-                            <Clock size={16} aria-label={t(`jobs.status.${displayStatus}`)} />
-                        ) : (
-                            t(`jobs.status.${displayStatus}`)
-                        )}
-                    </Badge>
+            <Container size={isMobile ? 12 : 6} right={!isMobile} center={isMobile}>
+                <Container size={12} left center>
+                    <Container size={6} left center>
+                        <div className="flex items-center gap-1.5">
+                            <CircleDotDashed size={16} className="shrink-0 text-slate-600 dark:text-slate-400" aria-hidden />
+                            <Title sm left>{stitchedPointsCount}</Title>
+                        </div>
+                    </Container>
+                    <Container size={6} left center>
+                        <div className="flex items-center gap-1.5">
+                            <UserStar size={20} className="shrink-0 text-slate-600 dark:text-slate-400" aria-hidden />
+                            {isSuccess ? (
+                                <Title sm left>{guardsCount}</Title>
+                            ) : (
+                                <Badge danger={displayStatus === Status.FAILED}>
+                                    {displayStatus === Status.FAILED ? (
+                                        <TriangleAlert size={16} aria-label={t(`jobs.status.${displayStatus}`)} />
+                                    ) : displayStatus === Status.PENDING ? (
+                                        <Clock size={16} aria-label={t(`jobs.status.${displayStatus}`)} />
+                                    ) : (
+                                        t(`jobs.status.${displayStatus}`)
+                                    )}
+                                </Badge>
+                            )}
+                        </div>
+                    </Container>
                 </Container>
-            )}
+            </Container>
         </Container>
     );
 };

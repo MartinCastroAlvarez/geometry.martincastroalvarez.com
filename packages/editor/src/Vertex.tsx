@@ -3,9 +3,12 @@
  *
  * Context: Konva Circle; fill from useTheme().getColor (theme.css). No stroke.
  * dragBoundFunc clamps position to dragBounds [0,0]–[width,height] when provided.
+ * When tooltip is passed, reports hover position via onTooltipShow/onTooltipHide so the
+ * parent can render a Tooltip outside the Konva tree (canvas cannot host DOM tooltips).
  *
  * Example:
  *   <Vertex vertex={v} index={i} onDragMove={handleVertexDrag} onClick={handleVertexClick} />
+ *   <Vertex vertex={v} index={i} tooltip={`(${v.x}, ${v.y})`} onTooltipShow={...} onTooltipHide={...} />
  */
 
 import { memo, useState } from "react";
@@ -30,6 +33,12 @@ export interface VertexProps {
     scale?: number;
     /** When "lg" or "xl", vertex is drawn larger (lg is slightly smaller than xl). */
     size?: "lg" | "xl";
+    /** Optional tooltip content; when set, parent should pass onTooltipShow/onTooltipHide and render Tooltip outside Konva. */
+    tooltip?: React.ReactNode;
+    /** Called when pointer enters and tooltip is set; parent should show tooltip at (clientX, clientY). */
+    onTooltipShow?: (content: React.ReactNode, clientX: number, clientY: number) => void;
+    /** Called when pointer leaves; parent should hide tooltip. */
+    onTooltipHide?: () => void;
 }
 
 const VertexComponent = ({
@@ -45,6 +54,9 @@ const VertexComponent = ({
     contentBounds,
     scale = 1,
     size,
+    tooltip,
+    onTooltipShow,
+    onTooltipHide,
 }: VertexProps) => {
     const { getColor } = useTheme();
     const [isHovered, setIsHovered] = useState(false);
@@ -71,6 +83,22 @@ const VertexComponent = ({
               }
             : undefined;
 
+    const handleMouseEnter = (e: { evt: MouseEvent }) => {
+        setIsHovered(true);
+        if (tooltip != null && onTooltipShow && e.evt) {
+            onTooltipShow(tooltip, e.evt.clientX, e.evt.clientY);
+        }
+    };
+    const handleMouseMove = (e: { evt: MouseEvent }) => {
+        if (tooltip != null && onTooltipShow && e.evt) {
+            onTooltipShow(tooltip, e.evt.clientX, e.evt.clientY);
+        }
+    };
+    const handleMouseLeave = () => {
+        setIsHovered(false);
+        if (tooltip != null && onTooltipHide) onTooltipHide();
+    };
+
     return (
         <Circle
             x={vertex.x}
@@ -91,8 +119,9 @@ const VertexComponent = ({
             onDragEnd={onDragEnd ? () => onDragEnd(index) : undefined}
             onClick={onClick ? () => onClick(index) : undefined}
             onTap={onClick ? () => onClick(index) : undefined}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            onMouseMove={tooltip != null && onTooltipShow ? handleMouseMove : undefined}
             shadowBlur={isHovered || isActive ? 10 : 0}
             shadowColor="rgba(0,0,0,0.4)"
             shadowOpacity={0.5}

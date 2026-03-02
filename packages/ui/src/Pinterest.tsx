@@ -19,8 +19,13 @@
 import * as React from "react";
 import { useDevice } from "./useDevice";
 
+/** Units used when filling to a multiple of 12 (includes 4 for complement). */
 const RANDOM_UNITS = [4, 6, 8, 12] as const;
+/** Minimum height: when picking a new column height, use only these (8 = 200px min). */
+const RANDOM_UNITS_PICK = [8, 12] as const;
 const SIZE_SCALE = 25;
+/** No pin is shown shorter than this (avoids tiny cards e.g. Batman, Snake). */
+const MIN_PIN_HEIGHT_PX = 280;
 
 function computeRandomSizes(count: number, isMobile: boolean): number[] {
     if (isMobile) {
@@ -32,13 +37,13 @@ function computeRandomSizes(count: number, isMobile: boolean): number[] {
     for (let i = 0; i < count; i++) {
         let unit: number;
         if (sum === 0 || sum % 12 === 0) {
-            unit = RANDOM_UNITS[Math.floor(Math.random() * RANDOM_UNITS.length)];
+            unit = RANDOM_UNITS_PICK[Math.floor(Math.random() * RANDOM_UNITS_PICK.length)];
         } else {
             const complement = 12 - (sum % 12);
             unit = complement === 3 ? 4 : complement === 9 ? 12 : complement;
         }
         sum += unit;
-        sizes.push(unit * SIZE_SCALE);
+        sizes.push(Math.max(unit * SIZE_SCALE, MIN_PIN_HEIGHT_PX));
     }
     return sizes;
 }
