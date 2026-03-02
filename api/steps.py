@@ -38,6 +38,9 @@ from enums import StepName
 from exceptions import BridgeFailureError
 from exceptions import EarClippingFailureError
 from exceptions import GuardCoverageFailureError
+from exceptions import JobStdoutMissingConvexComponentsError
+from exceptions import JobStdoutMissingEarsError
+from exceptions import JobStdoutMissingStitchedError
 from exceptions import PolygonNotSimpleError
 from exceptions import PolygonsDoNotShareEdgeError
 from exceptions import StepNotHandledError
@@ -50,11 +53,13 @@ from geometry import Polygon
 from geometry.convex import ConvexComponent
 from geometry.ear import Ear
 from geometry.segment import Segment
+from geometry.visibility import Visibility
 from geometry.walk import Walk
 from models import Job
 from models import User
 from repositories import JobsRepository
 from settings import STITCH_BUCKET_SIZE
+from structs import Table
 
 logger = logging.getLogger(__name__)
 
@@ -336,6 +341,7 @@ class StitchingStep(SequenceStep):
             bridge: Segment | None = None
             anchor: Point | None = None
 
+            # Find shortest valid bridge from polygon to obstacle anchor (bucket of candidates).
             for anchor in anchors:
                 bridge = None
                 bucket: list[Segment] = []
@@ -357,7 +363,7 @@ class StitchingStep(SequenceStep):
                     if any(edge.intersects(segment) for edge in edges if not edge.connects(segment)):
                         continue
                     bucket.append(segment)
-                    bucket.sort(key=lambda s: s.size)
+                    bucket.sort(key=lambda segment: segment.size)
                     bucket = bucket[:STITCH_BUCKET_SIZE]
                     if len(bucket) >= STITCH_BUCKET_SIZE:
                         bridge = bucket[0]
@@ -391,495 +397,221 @@ class StitchingStep(SequenceStep):
 
         points.sort("ccw")
         self.points = points
-        return {"stitched": self.points.serialize(), "stitches": [s.serialize() for s in stitches]}
+        return {"stitched": self.points.serialize(), "stitches": [stitch.serialize() for stitch in stitches]}
 
 
 class EarClippingStep(SequenceStep):
     """
-    Ear clipping step. Idempotent: given the same job and inputs, running
-    multiple times produces the same outcome. Recomputes stitched polygon from
-    boundary and obstacles, then runs ear clipping (same logic as lab ArtGallery.ears).
-    Returns ears as list of serialized Ear (each Ear is 3 points).
+    Ear clipping step. Reads stitched polygon from job.stdout (from stitching step).
+    Runs ear clipping only; returns ears as Table.serialize().
+    Raises JobStdoutMissingStitchedError if stitched is missing.
     """
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
-        # Parse boundary and obstacles from job stdin.
-        boundary: Polygon = Polygon.unserialize(self.job.stdin.get("boundary"))
-        obstacles: list[Polygon] = [Polygon.unserialize(obstacle) for obstacle in (self.job.stdin.get("obstacles") or [])]
-        points: Polygon
-        if not obstacles:
-            points = boundary
-        else:
-            # Sort obstacles by rightmost vertex (desc) and stitch each to the current polygon.
-            obstacles = sorted(obstacles, key=lambda obstacle: (obstacle.rightmost.x, obstacle.rightmost.y), reverse=True)
-            points = Polygon(list(boundary))
-            edges: list[Segment] = list(points.edges)
-            for obstacle in obstacles:
-                obstacle.sort("cw")
-                anchors: list[Point] = sorted(list(obstacle), key=lambda point: (point.x, point.y), reverse=True)
-                bridge: Segment | None = None
-                anchor: Point | None = None
-                # Find shortest valid bridge from polygon to obstacle anchor (bucket of candidates).
-                for anchor in anchors:
-                    bridge = None
-                    bucket: list[Segment] = []
-                    for candidate in points << points.rightmost:
-                        if candidate == anchor:
-                            continue
-                        segment: Segment = candidate.to(anchor)
-                        if not boundary.contains(segment, inclusive=True):
-                            continue
-                        if any(other.intersects(segment, inclusive=False) for other in obstacles):
-                            continue
-                        if any(
-                            Walk(start=edge[0], center=edge[1], end=segment[0]).is_collinear()
-                            and Walk(start=edge[0], center=edge[1], end=segment[1]).is_collinear()
-                            for edge in boundary.edges
-                            if not edge.connects(segment)
-                        ):
-                            continue
-                        if any(edge.intersects(segment) for edge in edges if not edge.connects(segment)):
-                            continue
-                        bucket.append(segment)
-                        bucket.sort(key=lambda s: s.size)
-                        bucket = bucket[:STITCH_BUCKET_SIZE]
-                        if len(bucket) >= STITCH_BUCKET_SIZE:
-                            bridge = bucket[0]
-                            break
-                        if bridge is None or segment.size < bridge.size:
-                            bridge = segment
-                    if bridge is not None:
-                        break
-                if bridge is None or anchor is None:
-                    raise BridgeFailureError(f"No valid bridge found for obstacle: {obstacle}")
-                # Reject if bridge is a contiguous subsequence of polygon or obstacle (cannot stitch).
-                vertex: Point = bridge[0]
-                if bridge in points:
-                    raise StitchWinnerSubsequenceError("Winner is a subsequence of boundary points; cannot stitch")
-                if bridge in obstacle:
-                    raise StitchWinnerSubsequenceError("Winner is a subsequence of obstacle; cannot stitch")
-                # Rotate polygon so vertex is last, obstacle so anchor is first; require CCW/CW; merge and update.
-                left: Polygon = Polygon(list(points >> vertex))
-                right: Polygon = Polygon(list(obstacle << anchor))
-                if not left.is_ccw():
-                    raise StitchWinnerSubsequenceError("Left is not CCW; cannot stitch")
-                if not right.is_cw():
-                    raise StitchWinnerSubsequenceError("Right is not CW; cannot stitch")
-                merged: list[Point] = list(left) + list(right) + [anchor, vertex]
-                points = Polygon(merged)
-                edges = list(points.edges)
-            points.sort("ccw")
+        stitched_raw = self.job.stdout.get("stitched") or self.job.stdout.get("stiteched")
+        if not stitched_raw:
+            raise JobStdoutMissingStitchedError("Ear clipping requires stitched polygon in job.stdout (run stitching step first).")
+        points: Polygon = Polygon.unserialize(stitched_raw)
+        table: Table[Ear] = Table()
+
         # Ear clipping: while polygon has more than 3 vertices, find and clip an ear.
-        ears: list[Ear] = []
         while len(points) > 3:
             titanic: Polygon = Polygon(list(points))
             n: int = len(points)
             found: int | None = None
-            # Find first valid ear: convex turn, diagonal inside polygon, no other vertex inside triangle.
             for j in range(n):
-                left_pt: Point = points[j - 1]
-                center_pt: Point = points[j]
-                right_pt: Point = points[(j + 1) % n]
-                walk: Walk = Walk(start=left_pt, center=center_pt, end=right_pt)
+                left: Point = points[j - 1]
+                center: Point = points[j]
+                right: Point = points[j + 1]
+                walk: Walk = Walk(start=left, center=center, end=right)
                 if walk.is_collinear():
                     continue
                 if not walk.is_ccw():
                     continue
-                diagonal: Segment = left_pt.to(right_pt)
+                diagonal: Segment = left.to(right)
                 if not titanic.contains(diagonal, inclusive=True):
                     continue
-                tri: Polygon = Polygon([left_pt, center_pt, right_pt])
-                if any(tri.contains(points[k], inclusive=False) for k in range(n) if k not in ((j - 1) % n, j, (j + 1) % n)):
+                triangle: Polygon = Polygon([left, center, right])
+                if any(triangle.contains(points[k], inclusive=False) for k in range(n) if k not in ((j - 1) % n, j, (j + 1) % n)):
                     continue
                 found = j
-                ears.append(Ear([left_pt, center_pt, right_pt]))
+                table += Ear([left, center, right])
                 break
             if found is None:
                 raise EarClippingFailureError(f"No ear found for: {points}")
+
             # Remove ear tip from polygon and continue.
             points = Polygon([points[i] for i in range(n) if i != found])
+
         # Add final triangle as last ear (ccw or reversed if cw).
         if len(points) == 3:
             path: Walk = Walk(start=points[0], center=points[1], end=points[2])
             if path.is_collinear():
                 pass
             elif path.is_ccw():
-                ears.append(Ear([points[0], points[1], points[2]]))
+                table += Ear([points[0], points[1], points[2]])
             else:
-                ears.append(Ear([points[2], points[1], points[0]]))
-        return {"ears": [ear.serialize() for ear in ears]}
+                table += Ear([points[2], points[1], points[0]])
+
+        return {"ears": table.serialize()}
 
 
 class ConvexComponentOptimizationStep(SequenceStep):
     """
-    Convex component optimization step. Idempotent: given the same job and
-    inputs, running multiple times produces the same outcome. Recomputes
-    stitch and ear clipping, then merges adjacent convex components (same
-    logic as lab ArtGallery.convex_components). Returns convex_components
-    as list of serialized ConvexComponent.
+    Convex component optimization step. Reads ears from job.stdout (from ear clipping step).
+    Merges adjacent convex components; returns convex_components as Table.serialize().
+    Raises JobStdoutMissingEarsError if ears are missing.
     """
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
-        # Parse boundary and obstacles from job stdin.
-        boundary: Polygon = Polygon.unserialize(self.job.stdin.get("boundary"))
-        obstacles: list[Polygon] = [Polygon.unserialize(obstacle) for obstacle in (self.job.stdin.get("obstacles") or [])]
-        points: Polygon
-        if not obstacles:
-            points = boundary
-        else:
-            # Sort obstacles by rightmost vertex (desc) and stitch each to the current polygon.
-            obstacles = sorted(obstacles, key=lambda obstacle: (obstacle.rightmost.x, obstacle.rightmost.y), reverse=True)
-            points = Polygon(list(boundary))
-            edges: list[Segment] = list(points.edges)
-            for obstacle in obstacles:
-                obstacle.sort("cw")
-                anchors: list[Point] = sorted(list(obstacle), key=lambda point: (point.x, point.y), reverse=True)
-                bridge: Segment | None = None
-                anchor: Point | None = None
-                # Find shortest valid bridge from polygon to obstacle anchor (bucket of candidates).
-                for anchor in anchors:
-                    bridge = None
-                    bucket: list[Segment] = []
-                    for candidate in points << points.rightmost:
-                        if candidate == anchor:
-                            continue
-                        segment: Segment = candidate.to(anchor)
-                        if not boundary.contains(segment, inclusive=True):
-                            continue
-                        if any(other.intersects(segment, inclusive=False) for other in obstacles):
-                            continue
-                        if any(
-                            Walk(start=edge[0], center=edge[1], end=segment[0]).is_collinear()
-                            and Walk(start=edge[0], center=edge[1], end=segment[1]).is_collinear()
-                            for edge in boundary.edges
-                            if not edge.connects(segment)
-                        ):
-                            continue
-                        if any(edge.intersects(segment) for edge in edges if not edge.connects(segment)):
-                            continue
-                        bucket.append(segment)
-                        bucket.sort(key=lambda s: s.size)
-                        bucket = bucket[:STITCH_BUCKET_SIZE]
-                        if len(bucket) >= STITCH_BUCKET_SIZE:
-                            bridge = bucket[0]
-                            break
-                        if bridge is None or segment.size < bridge.size:
-                            bridge = segment
-                    if bridge is not None:
-                        break
-                if bridge is None or anchor is None:
-                    raise BridgeFailureError(f"No valid bridge found for obstacle: {obstacle}")
-                # Reject if bridge is a contiguous subsequence of polygon or obstacle (cannot stitch).
-                vertex: Point = bridge[0]
-                if bridge in points:
-                    raise StitchWinnerSubsequenceError("Winner is a subsequence of boundary points; cannot stitch")
-                if bridge in obstacle:
-                    raise StitchWinnerSubsequenceError("Winner is a subsequence of obstacle; cannot stitch")
-                # Rotate polygon so vertex is last, obstacle so anchor is first; require CCW/CW; merge and update.
-                left: Polygon = Polygon(list(points >> vertex))
-                right: Polygon = Polygon(list(obstacle << anchor))
-                if not left.is_ccw():
-                    raise StitchWinnerSubsequenceError("Left is not CCW; cannot stitch")
-                if not right.is_cw():
-                    raise StitchWinnerSubsequenceError("Right is not CW; cannot stitch")
-                merged: list[Point] = list(left) + list(right) + [anchor, vertex]
-                points = Polygon(merged)
-                edges = list(points.edges)
-            points.sort("ccw")
-        # Ear clipping: while polygon has more than 3 vertices, find and clip an ear.
-        ears_list: list[Ear] = []
-        while len(points) > 3:
-            titanic: Polygon = Polygon(list(points))
-            n: int = len(points)
-            found: int | None = None
-            for j in range(n):
-                left_pt: Point = points[j - 1]
-                center_pt: Point = points[j]
-                right_pt: Point = points[(j + 1) % n]
-                walk: Walk = Walk(start=left_pt, center=center_pt, end=right_pt)
-                if walk.is_collinear():
-                    continue
-                if not walk.is_ccw():
-                    continue
-                diagonal: Segment = left_pt.to(right_pt)
-                if not titanic.contains(diagonal, inclusive=True):
-                    continue
-                tri: Polygon = Polygon([left_pt, center_pt, right_pt])
-                if any(tri.contains(points[k], inclusive=False) for k in range(n) if k not in ((j - 1) % n, j, (j + 1) % n)):
-                    continue
-                found = j
-                ears_list.append(Ear([left_pt, center_pt, right_pt]))
-                break
-            if found is None:
-                raise EarClippingFailureError(f"No ear found for: {points}")
-            # Remove ear tip from polygon and continue.
-            points = Polygon([points[i] for i in range(n) if i != found])
-        # Add final triangle as last ear (ccw or reversed if cw).
-        if len(points) == 3:
-            path: Walk = Walk(start=points[0], center=points[1], end=points[2])
-            if path.is_ccw():
-                ears_list.append(Ear([points[0], points[1], points[2]]))
-            else:
-                ears_list.append(Ear([points[2], points[1], points[0]]))
-        # Build initial convex components from ears; merge adjacent pairs by largest area until no merge possible.
-        components: list[ConvexComponent] = [ConvexComponent(list(ear)) for ear in ears_list]
+        ears_raw = self.job.stdout.get("ears")
+        if not ears_raw:
+            raise JobStdoutMissingEarsError("Convex component step requires ears in job.stdout (run ear clipping step first).")
+        ears_items = list(ears_raw.values()) if isinstance(ears_raw, dict) else ears_raw
+        ears_list: list[Ear] = [Ear.unserialize(serialized) for serialized in ears_items]
+
+        table: Table[ConvexComponent] = Table()
+        for ear in ears_list:
+            table += ConvexComponent(list(ear))
+
+        # Merge adjacent pairs by largest area until no merge possible.
         while True:
-            # Index components by edge (frozenset of endpoints) to find adjacent pairs.
-            components_by_edge: defaultdict[frozenset[Point], list[ConvexComponent]] = defaultdict(list)
-            for comp in components:
-                for edge in comp.edges:
-                    key: frozenset[Point] = frozenset({edge[0], edge[1]})
-                    components_by_edge[key].append(comp)
+            components: list[ConvexComponent] = list(table)
+            components_by_edge: defaultdict[Segment, list[ConvexComponent]] = defaultdict(list)
+            for component in components:
+                for edge in component.edges:
+                    components_by_edge[edge].append(component)
             best_area: Decimal | None = None
-            best_merged: ConvexComponent | None = None
+            best_merged_result: ConvexComponent | None = None
             best_pair: tuple[ConvexComponent, ConvexComponent] | None = None
-            # Try merging each component with an adjacent one; keep the merge with largest area.
-            for comp in components:
-                adjacent: set[ConvexComponent] = {
-                    other for edge in comp.edges for other in components_by_edge[frozenset({edge[0], edge[1]})] if other is not comp
-                }
+            for component in components:
+                adjacent: set[ConvexComponent] = {other for edge in component.edges for other in components_by_edge[edge] if other is not component}
                 for other in adjacent:
                     try:
-                        merged_cc: ConvexComponent = comp + other
+                        best_merged: ConvexComponent = component + other
                     except (ValidationError, PolygonsDoNotShareEdgeError):
                         continue
-                    if best_area is None or abs(merged_cc.signed_area) > best_area:
-                        best_area = abs(merged_cc.signed_area)
-                        best_merged = merged_cc
-                        best_pair = (comp, other)
-            if best_pair is None or best_merged is None:
+                    if best_area is None or abs(best_merged.signed_area) > best_area:
+                        best_area = abs(best_merged.signed_area)
+                        best_merged_result = best_merged
+                        best_pair = (component, other)
+            if best_pair is None or best_merged_result is None:
                 break
-            # Replace the two components with the merged one.
-            components.remove(best_pair[0])
-            components.remove(best_pair[1])
-            components.append(best_merged)
-        return {"convex_components": [cc.serialize() for cc in components]}
+            table -= best_pair[0]
+            table -= best_pair[1]
+            table += best_merged_result
+
+        return {"convex_components": table.serialize()}
+
+
+def _point_visible_from(guard: Point, point: Point, boundary: Polygon, obstacles: list[Polygon]) -> bool:
+    """
+    True if point is visible from guard (segment guard->point inside boundary, no obstacle crossing).
+    Visibility is always evaluated against the full art gallery (all boundary and obstacle edges).
+    """
+    if guard == point:
+        return True
+    segment: Segment = guard.to(point)
+    if not boundary.contains(segment, inclusive=True):
+        return False
+    if any(obstacle.intersects(segment, inclusive=False) for obstacle in obstacles):
+        return False
+    if any(obstacle.contains(segment.midpoint, inclusive=False) for obstacle in obstacles):
+        return False
+    return True
 
 
 class GuardPlacementStep(SequenceStep):
     """
-    Guard placement step. Idempotent: given the same job and inputs, running
-    multiple times produces the same outcome. Recomputes stitch, ear clipping,
-    convex optimization, then greedy guard placement + post-process (same logic
-    as lab ArtGallery.guards). Returns guards (list of Point) and visibility
-    (list of list of points; visibility[i] = points visible by guards[i]).
+    Guard placement step. Reads stitched and convex_components from job.stdout
+    (from stitching and convex component steps). Boundary and obstacles from stdin for visibility.
+
+    Algorithm (reduces search space by component and remaining points):
+    1. Remaining state: all convex components and all stitched points (vertices to cover).
+    2. Pick the largest convex component (by area) from remaining components.
+    3. Evaluate only the vertices of that component as guard candidates; score each by how many
+       remaining points it sees. Visibility is always tested against the full art gallery
+       (boundary + obstacles); only the set of "remaining points" shrinks each iteration.
+    4. Add the guard that sees the most remaining points; remove that component and any other
+       component that guard fully covers; remove from remaining points all points that guard sees.
+    5. Repeat until no points remain to be seen.
+
+    Post-process: remove redundant guards whose visibility is contained in the union of the others.
+    Returns guards and visibility as Table.serialize(). Raises if stitched or convex_components missing.
     """
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
-        # Parse boundary and obstacles from job stdin.
+        stitched_raw = self.job.stdout.get("stitched") or self.job.stdout.get("stiteched")
+        if not stitched_raw:
+            raise JobStdoutMissingStitchedError("Guard placement requires stitched polygon in job.stdout (run stitching step first).")
+        stitched: Polygon = Polygon.unserialize(stitched_raw)
+
+        convex_raw = self.job.stdout.get("convex_components")
+        if not convex_raw:
+            raise JobStdoutMissingConvexComponentsError("Guard placement requires convex_components in job.stdout (run convex component step first).")
+        convex_items = list(convex_raw.values()) if isinstance(convex_raw, dict) else convex_raw
+        components_guard: list[ConvexComponent] = [ConvexComponent.unserialize(serialized) for serialized in convex_items]
+
         boundary: Polygon = Polygon.unserialize(self.job.stdin.get("boundary"))
         obstacles: list[Polygon] = [Polygon.unserialize(obstacle) for obstacle in (self.job.stdin.get("obstacles") or [])]
-        stitched: Polygon
-        if not obstacles:
-            stitched = boundary
-        else:
-            # Sort obstacles by rightmost vertex (desc) and stitch each to the current polygon.
-            obstacles = sorted(obstacles, key=lambda obstacle: (obstacle.rightmost.x, obstacle.rightmost.y), reverse=True)
-            stitched = Polygon(list(boundary))
-            edges: list[Segment] = list(stitched.edges)
-            for obstacle in obstacles:
-                obstacle.sort("cw")
-                anchors: list[Point] = sorted(list(obstacle), key=lambda point: (point.x, point.y), reverse=True)
-                bridge: Segment | None = None
-                anchor: Point | None = None
-                # Find shortest valid bridge from polygon to obstacle anchor (bucket of candidates).
-                for anchor in anchors:
-                    bridge = None
-                    bucket: list[Segment] = []
-                    for candidate in stitched << stitched.rightmost:
-                        if candidate == anchor:
-                            continue
-                        segment: Segment = candidate.to(anchor)
-                        if not boundary.contains(segment, inclusive=True):
-                            continue
-                        if any(other.intersects(segment, inclusive=False) for other in obstacles):
-                            continue
-                        if any(
-                            Walk(start=edge[0], center=edge[1], end=segment[0]).is_collinear()
-                            and Walk(start=edge[0], center=edge[1], end=segment[1]).is_collinear()
-                            for edge in boundary.edges
-                            if not edge.connects(segment)
-                        ):
-                            continue
-                        if any(edge.intersects(segment) for edge in edges if not edge.connects(segment)):
-                            continue
-                        bucket.append(segment)
-                        bucket.sort(key=lambda s: s.size)
-                        bucket = bucket[:STITCH_BUCKET_SIZE]
-                        if len(bucket) >= STITCH_BUCKET_SIZE:
-                            bridge = bucket[0]
-                            break
-                        if bridge is None or segment.size < bridge.size:
-                            bridge = segment
-                    if bridge is not None:
-                        break
-                if bridge is None or anchor is None:
-                    raise BridgeFailureError(f"No valid bridge found for obstacle: {obstacle}")
-                # Reject if bridge is a contiguous subsequence of polygon or obstacle (cannot stitch).
-                vertex: Point = bridge[0]
-                if bridge in stitched:
-                    raise StitchWinnerSubsequenceError("Winner is a subsequence of boundary points; cannot stitch")
-                if bridge in obstacle:
-                    raise StitchWinnerSubsequenceError("Winner is a subsequence of obstacle; cannot stitch")
-                # Rotate polygon so vertex is last, obstacle so anchor is first; require CCW/CW; merge and update.
-                left: Polygon = Polygon(list(stitched >> vertex))
-                right: Polygon = Polygon(list(obstacle << anchor))
-                if not left.is_ccw():
-                    raise StitchWinnerSubsequenceError("Left is not CCW; cannot stitch")
-                if not right.is_cw():
-                    raise StitchWinnerSubsequenceError("Right is not CW; cannot stitch")
-                merged: list[Point] = list(left) + list(right) + [anchor, vertex]
-                stitched = Polygon(merged)
-                edges = list(stitched.edges)
-            stitched.sort("ccw")
-        # Ear clipping: while polygon has more than 3 vertices, find and clip an ear.
-        points_ear: Polygon = Polygon(list(stitched))
-        ears_guard: list[Ear] = []
-        while len(points_ear) > 3:
-            titanic: Polygon = Polygon(list(points_ear))
-            n: int = len(points_ear)
-            found: int | None = None
-            for j in range(n):
-                left_pt: Point = points_ear[j - 1]
-                center_pt: Point = points_ear[j]
-                right_pt: Point = points_ear[(j + 1) % n]
-                walk: Walk = Walk(start=left_pt, center=center_pt, end=right_pt)
-                if walk.is_collinear():
-                    continue
-                if not walk.is_ccw():
-                    continue
-                diagonal: Segment = left_pt.to(right_pt)
-                if not titanic.contains(diagonal, inclusive=True):
-                    continue
-                tri: Polygon = Polygon([left_pt, center_pt, right_pt])
-                if any(tri.contains(points_ear[k], inclusive=False) for k in range(n) if k not in ((j - 1) % n, j, (j + 1) % n)):
-                    continue
-                found = j
-                ears_guard.append(Ear([left_pt, center_pt, right_pt]))
-                break
-            if found is None:
-                raise EarClippingFailureError(f"No ear found for: {points_ear}")
-            # Remove ear tip from polygon and continue.
-            points_ear = Polygon([points_ear[i] for i in range(n) if i != found])
-        # Add final triangle as last ear (ccw or reversed if cw).
-        if len(points_ear) == 3:
-            path: Walk = Walk(start=points_ear[0], center=points_ear[1], end=points_ear[2])
-            if path.is_ccw():
-                ears_guard.append(Ear([points_ear[0], points_ear[1], points_ear[2]]))
-            else:
-                ears_guard.append(Ear([points_ear[2], points_ear[1], points_ear[0]]))
-        # Build convex components from ears; merge adjacent pairs by largest area until no merge possible.
-        components_guard: list[ConvexComponent] = [ConvexComponent(list(ear)) for ear in ears_guard]
-        while True:
-            # Index components by edge to find adjacent pairs.
-            components_by_edge_guard: defaultdict[frozenset, list[ConvexComponent]] = defaultdict(list)
-            for comp in components_guard:
-                for edge in comp.edges:
-                    key = frozenset({edge[0], edge[1]})
-                    components_by_edge_guard[key].append(comp)
-            best_area_guard: Decimal | None = None
-            best_merged_guard: ConvexComponent | None = None
-            best_pair_guard: tuple[ConvexComponent, ConvexComponent] | None = None
-            # Try merging each component with an adjacent one; keep the merge with largest area.
-            for comp in components_guard:
-                adjacent = {other for edge in comp.edges for other in components_by_edge_guard[frozenset({edge[0], edge[1]})] if other is not comp}
-                for other in adjacent:
-                    try:
-                        merged = comp + other
-                    except (ValidationError, PolygonsDoNotShareEdgeError):
-                        continue
-                    if best_area_guard is None or abs(merged.signed_area) > best_area_guard:
-                        best_area_guard = abs(merged.signed_area)
-                        best_merged_guard = merged
-                        best_pair_guard = (comp, other)
-            if best_pair_guard is None or best_merged_guard is None:
-                break
-            # Replace the two components with the merged one.
-            components_guard.remove(best_pair_guard[0])
-            components_guard.remove(best_pair_guard[1])
-            components_guard.append(best_merged_guard)
-        # Greedy guard placement: candidates = stitched vertices; pick guard that sees most remaining components.
-        candidates: list[Point] = list(stitched)
+
+        # Remaining points to cover (shrinks each iteration). Visibility tests always use full boundary + obstacles.
+        remaining_points: set[Point] = set(stitched)
         remaining_components: set[ConvexComponent] = set(components_guard)
-        guards: list[Point] = []
-        while remaining_components:
+        guards_list: list[Point] = []
+
+        while remaining_points:
+            if not remaining_components:
+                raise GuardCoverageFailureError("Failed to cover all points; no remaining convex components.")
+            # Step 1: pick the largest convex component (by area) from the list of remaining components.
+            largest: ConvexComponent = max(remaining_components, key=lambda c: abs(c.signed_area))
+            # Step 2: evaluate only guards at the vertices of that component; score = remaining points visible (visibility vs full art gallery).
+            candidates: list[Point] = list(largest)
             best_guard: Point | None = None
             best_count: int = -1
-            # Choose candidate that sees the most uncovered components.
-            for g in candidates:
-                count: int = 0
-                for comp in remaining_components:
-                    if g in list(comp):
-                        count += 1
-                    elif all(
-                        boundary.contains(g.to(point), inclusive=True)
-                        and not any(obstacle.intersects(g.to(point), inclusive=False) for obstacle in obstacles)
-                        and not any(obstacle.contains(g.to(point).midpoint, inclusive=False) for obstacle in obstacles)
-                        for point in comp
-                    ):
-                        count += 1
+            for guard in candidates:
+                count = sum(1 for p in remaining_points if _point_visible_from(guard, p, boundary, obstacles))
                 if count > best_count:
                     best_count = count
-                    best_guard = g
+                    best_guard = guard
             if best_guard is None or best_count == 0:
                 raise GuardCoverageFailureError("Failed to cover all convex components.")
-            guards.append(best_guard)
-            candidates.remove(best_guard)
-            # Mark components now covered by this guard and remove from remaining.
-            seen: set[ConvexComponent] = set()
-            for comp in remaining_components:
-                if best_guard in list(comp):
-                    seen.add(comp)
-                elif all(
-                    boundary.contains(best_guard.to(point), inclusive=True)
-                    and not any(obstacle.intersects(best_guard.to(point), inclusive=False) for obstacle in obstacles)
-                    and not any(obstacle.contains(best_guard.to(point).midpoint, inclusive=False) for obstacle in obstacles)
-                    for point in comp
-                ):
-                    seen.add(comp)
-            remaining_components -= seen
+            if best_guard not in guards_list:
+                guards_list.append(best_guard)
+            # Step 3: remove the chosen component and any other convex component this guard completely sees.
+            remaining_components.discard(largest)
+            for comp in list(remaining_components):
+                if all(_point_visible_from(best_guard, p, boundary, obstacles) for p in comp):
+                    remaining_components.discard(comp)
+            # Step 4: remove from remaining points all points visible to this guard; repeat until no points left.
+            for p in list(remaining_points):
+                if _point_visible_from(best_guard, p, boundary, obstacles):
+                    remaining_points.discard(p)
+
         # Post-process: remove redundant guards whose visibility is contained in the union of the others.
         removed: bool = True
         while removed:
             removed = False
             visibility_by_guard: list[list[Point]] = []
-            for g in guards:
-                vis: list[Point] = [
-                    point
-                    for point in stitched
-                    if g == point
-                    or (
-                        boundary.contains(g.to(point), inclusive=True)
-                        and not any(obstacle.intersects(g.to(point), inclusive=False) for obstacle in obstacles)
-                        and not any(obstacle.contains(g.to(point).midpoint, inclusive=False) for obstacle in obstacles)
-                    )
-                ]
-                visibility_by_guard.append(vis)
-            uncovereed: set[Point] = set(stitched) - set().union(*(set(vis) for vis in visibility_by_guard))
-            if uncovereed:
+            for guard in guards_list:
+                visible: list[Point] = [p for p in stitched if _point_visible_from(guard, p, boundary, obstacles)]
+                visibility_by_guard.append(visible)
+            uncovered: set[Point] = set(stitched) - set().union(*(set(visible) for visible in visibility_by_guard))
+            if uncovered:
                 raise GuardCoverageFailureError("Failed to cover points.")
-            # If a guard's visible set is subset of the union of others, remove that guard.
-            for i, g in enumerate(guards):
-                other_union: set[Point] = set().union(*(set(visibility_by_guard[j]) for j in range(len(guards)) if j != i))
-                if set(visibility_by_guard[i]).issubset(other_union):
-                    guards.pop(i)
+            for index, guard in enumerate(guards_list):
+                other_union: set[Point] = set().union(*(set(visibility_by_guard[j]) for j in range(len(guards_list)) if j != index))
+                if set(visibility_by_guard[index]).issubset(other_union):
+                    guards_list.pop(index)
                     removed = True
                     break
-        # Build final visibility list (points visible by each guard) and return.
-        visibility_final: list[list[Point]] = []
-        for g in guards:
-            vis = [
-                point
-                for point in stitched
-                if g == point
-                or (
-                    boundary.contains(g.to(point), inclusive=True)
-                    and not any(obstacle.intersects(g.to(point), inclusive=False) for obstacle in obstacles)
-                    and not any(obstacle.contains(g.to(point).midpoint, inclusive=False) for obstacle in obstacles)
-                )
-            ]
-            visibility_final.append(vis)
+
+        # Build guards table and Table[Visibility] (keys match Table[Point] keys for guards).
+        guards_table: Table[Point] = Table.unserialize(guards_list)
+        visibility_table: Table[Visibility] = Table()
+        for guard, pts in zip(guards_list, visibility_by_guard):
+            visibility_table.add(Visibility(guard, pts))
         return {
-            "guards": [g.serialize() for g in guards],
-            "visibility": [[point.serialize() for point in vis] for vis in visibility_final],
+            "guards": guards_table.serialize(),
+            "visibility": visibility_table.serialize(),
         }

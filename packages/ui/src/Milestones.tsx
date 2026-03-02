@@ -5,6 +5,7 @@
  */
 
 import React, { isValidElement, Children, cloneElement } from "react";
+import { Hourglass } from "lucide-react";
 
 export type MilestoneStepStatus = "completed" | "current" | "future";
 
@@ -46,6 +47,8 @@ const MilestoneComponent: React.FC<MilestoneProps> = ({
             <div className={`${circleClasses} ${circleVariant}`}>
                 {isCompleted ? (
                     <span aria-hidden>✓</span>
+                ) : isCurrent ? (
+                    <Hourglass className="w-4 h-4" aria-hidden />
                 ) : (
                     <span aria-hidden>{stepIndex}</span>
                 )}

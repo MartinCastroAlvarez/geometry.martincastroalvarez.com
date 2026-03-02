@@ -23,7 +23,6 @@ Examples:
 
 from __future__ import annotations
 
-import json
 from decimal import Decimal
 from typing import TYPE_CHECKING
 from typing import Any
@@ -199,7 +198,7 @@ class Segment(list, Spatial, Bounded, Serializable[list[Any]]):
         )
 
     def serialize(self) -> list[list[Any]]:
-        return [json.loads(self[0].serialize()), json.loads(self[1].serialize())]
+        return [self[0].serialize(), self[1].serialize()]
 
     @classmethod
     def unserialize(cls, data: list[Any]) -> Segment:

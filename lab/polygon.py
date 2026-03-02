@@ -18,9 +18,6 @@ from segment import Segment
 from segment import SegmentSequence
 from serializable import Serializable
 
-if TYPE_CHECKING:
-    pass
-
 
 class Polygon(Bounded, Element2D, Serializable):
     points: PointSequence

@@ -20,6 +20,7 @@ import { Viewer } from "@geometry/editor";
 import { useJobs, useSession } from "@geometry/data";
 import { useLocale } from "@geometry/i18n";
 import { JobsPageSkeleton } from "../skeletons";
+import { getDisplayStatus } from "../utils/jobStatus";
 
 const VIEWER_HEIGHT = 250;
 
@@ -34,6 +35,7 @@ const Cell = ({ job }: CellProps) => {
         typeof job.meta?.title === "string" && job.meta.title.trim()
             ? String(job.meta.title)
             : t("editor.untitledGallery");
+    const displayStatus = getDisplayStatus(job);
 
     return (
         <Container padded spaced rounded left onClick={() => navigate(`/jobs/${job.id}`)}>
@@ -44,8 +46,8 @@ const Cell = ({ job }: CellProps) => {
                 <Title left truncate>{title}</Title>
             </Container>
             <Container size={4} right>
-                <Badge danger={job.status === Status.FAILED} success={job.status === Status.SUCCESS}>
-                    {t(`jobs.status.${job.status}`)}
+                <Badge danger={displayStatus === Status.FAILED} success={displayStatus === Status.SUCCESS}>
+                    {t(`jobs.status.${displayStatus}`)}
                 </Badge>
             </Container>
         </Container>

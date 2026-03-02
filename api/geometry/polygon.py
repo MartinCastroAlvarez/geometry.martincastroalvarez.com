@@ -26,7 +26,6 @@ Examples:
 
 from __future__ import annotations
 
-import json
 from decimal import Decimal
 from typing import Any
 
@@ -330,19 +329,24 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[list[Any]]
         >>> poly.serialize()
         [[0, 0], [1, 1]]
         """
-        return [json.loads(point.serialize()) for point in self]
+        return [point.serialize() for point in self]
 
     @classmethod
-    def unserialize(cls, data: list[Any]) -> Polygon:
+    def unserialize(cls, data: dict[str, Any] | list[Any]) -> Polygon:
         """
-        Build Polygon from list of point coords; each point validated via Point.unserialize.
+        Build Polygon from list of point coords or dict with "points" key; each point validated via Point.unserialize.
 
         Example
         -------
         >>> poly = Polygon.unserialize([[0, 0], [1, 0], [1, 1], [0, 1]])
         >>> len(poly)
         4
+        >>> poly = Polygon.unserialize({"points": [[0, 0], [1, 0], [1, 1]]})
+        >>> len(poly)
+        3
         """
+        if isinstance(data, dict) and "points" in data:
+            data = data["points"]
         if not isinstance(data, list):
             raise PolygonUnserializeExpectsListError("Polygon.unserialize expects a list of points")
         return cls([Point.unserialize(item) for item in data])

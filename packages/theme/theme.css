@@ -22,8 +22,8 @@
   --color-primary: 255 255 255;
   --color-danger: 252 165 165;
   --color-success: 134 239 172;
-  /* Editor canvas stroke/fill (Vertex, Edge); carbon gray (not pure white/black) */
-  --color-polygon: 148 163 184;
+  /* Editor canvas stroke/fill (Vertex, Edge); lighter slate in dark mode for visibility */
+  --color-polygon: 203 213 225;
   /* Stitched edge (Viewer): subtle in dark mode */
   --color-edge-stitched: 51 65 85;
   /* Grid overlay: background and line color (full rgba for use in inline style / linear-gradient) */

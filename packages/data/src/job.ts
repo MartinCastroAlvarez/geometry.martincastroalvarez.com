@@ -124,7 +124,18 @@ export const useUpdateJob = () => {
     const queryClient = useQueryClient();
     const token = useAuthentication();
     const mutation = useMutation({
-        mutationFn: async ({ jobId, meta }: { jobId: string; meta: Record<string, string> }) => {
+        mutationFn: async ({
+            jobId,
+            meta,
+            status,
+        }: {
+            jobId: string;
+            meta: Record<string, string>;
+            status?: string;
+        }) => {
+            if (status !== undefined && status !== "success") {
+                throw new Error("Only success jobs can be updated");
+            }
             const variables = { jobId, meta };
             console.log("[data] useUpdateJob request", { ...variables, token: token ?? null });
             const out = await new GeometryApiClient(GEOMETRY_API_URL, token).updateJob(jobId, meta);

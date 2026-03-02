@@ -2,7 +2,7 @@
  * Viewer toolbar: mode buttons in order — polygon, stitch, ear clipping, convex, guard visibility.
  * One mode is active at a time; active button gets the active prop.
  */
-import { TriangleDashed, Hexagon, SquareDashedBottomCode, Waypoints, User } from "lucide-react";
+import { TriangleDashed, Hexagon, SquareDashed, Waypoints, Eye } from "lucide-react";
 import { Container, Toolbar, Button } from "@geometry/ui";
 import { useLocale } from "@geometry/i18n";
 import { ViewerMode } from "./ViewerMode";
@@ -10,9 +10,9 @@ import { ViewerMode } from "./ViewerMode";
 const MODE_ICONS: Record<ViewerMode, React.ReactNode> = {
     [ViewerMode.Default]: <Hexagon size={14} className="shrink-0" aria-hidden />,
     [ViewerMode.EarClipping]: <TriangleDashed size={14} className="shrink-0" aria-hidden />,
-    [ViewerMode.ConvexComponent]: <SquareDashedBottomCode size={14} className="shrink-0" aria-hidden />,
+    [ViewerMode.ConvexComponent]: <SquareDashed size={14} className="shrink-0" aria-hidden />,
     [ViewerMode.Stitching]: <Waypoints size={14} className="shrink-0" aria-hidden />,
-    [ViewerMode.Visibility]: <User size={14} className="shrink-0" aria-hidden />,
+    [ViewerMode.Visibility]: <Eye size={14} className="shrink-0" aria-hidden />,
 };
 
 export interface ViewerToolbarProps {

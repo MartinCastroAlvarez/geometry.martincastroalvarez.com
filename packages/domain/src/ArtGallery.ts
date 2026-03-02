@@ -15,11 +15,13 @@ import { ConvexComponent } from './ConvexComponent';
 import { Ear } from './Ear';
 import { Point, PointDict } from './Point';
 import { Polygon, PolygonDict } from './Polygon';
+import { Visibility, VisibilityDict } from './Visibility';
 
 export interface ArtGalleryDict {
     boundary: PolygonDict;
     obstacles: PolygonDict[];
-    guards: PointDict[];
+    /** Guards as array of points or dict (table) key -> point for API. */
+    guards: PointDict[] | Record<string, PointDict | number[]>;
     /** Optional stitched polygon from the stitching step (API). */
     stitched?: PolygonDict;
     /** Optional list of bridge edges from the stitching step; each segment is two points (PointDict or [x,y]). */
@@ -28,8 +30,38 @@ export interface ArtGalleryDict {
     ears?: PolygonDict[] | Record<string, PolygonDict | number[][] | unknown>;
     /** Optional convex components from decomposition (API; table or array; values may be PolygonDict or list of coords). */
     convex_components?: PolygonDict[] | Record<string, PolygonDict | number[][] | unknown>;
-    /** Optional visibility paths (API; array of paths, each path is array of points). */
-    visibility?: PointDict[][];
+    /** Optional visibility (API dict key->points; or array of paths; or VisibilityDict[]). */
+    visibility?: Record<string, PointDict[] | number[][]> | PointDict[][] | VisibilityDict[];
+}
+
+function parseVisibilityFromDict(dict: ArtGalleryDict): Visibility[] {
+    const rawGuards = dict.guards;
+    const rawVis = dict.visibility ?? [];
+    if (Array.isArray(rawGuards) && Array.isArray(rawVis)) {
+        const paths = rawVis as (PointDict[] | number[])[];
+        return rawGuards.map((g, i) => {
+            const path = paths[i];
+            const points = Array.isArray(path) ? path.map((p: unknown) => Point.fromDict(Array.isArray(p) ? { x: Number(p[0]), y: Number(p[1]) } : p as PointDict)) : [];
+            return new Visibility(Point.fromDict(g), points);
+        });
+    }
+    if (Array.isArray(rawVis) && rawVis.length > 0 && rawVis[0] != null && typeof rawVis[0] === 'object' && 'guard' in (rawVis[0] as object)) {
+        return (rawVis as VisibilityDict[]).map((v) => Visibility.fromDict(v));
+    }
+    if (rawGuards != null && typeof rawGuards === 'object' && !Array.isArray(rawGuards) && rawVis != null && typeof rawVis === 'object' && !Array.isArray(rawVis)) {
+        const keys = Object.keys(rawGuards);
+        return keys
+            .map((k) => {
+                const g = (rawGuards as Record<string, unknown>)[k];
+                const path = (rawVis as Record<string, unknown>)[k];
+                if (!g || !Array.isArray(path)) return null;
+                const guard = Point.fromDict(Array.isArray(g) ? { x: Number(g[0]), y: Number(g[1]) } : g as PointDict);
+                const points = path.map((p) => Point.fromDict(Array.isArray(p) ? { x: Number(p[0]), y: Number(p[1]) } : p as PointDict));
+                return new Visibility(guard, points);
+            })
+            .filter((v): v is Visibility => v != null);
+    }
+    return [];
 }
 
 export class ArtGallery {
@@ -45,8 +77,8 @@ export class ArtGallery {
         public readonly ears: Ear[] = [],
         /** Optional convex components from decomposition. */
         public readonly convex_components: ConvexComponent[] = [],
-        /** Optional visibility paths (each path is a sequence of points). */
-        public readonly visibility: Point[][] = []
+        /** Optional visibility (one per guard; guard and visible region points). */
+        public readonly visibility: Visibility[] = []
     ) { }
 
     static fromDict(dict: ArtGalleryDict): ArtGallery {
@@ -77,9 +109,7 @@ export class ArtGallery {
             .map(toPolyDict)
             .filter((d) => d.points && d.points.length >= 3)
             .map((d) => ConvexComponent.fromDict(d));
-        const visibility: Point[][] = (dict.visibility ?? []).map((path) =>
-            path.map(Point.fromDict)
-        );
+        const visibility: Visibility[] = parseVisibilityFromDict(dict);
         const rawStitches = dict.stitches ?? [];
         const stitches: [Point, Point][] = rawStitches.map((seg: unknown) => {
             const s = Array.isArray(seg) && seg.length >= 2 ? seg : [];
@@ -91,10 +121,17 @@ export class ArtGallery {
                     : Point.fromDict(p as PointDict);
             return [toPoint(a), toPoint(b)];
         });
+        const guardsList = Array.isArray(dict.guards)
+            ? dict.guards.map((g) => Point.fromDict(g))
+            : (dict.guards && typeof dict.guards === 'object'
+                ? Object.values(dict.guards).map((g: PointDict | number[]) =>
+                    Point.fromDict(Array.isArray(g) ? { x: Number(g[0]), y: Number(g[1]) } : g as PointDict)
+                  )
+                : []);
         return new ArtGallery(
             Polygon.fromDict(dict.boundary),
             dict.obstacles.map(Polygon.fromDict),
-            dict.guards.map(Point.fromDict),
+            guardsList,
             stitched,
             stitches,
             ears,
@@ -122,7 +159,7 @@ export class ArtGallery {
             out.convex_components = this.convex_components.map((c) => c.toDict());
         }
         if (this.visibility.length > 0) {
-            out.visibility = this.visibility.map((path) => path.map((p) => p.toDict()));
+            out.visibility = this.visibility.map((v) => v.toDict());
         }
         return out;
     }

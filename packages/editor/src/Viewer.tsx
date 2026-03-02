@@ -1,18 +1,30 @@
 /**
- * Display-only viewer for an ArtGallery: grid background and edges (no vertices).
+ * Display-only viewer for an ArtGallery: grid background, edges, and guard vertices.
  * When artGallery is null or undefined, the grid is shown but no polygon (empty state).
- * When interactive is true, pan is enabled and a ViewerToolbar is shown for mode (polygon vs stitching).
- * Default mode: boundary and obstacles only. Stitching mode: only the stitches (bridge edges from API).
+ * When interactive is true, pan is enabled and a ViewerToolbar is shown for mode.
+ * Default: boundary and obstacles. Stitching: stitched polygon (edges not on boundary/obstacles muted).
+ * Ear clipping: ears (ear edges muted). Convex: convex components (internal edges muted).
+ * Visibility: boundary and obstacle edges shown muted; visibility polygon edges (guard to visible points) normal, drawn on top.
+ * In all modes, a Vertex is shown for each guard.
  */
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Stage, Layer } from "react-konva";
 import type { ArtGallery } from "@geometry/domain";
 import { Container, useDevice } from "@geometry/ui";
-import { artGalleryToEditorState, stitchesToEditorState } from "./adapters";
+import {
+    artGalleryToEditorState,
+    boundaryObstacleEdgeKeys,
+    convexComponentsToEditorState,
+    edgeKey,
+    earsToEditorState,
+    polygonToEditorState,
+    visibilityToEditorState,
+} from "./adapters";
 import type { EditorVertex } from "./types";
 import { Edge } from "./Edge";
 import { Grid } from "./Grid";
+import { Vertex } from "./Vertex";
 import { ViewerMode } from "./ViewerMode";
 import { ViewerToolbar } from "./ViewerToolbar";
 
@@ -44,8 +56,9 @@ export const Viewer = ({
 const EMPTY_STATE: {
     vertices: EditorVertex[];
     edges: [number, number][];
-    stitchEdgeStartIndex: number;
-} = { vertices: [], edges: [], stitchEdgeStartIndex: 0 };
+    edgeMuted: boolean[];
+    guardVertices: EditorVertex[];
+} = { vertices: [], edges: [], edgeMuted: [], guardVertices: [] };
 
 function computeFitTransform(
     vertices: EditorVertex[],
@@ -114,26 +127,52 @@ const ViewerInner = ({
     const [mode, setMode] = useState<ViewerMode>(ViewerMode.Default);
     const { isMobile } = useDevice();
 
-    const { vertices, edges, stitchEdgeStartIndex } = useMemo(() => {
+    const { vertices, edges, edgeMuted, guardVertices } = useMemo(() => {
         if (artGallery == null) return EMPTY_STATE;
-        const base = artGalleryToEditorState(artGallery);
-        if (mode === ViewerMode.Stitching && artGallery.stitches.length > 0) {
-            const stitch = stitchesToEditorState(artGallery.stitches);
-            const nBase = base.vertices.length;
-            const mergedVertices = [...base.vertices, ...stitch.vertices];
-            const mergedEdges: [number, number][] = [
-                ...base.edges,
-                ...stitch.edges.map(([a, b]) => [a + nBase, b + nBase] as [number, number]),
-            ];
-            return {
-                vertices: mergedVertices,
-                edges: mergedEdges,
-                stitchEdgeStartIndex: base.edges.length,
-            };
+        const boundaryKeys = boundaryObstacleEdgeKeys(artGallery.boundary, artGallery.obstacles);
+        const guardVertices: EditorVertex[] = artGallery.guards.map((g, i) => ({
+            id: `guard-${i}-${g.x}-${g.y}`,
+            x: g.x,
+            y: g.y,
+        }));
+
+        if (mode === ViewerMode.Stitching && artGallery.stitched != null && artGallery.stitched.points.length > 0) {
+            const { vertices: vs, edges: es } = polygonToEditorState(artGallery.stitched);
+            const muted = es.map(([a, b]) => !boundaryKeys.has(edgeKey(vs[a], vs[b])));
+            return { vertices: vs, edges: es, edgeMuted: muted, guardVertices };
         }
+        if (mode === ViewerMode.EarClipping && artGallery.ears.length > 0) {
+            const { vertices: vs, edges: es } = earsToEditorState(artGallery.ears);
+            const muted = es.map(([a, b]) => !boundaryKeys.has(edgeKey(vs[a], vs[b])));
+            return { vertices: vs, edges: es, edgeMuted: muted, guardVertices };
+        }
+        if (mode === ViewerMode.ConvexComponent && artGallery.convex_components.length > 0) {
+            const { vertices: vs, edges: es } = convexComponentsToEditorState(artGallery.convex_components);
+            const muted = es.map(([a, b]) => !boundaryKeys.has(edgeKey(vs[a], vs[b])));
+            return { vertices: vs, edges: es, edgeMuted: muted, guardVertices };
+        }
+        if (mode === ViewerMode.Visibility && artGallery.visibility.length > 0) {
+            const base = artGalleryToEditorState(artGallery);
+            const { vertices: visVs, edges: visEs } = visibilityToEditorState(artGallery.visibility);
+            const nBase = base.vertices.length;
+            const vertices = [...base.vertices, ...visVs];
+            const edges: [number, number][] = [
+                ...base.edges,
+                ...visEs.map(([a, b]) => [a + nBase, b + nBase] as [number, number]),
+            ];
+            const edgeMuted = [
+                ...base.edges.map(() => true),
+                ...visEs.map(() => false),
+            ];
+            return { vertices, edges, edgeMuted, guardVertices };
+        }
+        const base = artGalleryToEditorState(artGallery);
+        const muted = base.edges.map(() => false);
         return {
-            ...base,
-            stitchEdgeStartIndex: base.edges.length,
+            vertices: base.vertices,
+            edges: base.edges,
+            edgeMuted: muted,
+            guardVertices,
         };
     }, [artGallery, mode]);
 
@@ -144,14 +183,18 @@ const ViewerInner = ({
                 .map(([a, b], i) => ({
                     start: vertices[a],
                     end: vertices[b],
-                    isStitch: i >= stitchEdgeStartIndex,
+                    muted: edgeMuted[i] ?? false,
                 })),
-        [vertices, edges, stitchEdgeStartIndex]
+        [vertices, edges, edgeMuted]
     );
 
+    const fitVertices = useMemo(
+        () => (guardVertices.length > 0 ? [...vertices, ...guardVertices] : vertices),
+        [vertices, guardVertices]
+    );
     const fitTransform = useMemo(
-        () => (vertices.length > 0 ? computeFitTransform(vertices, stageWidth, stageHeight) : null),
-        [vertices, stageWidth, stageHeight]
+        () => (fitVertices.length > 0 ? computeFitTransform(fitVertices, stageWidth, stageHeight) : null),
+        [fitVertices, stageWidth, stageHeight]
     );
 
     const layerScale = fitTransform ? fitTransform.scale : 1;
@@ -268,14 +311,24 @@ const ViewerInner = ({
                                 scaleX={layerScale}
                                 scaleY={layerScale}
                             >
-                                {allEdges.map(({ start, end, isStitch }, i) => (
+                                {allEdges.map(({ start, end, muted }, i) => (
                                     <Edge
                                         key={`edge-${i}`}
                                         start={start}
                                         end={end}
                                         edgeIndex={i}
-                                        muted={mode === ViewerMode.Stitching && isStitch}
+                                        muted={muted}
                                         scale={scale * layerScale}
+                                    />
+                                ))}
+                                {guardVertices.map((vertex, i) => (
+                                    <Vertex
+                                        key={vertex.id}
+                                        vertex={vertex}
+                                        index={vertices.length + i}
+                                        draggable={false}
+                                        scale={scale * layerScale}
+                                        primary
                                     />
                                 ))}
                             </Layer>

@@ -17,7 +17,7 @@
  *   polygonToApiFormat(domainPolygon);  // [{ x, y }, ...] for API
  */
 
-import { ArtGallery, Point, Polygon, parseStatus } from "@geometry/domain";
+import { ArtGallery, ConvexComponent, Ear, Point, Polygon, Visibility, parseStatus } from "@geometry/domain";
 import type { ArtGalleryDict, Gallery, Job } from "@geometry/domain";
 import type { ApiUser, ApiJob, ApiArtGallery, ApiPolygon } from "./types";
 
@@ -90,10 +90,121 @@ function parseObstacles(stdin: Record<string, unknown>): Polygon[] {
     return obstacles;
 }
 
+/** Parse guards from stdout: array of points or dict (table.serialize()) with serialized points. */
+function parseGuards(data: Record<string, unknown>): Point[] {
+    const raw = data.guards;
+    const items = Array.isArray(raw) ? raw : raw && typeof raw === "object" ? Object.values(raw) : [];
+    const guards: Point[] = [];
+    for (const item of items) {
+        let pt: { x: number; y: number } | null = parsePoint(item);
+        if (!pt && typeof item === "string") {
+            try {
+                const arr = JSON.parse(item) as unknown;
+                if (Array.isArray(arr) && arr.length >= 2) pt = parsePoint(arr);
+            } catch {
+                // ignore
+            }
+        }
+        if (pt) guards.push(new Point(pt.x, pt.y));
+    }
+    return guards;
+}
+
+/** Parse ears from stdout: array of 3-point polygons or dict (table.serialize()). */
+function parseEars(data: Record<string, unknown>): Ear[] {
+    const raw = data.ears;
+    const items = Array.isArray(raw) ? raw : raw && typeof raw === "object" ? Object.values(raw) : [];
+    const ears: Ear[] = [];
+    for (const ear of items) {
+        if (!Array.isArray(ear) || ear.length !== 3) continue;
+        const points: Point[] = [];
+        let ok = true;
+        for (const point of ear) {
+            const pt = parsePoint(point);
+            if (!pt) {
+                ok = false;
+                break;
+            }
+            points.push(new Point(pt.x, pt.y));
+        }
+        if (ok && points.length === 3) ears.push(new Ear(points));
+    }
+    return ears;
+}
+
+/** Parse convex_components from stdout: array of polygons (3+ points) or dict (table.serialize()). */
+function parseConvexComponents(data: Record<string, unknown>): ConvexComponent[] {
+    const raw = data.convex_components;
+    const items = Array.isArray(raw) ? raw : raw && typeof raw === "object" ? Object.values(raw) : [];
+    const components: ConvexComponent[] = [];
+    for (const poly of items) {
+        if (!Array.isArray(poly) || poly.length < 3) continue;
+        const points: Point[] = [];
+        let ok = true;
+        for (const point of poly) {
+            const pt = parsePoint(point);
+            if (!pt) {
+                ok = false;
+                break;
+            }
+            points.push(new Point(pt.x, pt.y));
+        }
+        if (ok && points.length >= 3) {
+            try {
+                components.push(new ConvexComponent(points));
+            } catch {
+                // skip invalid convex
+            }
+        }
+    }
+    return components;
+}
+
+function parsePath(path: unknown): Point[] {
+    if (!Array.isArray(path)) return [];
+    const points: Point[] = [];
+    for (const point of path) {
+        let pt: { x: number; y: number } | null = parsePoint(point);
+        if (!pt && typeof point === "string") {
+            try {
+                const arr = JSON.parse(point) as unknown;
+                if (Array.isArray(arr) && arr.length >= 2) pt = parsePoint(arr);
+            } catch {
+                // ignore
+            }
+        }
+        if (pt) points.push(new Point(pt.x, pt.y));
+    }
+    return points;
+}
+
+/** Parse guards and visibility from stdout; returns guards list and Visibility[] (dicts share keys). */
+function parseGuardsAndVisibility(data: Record<string, unknown>): { guards: Point[]; visibility: Visibility[] } {
+    const rawGuards = data.guards;
+    const rawVis = data.visibility;
+    if (rawGuards != null && typeof rawGuards === "object" && !Array.isArray(rawGuards) && rawVis != null && typeof rawVis === "object" && !Array.isArray(rawVis)) {
+        const keys = Object.keys(rawGuards);
+        const guards: Point[] = [];
+        const visibility: Visibility[] = [];
+        for (const k of keys) {
+            const g = parsePoint((rawGuards as Record<string, unknown>)[k]);
+            const path = (rawVis as Record<string, unknown>)[k];
+            if (!g) continue;
+            guards.push(new Point(g.x, g.y));
+            if (Array.isArray(path)) visibility.push(new Visibility(new Point(g.x, g.y), parsePath(path)));
+        }
+        return { guards, visibility };
+    }
+    const guards = parseGuards(data);
+    const visItems = Array.isArray(rawVis) ? rawVis : rawVis && typeof rawVis === "object" ? Object.values(rawVis) : [];
+    const visibility = visItems.map((path: unknown, i: number) => new Visibility(guards[i] ?? new Point(0, 0), parsePath(path))).filter((_, i) => guards[i] != null);
+    return { guards, visibility };
+}
+
 /**
  * Build an ArtGallery from a record (stdin or stdout) when it contains valid boundary and obstacles.
  * Used when reading job list, single job, or createJob response. Optional stitched from stdout
- * (key "stitched" or "stiteched"). The gallery is conceptually identified by the job id (see module doc).
+ * (key "stitched" or "stiteched"). Parses ears, convex_components, guards, visibility when present.
  */
 export function artGalleryFromPolygonData(_jobId: string, data: Record<string, unknown>): ArtGallery | undefined {
     const boundary = parseBoundary(data);
@@ -122,7 +233,10 @@ export function artGalleryFromPolygonData(_jobId: string, data: Record<string, u
               })
               .filter((x): x is [Point, Point] => x != null)
         : [];
-    return new ArtGallery(boundary, obstacles, [], stitched, stitches, [], [], []);
+    const { guards, visibility } = parseGuardsAndVisibility(data);
+    const ears = parseEars(data);
+    const convex_components = parseConvexComponents(data);
+    return new ArtGallery(boundary, obstacles, guards, stitched, stitches, ears, convex_components, visibility);
 }
 
 export const toDomainJob = (api: ApiJob): Job => {

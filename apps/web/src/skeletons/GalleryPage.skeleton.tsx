@@ -3,7 +3,7 @@
  * then 2 cols (desktop/tablet) or 1 (mobile): left title + muted timestamp, right Edit button.
  */
 import { Skeleton, Page, Container, TitleSkeleton, TextSkeleton, ButtonSkeleton, Toolbar, useDevice } from "@geometry/ui";
-import { ViewerSkeleton } from "@geometry/editor";
+import { ViewerSkeleton, SummarySkeleton } from "@geometry/editor";
 
 const VIEWER_HEIGHT = 520;
 
@@ -16,6 +16,11 @@ export const GalleryPageSkeleton = () => {
             <Page>
                 <Container padded spaced>
                     <ViewerSkeleton height={VIEWER_HEIGHT} />
+                </Container>
+                <Container padded spaced>
+                    <Container size={12} left center>
+                        <SummarySkeleton />
+                    </Container>
                 </Container>
                 <Container padded spaced>
                     <Container size={colSize} left={!isMobile} center={isMobile}>

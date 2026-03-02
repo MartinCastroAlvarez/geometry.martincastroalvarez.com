@@ -11,7 +11,7 @@
  *   const { vertices, edges } = artGalleryToEditorState(gallery);
  */
 
-import { ArtGallery, Point, Polygon } from "@geometry/domain";
+import { ArtGallery, ConvexComponent, Ear, Point, Polygon, Visibility } from "@geometry/domain";
 import type { EditorVertex, ApiPolygon } from "./types";
 
 export const polygonToEditorVertices = (polygon: Polygon): EditorVertex[] => {
@@ -74,6 +74,127 @@ export const artGalleryToEditorState = (gallery: ArtGallery): {
 
     return { vertices, edges };
 };
+
+/** Canonical key for an undirected edge (same for (a,b) and (b,a)) for O(1) lookup. */
+export function edgeKey(
+    a: { x: number; y: number },
+    b: { x: number; y: number }
+): string {
+    const [p1, p2] =
+        a.x < b.x || (a.x === b.x && a.y < b.y) ? [a, b] : [b, a];
+    return `${p1.x},${p1.y}-${p2.x},${p2.y}`;
+}
+
+/** Set of edge keys for all edges of boundary and obstacles (for muted styling in viewer modes). */
+export function boundaryObstacleEdgeKeys(boundary: Polygon, obstacles: Polygon[]): Set<string> {
+    const keys = new Set<string>();
+    const addPolygon = (poly: Polygon) => {
+        const pts = poly.points;
+        const n = pts.length;
+        for (let i = 0; i < n; i++) {
+            const p1 = pts[i];
+            const p2 = pts[(i + 1) % n];
+            keys.add(edgeKey(p1, p2));
+        }
+    };
+    addPolygon(boundary);
+    obstacles.forEach(addPolygon);
+    return keys;
+}
+
+/** Vertices and edges from a single polygon (e.g. stitched). */
+export function polygonToEditorState(poly: Polygon): {
+    vertices: EditorVertex[];
+    edges: [number, number][];
+} {
+    const vertices = polygonToEditorVertices(poly);
+    const n = vertices.length;
+    const edges: [number, number][] = [];
+    for (let i = 0; i < n; i++) {
+        edges.push([i, (i + 1) % n] as [number, number]);
+    }
+    return { vertices, edges };
+}
+
+/** Flat vertices and edges from all ears (each ear = 3 vertices + 3 edges). */
+export function earsToEditorState(ears: Ear[]): {
+    vertices: EditorVertex[];
+    edges: [number, number][];
+} {
+    const vertices: EditorVertex[] = [];
+    const edges: [number, number][] = [];
+    let offset = 0;
+    ears.forEach((ear: Ear, earIdx: number) => {
+        const pts = ear.points;
+        for (let i = 0; i < pts.length; i++) {
+            vertices.push({
+                id: `ear-${earIdx}-${i}-${pts[i].x}-${pts[i].y}`,
+                x: pts[i].x,
+                y: pts[i].y,
+            });
+        }
+        const n = pts.length;
+        for (let i = 0; i < n; i++) {
+            edges.push([offset + i, offset + (i + 1) % n] as [number, number]);
+        }
+        offset += n;
+    });
+    return { vertices, edges };
+}
+
+/** Flat vertices and edges from all visibility polygons (one per guard; each Visibility.points is a closed ring). */
+export function visibilityToEditorState(visibility: Visibility[]): {
+    vertices: EditorVertex[];
+    edges: [number, number][];
+} {
+    const vertices: EditorVertex[] = [];
+    const edges: [number, number][] = [];
+    let offset = 0;
+    visibility.forEach((vis: Visibility, pathIdx: number) => {
+        const path = vis.points;
+        if (path.length < 2) return;
+        for (let i = 0; i < path.length; i++) {
+            const p = path[i];
+            vertices.push({
+                id: `visibility-${pathIdx}-${i}-${p.x}-${p.y}`,
+                x: p.x,
+                y: p.y,
+            });
+        }
+        const n = path.length;
+        for (let i = 0; i < n; i++) {
+            edges.push([offset + i, offset + (i + 1) % n] as [number, number]);
+        }
+        offset += n;
+    });
+    return { vertices, edges };
+}
+
+/** Flat vertices and edges from all convex components. */
+export function convexComponentsToEditorState(components: ConvexComponent[]): {
+    vertices: EditorVertex[];
+    edges: [number, number][];
+} {
+    const vertices: EditorVertex[] = [];
+    const edges: [number, number][] = [];
+    let offset = 0;
+    components.forEach((comp: ConvexComponent, compIdx: number) => {
+        const pts = comp.points;
+        for (let i = 0; i < pts.length; i++) {
+            vertices.push({
+                id: `convex-${compIdx}-${i}-${pts[i].x}-${pts[i].y}`,
+                x: pts[i].x,
+                y: pts[i].y,
+            });
+        }
+        const n = pts.length;
+        for (let i = 0; i < n; i++) {
+            edges.push([offset + i, offset + (i + 1) % n] as [number, number]);
+        }
+        offset += n;
+    });
+    return { vertices, edges };
+}
 
 /**
  * Build flat vertices and edges from a list of stitch segments (bridge edges from the stitching step).

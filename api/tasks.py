@@ -192,8 +192,21 @@ class StartTask(Task):
 
         meta: dict[str, Any] = validated_input.get("meta") or {}
         step: Step = Step.of(self.job.step_name)(job=self.job, user=self.user)
-        try:
 
+        # SequenceStep after the first: merge previous siblings' stdout so this step has stitched, ears, etc.
+        if isinstance(step, SequenceStep) and step.parent is not None:
+            sibling_ids: list[Identifier] = list(step.parent.children_ids)
+            try:
+                idx: int = sibling_ids.index(self.job.id)
+            except ValueError:
+                idx = -1
+            if idx > 0:
+                for prev_id in sibling_ids[:idx]:
+                    prev_job: Job = self.repository.get(prev_id)
+                    self.job.stdout.update(prev_job.stdout)
+                step.job = self.job
+
+        try:
             # Run the step, and merge the output into job.stdout.
             stdout: dict[str, Any] = step.run(**meta)
             self.job = step.job
@@ -315,9 +328,16 @@ class ReportTask(Task):
             pass
         else:
             self.job.status = Status.SUCCESS
-            finished_at_key: str = f"step:{self.job.step_name.slug}:finished_at"
+            slug: str = self.job.step_name.slug
+            finished_at_key: str = f"step:{slug}:finished_at"
             if finished_at_key not in self.job.meta:
                 self.job.meta[finished_at_key] = Timestamp.now().to_iso()
+            started_at_key: str = f"step:{slug}:started_at"
+            if started_at_key in self.job.meta:
+                started_at = Timestamp.from_iso(self.job.meta[started_at_key])
+                finished_at = Timestamp.from_iso(self.job.meta[finished_at_key])
+                elapsed_seconds: float = (finished_at.to_datetime() - started_at.to_datetime()).total_seconds()
+                self.job.meta[f"step:{slug}:elapsed_time"] = elapsed_seconds
             logger.info("ReportTask.execute() | job completed job_id=%s status=SUCCESS", self.job.id)
 
         self.repository.save(self.job)

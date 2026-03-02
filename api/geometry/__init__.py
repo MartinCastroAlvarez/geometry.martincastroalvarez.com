@@ -31,6 +31,7 @@ from geometry.interval import Interval
 from geometry.point import Point
 from geometry.polygon import Polygon
 from geometry.segment import Segment
+from geometry.visibility import Visibility
 from geometry.walk import Walk
 
 __all__ = [
@@ -42,5 +43,6 @@ __all__ = [
     "Point",
     "Polygon",
     "Segment",
+    "Visibility",
     "Walk",
 ]

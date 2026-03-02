@@ -1,5 +1,5 @@
 """
-Point type: list of exactly two Decimal coordinates (x, y). Hashable, comparable, Serializable[str].
+Point type: list of exactly two Decimal coordinates (x, y). Hashable, comparable, Serializable[list[str]].
 
 Title
 -----
@@ -8,7 +8,7 @@ Point (2D Coordinate)
 Context
 -------
 Point represents a 2D point as a list of two Decimal values (x, y). It
-inherits from list, implements Serializable[str] (JSON array string),
+inherits from list, implements Serializable[list[str]] (list of two coordinate strings),
 and is hashable via Signature. Supports __eq__, __lt__, __sub__, and
 to(other) returning a Segment. Constructor accepts list or tuple of two
 numeric values; invalid or wrong length raises ValidationError. Used
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from geometry.segment import Segment
 
 
-class Point(list, Serializable[str]):
+class Point(list, Serializable[list[str]]):
     """
     A point as a list of exactly two Decimal values (x, y). Inherits from list.
     Implements serialize (-> str), unserialize (str | list); __hash__, __eq__, __lt__, __sub__, __len__, __getitem__.
@@ -120,9 +120,9 @@ class Point(list, Serializable[str]):
             return super().__getitem__(1)
         raise IndexError("Point index out of range")
 
-    def serialize(self) -> str:
-        """Return JSON string of [x, y] for use as dict key or wire format."""
-        return json.dumps([str(self.x), str(self.y)])
+    def serialize(self) -> list[str]:
+        """Return list of two coordinate strings [str(x), str(y)] for wire format."""
+        return [str(self.x), str(self.y)]
 
     @classmethod
     def unserialize(cls, data: str | list[Any]) -> Point:

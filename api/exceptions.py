@@ -384,6 +384,13 @@ class JobNotFinishedToPublishError(ValidationError):
         super().__init__(message)
 
 
+class JobNotSuccessToUpdateError(ValidationError):
+    """Only success jobs can be updated."""
+
+    def __init__(self, message: str = "Only success jobs can be updated"):
+        super().__init__(message)
+
+
 class JobStdoutMissingGeometryError(ValidationError):
     """Job stdout has no boundary or obstacles; cannot publish gallery."""
 
@@ -395,6 +402,20 @@ class JobStdoutMissingStitchedError(ValidationError):
     """Job stdout is missing stitched polygon or stitches; cannot publish gallery."""
 
     def __init__(self, message: str = "Job stdout must contain stitched and stitches to publish gallery"):
+        super().__init__(message)
+
+
+class JobStdoutMissingEarsError(ValidationError):
+    """Step requires ears in job.stdout (run ear clipping step first)."""
+
+    def __init__(self, message: str = "Convex component step requires ears in job.stdout (run ear clipping step first)."):
+        super().__init__(message)
+
+
+class JobStdoutMissingConvexComponentsError(ValidationError):
+    """Step requires convex_components in job.stdout (run convex component step first)."""
+
+    def __init__(self, message: str = "Guard placement step requires convex_components in job.stdout (run convex component step first)."):
         super().__init__(message)
 
 

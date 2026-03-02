@@ -78,38 +78,51 @@ class TestSimpleSteps:
         assert out == {}
 
     def test_ear_clipping_step_run(self):
+        # Ear clipping reads stitched from job.stdout (from stitching step).
         job = Job(
             id=Identifier("j1"),
             step_name=StepName.EAR_CLIPPING,
             stdin={"boundary": [[0, 0], [10, 0], [10, 10], [0, 10]], "obstacles": []},
+            stdout={"stitched": [[0, 0], [10, 0], [10, 10], [0, 10]]},
         )
         step = EarClippingStep(job=job, user=_user())
         out = step.run()
         assert "ears" in out
-        assert len(out["ears"]) >= 1
-        assert len(out["ears"][0]) == 3
+        ears_values = list(out["ears"].values()) if isinstance(out["ears"], dict) else out["ears"]
+        assert len(ears_values) >= 1
+        assert len(ears_values[0]) == 3
 
     def test_ear_clipping_step_run_pentagon(self):
+        pentagon = [[0, 0], [2, 0], [2.5, 1.5], [1, 2.5], [-0.5, 1.5]]
         job = Job(
             id=Identifier("j1"),
             step_name=StepName.EAR_CLIPPING,
-            stdin={
-                "boundary": [[0, 0], [2, 0], [2.5, 1.5], [1, 2.5], [-0.5, 1.5]],
-                "obstacles": [],
-            },
+            stdin={"boundary": pentagon, "obstacles": []},
+            stdout={"stitched": pentagon},
         )
         step = EarClippingStep(job=job, user=_user())
         out = step.run()
         assert "ears" in out
-        assert len(out["ears"]) == 3
-        for ear in out["ears"]:
+        ears_values = list(out["ears"].values()) if isinstance(out["ears"], dict) else out["ears"]
+        assert len(ears_values) == 3
+        for ear in ears_values:
             assert len(ear) == 3
 
     def test_convex_component_optimization_step_run(self):
+        # Convex step reads ears from job.stdout (from ear clipping step).
+        stitched = [[0, 0], [10, 0], [10, 10], [0, 10]]
+        job_ear = Job(
+            id=Identifier("j_ear"),
+            step_name=StepName.EAR_CLIPPING,
+            stdin={"boundary": stitched, "obstacles": []},
+            stdout={"stitched": stitched},
+        )
+        ear_out = EarClippingStep(job=job_ear, user=_user()).run()
         job = Job(
             id=Identifier("j1"),
             step_name=StepName.CONVEX_COMPONENT_OPTIMIZATION,
-            stdin={"boundary": [[0, 0], [10, 0], [10, 10], [0, 10]], "obstacles": []},
+            stdin={"boundary": stitched, "obstacles": []},
+            stdout={"stitched": stitched, "ears": ear_out["ears"]},
         )
         step = ConvexComponentOptimizationStep(job=job, user=_user())
         out = step.run()
@@ -117,10 +130,27 @@ class TestSimpleSteps:
         assert len(out["convex_components"]) >= 1
 
     def test_guard_placement_step_run(self):
+        # Guard placement reads stitched and convex_components from job.stdout.
+        stitched = [[0, 0], [10, 0], [10, 10], [0, 10]]
+        job_ear = Job(
+            id=Identifier("j_ear"),
+            step_name=StepName.EAR_CLIPPING,
+            stdin={"boundary": stitched, "obstacles": []},
+            stdout={"stitched": stitched},
+        )
+        ear_out = EarClippingStep(job=job_ear, user=_user()).run()
+        job_convex = Job(
+            id=Identifier("j_convex"),
+            step_name=StepName.CONVEX_COMPONENT_OPTIMIZATION,
+            stdin={"boundary": stitched, "obstacles": []},
+            stdout={"stitched": stitched, "ears": ear_out["ears"]},
+        )
+        convex_out = ConvexComponentOptimizationStep(job=job_convex, user=_user()).run()
         job = Job(
             id=Identifier("j1"),
             step_name=StepName.GUARD_PLACEMENT,
-            stdin={"boundary": [[0, 0], [10, 0], [10, 10], [0, 10]], "obstacles": []},
+            stdin={"boundary": stitched, "obstacles": []},
+            stdout={"stitched": stitched, "convex_components": convex_out["convex_components"]},
         )
         step = GuardPlacementStep(job=job, user=_user())
         out = step.run()
@@ -130,13 +160,33 @@ class TestSimpleSteps:
         assert len(out["visibility"]) == len(out["guards"])
 
     def test_guard_placement_step_run_with_one_obstacle(self):
+        boundary = [[0, 0], [10, 0], [10, 10], [0, 10]]
+        obstacles = [[[2, 2], [4, 2], [4, 4], [2, 4]]]
+        job_stitch = Job(
+            id=Identifier("j_stitch"),
+            step_name=StepName.STITCHING,
+            stdin={"boundary": boundary, "obstacles": obstacles},
+        )
+        stitch_out = StitchingStep(job=job_stitch, user=_user()).run()
+        job_ear = Job(
+            id=Identifier("j_ear"),
+            step_name=StepName.EAR_CLIPPING,
+            stdin={"boundary": boundary, "obstacles": obstacles},
+            stdout={"stitched": stitch_out["stitched"]},
+        )
+        ear_out = EarClippingStep(job=job_ear, user=_user()).run()
+        job_convex = Job(
+            id=Identifier("j_convex"),
+            step_name=StepName.CONVEX_COMPONENT_OPTIMIZATION,
+            stdin={"boundary": boundary, "obstacles": obstacles},
+            stdout={"stitched": stitch_out["stitched"], "ears": ear_out["ears"]},
+        )
+        convex_out = ConvexComponentOptimizationStep(job=job_convex, user=_user()).run()
         job = Job(
             id=Identifier("j1"),
             step_name=StepName.GUARD_PLACEMENT,
-            stdin={
-                "boundary": [[0, 0], [10, 0], [10, 10], [0, 10]],
-                "obstacles": [[[2, 2], [4, 2], [4, 4], [2, 4]]],
-            },
+            stdin={"boundary": boundary, "obstacles": obstacles},
+            stdout={"stitched": stitch_out["stitched"], "convex_components": convex_out["convex_components"]},
         )
         step = GuardPlacementStep(job=job, user=_user())
         out = step.run()

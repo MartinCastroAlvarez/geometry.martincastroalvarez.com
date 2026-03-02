@@ -11,7 +11,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { enUS, es } from "date-fns/locale";
 import { Page, Container, Title, Text, Toolbar, Button, useDevice } from "@geometry/ui";
-import { Viewer } from "@geometry/editor";
+import { Viewer, Summary } from "@geometry/editor";
 import { useArtGallery } from "@geometry/data";
 import { useAnalytics, GoogleAnalyticsActions, GoogleAnalyticsCategories } from "@geometry/analytics";
 import { Language, useLocale } from "@geometry/i18n";
@@ -80,6 +80,11 @@ export const GalleryPage = () => {
         <Page>
             <Container padded spaced>
                 <Viewer artGallery={gallery!.artGallery} size={VIEWER_HEIGHT} interactive />
+            </Container>
+            <Container padded spaced>
+                <Container size={12} left center>
+                    <Summary artGallery={gallery!.artGallery} />
+                </Container>
             </Container>
             <Container padded spaced>
                 <Container size={isMobile ? 12 : 6} left={!isMobile} center={isMobile}>

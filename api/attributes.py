@@ -524,6 +524,7 @@ _GEOMETRY_NAMES = frozenset(
         "Point",
         "Polygon",
         "Segment",
+        "Visibility",
         "Walk",
     }
 )

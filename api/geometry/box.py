@@ -23,7 +23,6 @@ Examples:
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from exceptions import BoxInvalidEdgeError
@@ -39,10 +38,10 @@ from interfaces import Spatial
 class Box(Spatial, Serializable[dict[str, Any]]):
     def serialize(self) -> dict[str, Any]:
         return {
-            "bottom_left": json.loads(self.bottom_left.serialize()),
-            "top_left": json.loads(self.top_left.serialize()),
-            "bottom_right": json.loads(self.bottom_right.serialize()),
-            "top_right": json.loads(self.top_right.serialize()),
+            "bottom_left": self.bottom_left.serialize(),
+            "top_left": self.top_left.serialize(),
+            "bottom_right": self.bottom_right.serialize(),
+            "top_right": self.top_right.serialize(),
         }
 
     @classmethod

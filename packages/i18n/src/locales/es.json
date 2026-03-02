@@ -114,6 +114,12 @@
     "confirm": "Confirmar",
     "cancel": "Cancelar"
   },
+  "summary": {
+    "points": "Puntos",
+    "obstacles": "Obstáculos",
+    "guards": "Guardias",
+    "components": "Componentes"
+  },
   "validation": {
     "resultsTitle": "Resultados de validación",
     "POLYGON_CONVEX_OK": "El polígono es convexo.",

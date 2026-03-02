@@ -11,13 +11,14 @@ import { useParams, useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { enUS, es } from "date-fns/locale";
 import { Page, Container, Title, Text, Badge, Inspector, Input, Toolbar, Button, Problem, Confirm, Milestones, Milestone, MilestonesSkeleton, useDevice, useDebounce } from "@geometry/ui";
-import { Viewer } from "@geometry/editor";
+import { Viewer, Summary } from "@geometry/editor";
 import { useJob, useJobChildren, useUpdateJob, usePublish, useDeleteJob, useSession, type ApiErrorResponse } from "@geometry/data";
 import { Status } from "@geometry/domain";
 import { useAnalytics, GoogleAnalyticsActions, GoogleAnalyticsCategories } from "@geometry/analytics";
 import { Language, useLocale } from "@geometry/i18n";
 import { Pencil, Trash2 } from "lucide-react";
 import { JobPageSkeleton } from "../skeletons";
+import { getDisplayStatus } from "../utils/jobStatus";
 
 const INSPECTOR_HEIGHT = 480;
 const VIEWER_HEIGHT = 520;
@@ -37,12 +38,17 @@ export const JobPage = () => {
     const { track } = useAnalytics();
     const [localTitle, setLocalTitle] = useState("");
     const hasInitializedTitle = useRef(false);
+    const jobStatusRef = useRef<string | undefined>(undefined);
     const [showPublishConfirm, setShowPublishConfirm] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [publishError, setPublishError] = useState<string | undefined>(undefined);
     const [deleteError, setDeleteError] = useState<string | undefined>(undefined);
 
     const loading = sessionLoading || jobLoading;
+
+    useEffect(() => {
+        if (job) jobStatusRef.current = job.status;
+    }, [job]);
 
     useEffect(() => {
         if (!id) return;
@@ -65,7 +71,7 @@ export const JobPage = () => {
             if (!id) return;
             const value = titleValue.trim() || t("editor.untitledGallery");
             updateJobMutation.mutate(
-                { jobId: id, meta: { title: value } },
+                { jobId: id, meta: { title: value }, status: jobStatusRef.current },
                 {
                     onSuccess: (data) => {
                         const next =
@@ -184,6 +190,7 @@ export const JobPage = () => {
             : t("jobs.job.updated");
 
     const hasError = Object.keys(job!.stderr ?? {}).length > 0;
+    const displayStatus = getDisplayStatus(job!);
 
     return (
         <Page>
@@ -215,6 +222,7 @@ export const JobPage = () => {
                             xl
                             transparent
                             strong
+                            readOnly={displayStatus !== Status.SUCCESS}
                         />
                     </Container>
                     <Container spaced>
@@ -224,8 +232,8 @@ export const JobPage = () => {
                             </Text>
                         </Container>
                         <Container size={12} left={!isMobile}>
-                            <Badge danger={job!.status === Status.FAILED} success={job!.status === Status.SUCCESS}>
-                                {t(`jobs.status.${job!.status}`)}
+                            <Badge danger={displayStatus === Status.FAILED} success={displayStatus === Status.SUCCESS}>
+                                {t(`jobs.status.${displayStatus}`)}
                             </Badge>
                         </Container>
                     </Container>
@@ -237,7 +245,7 @@ export const JobPage = () => {
                         </Problem>
                     )}
                     <Toolbar right={!isMobile} center={isMobile}>
-                        {job!.status === Status.SUCCESS && (
+                        {displayStatus === Status.SUCCESS && (
                             <Button
                                 onClick={handlePublishClick}
                                 primary
@@ -264,7 +272,13 @@ export const JobPage = () => {
                     </Toolbar>
                 </Container>
             </Container>
-            {childIds.length > 0 && (
+            {displayStatus === Status.SUCCESS && job!.artGallery != null ? (
+                <Container padded spaced>
+                    <Container size={12} left center>
+                        <Summary artGallery={job!.artGallery} />
+                    </Container>
+                </Container>
+            ) : childIds.length > 0 ? (
                 <Container padded spaced>
                     <Container size={12} left center>
                         {childrenLoading ? (
@@ -280,7 +294,7 @@ export const JobPage = () => {
                         )}
                     </Container>
                 </Container>
-            )}
+            ) : null}
             <Container padded spaced>
                 <Container size={12} spaced>
                     <Container size={isMobile ? 12 : 4} left>

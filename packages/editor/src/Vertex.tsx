@@ -28,6 +28,8 @@ export interface VertexProps {
     contentBounds?: { minX: number; minY: number; maxX: number; maxY: number };
     /** Canvas scale (zoom); used to keep visual size constant (radius divided by scale). Default 1. */
     scale?: number;
+    /** When true, vertex is drawn with a primary color and significantly larger. */
+    primary?: boolean;
 }
 
 const VertexComponent = ({
@@ -42,10 +44,12 @@ const VertexComponent = ({
     dragBounds,
     contentBounds,
     scale = 1,
+    primary = false,
 }: VertexProps) => {
     const { getColor } = useTheme();
     const [isHovered, setIsHovered] = useState(false);
-    const baseRadius = isActive ? 8 : isFirst ? 7 : isHovered ? 6 : 5;
+    const primaryStroke = primary ? getColor("--color-polygon") : undefined;
+    const baseRadius = primary ? 8 : isActive ? 8 : isFirst ? 7 : isHovered ? 6 : 5;
     const radius = baseRadius / scale;
 
     const dragBoundFunc =
@@ -72,8 +76,9 @@ const VertexComponent = ({
             x={vertex.x}
             y={vertex.y}
             radius={radius}
-            fill={getColor("--color-polygon")}
-            strokeWidth={0}
+            fill={primary ? getColor("--color-primary-400") : getColor("--color-polygon")}
+            stroke={primaryStroke}
+            strokeWidth={primary ? 2 : 0}
             draggable={draggable && !!onDragMove}
             cursor="pointer"
             dragBoundFunc={dragBoundFunc}

@@ -44,6 +44,7 @@ from exceptions import GalleryHasNoStitchesError
 from exceptions import GalleryHasNoVisibilityError
 from exceptions import GalleryHasStitchesWithoutObstaclesError
 from exceptions import JobNotFinishedToPublishError
+from exceptions import JobNotSuccessToUpdateError
 from exceptions import MetaKeysMustBeStringsError
 from exceptions import MetaMustBeDictError
 from exceptions import MetaRequiredError
@@ -264,6 +265,8 @@ class JobUpdateMutation(PrivateControllerMixin, Mutation):
         meta = validated_input["meta"]
         repo_job = JobsRepository(user=self.user)
         job = repo_job.get(job_id)
+        if not job.is_finished():
+            raise JobNotSuccessToUpdateError("Only success jobs can be updated")
         job.meta = {**job.meta, **meta}
         repo_job.save(job)
         if "title" in meta:
