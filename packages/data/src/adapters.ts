@@ -39,6 +39,33 @@ function toNumber(v: unknown): number {
     return Number.NaN;
 }
 
+/** Normalize API point ( [x,y] or { x, y }; coords may be string or number ) to { x, y }. */
+function toPointDict(p: unknown): { x: number; y: number } | null {
+    const pt = parsePoint(p);
+    return pt;
+}
+
+/** Normalize API polygon (array of points or { points } ) to PolygonDict shape { points: {x,y}[] }. */
+function toPolygonDictShape(raw: unknown): { points: Array<{ x: number; y: number }> } {
+    if (raw != null && typeof raw === "object" && "points" in (raw as object) && Array.isArray((raw as { points: unknown[] }).points)) {
+        const points: Array<{ x: number; y: number }> = [];
+        for (const p of (raw as { points: unknown[] }).points) {
+            const pt = toPointDict(p);
+            if (pt) points.push(pt);
+        }
+        return { points };
+    }
+    if (Array.isArray(raw) && raw.length >= 2) {
+        const points: Array<{ x: number; y: number }> = [];
+        for (const p of raw) {
+            const pt = toPointDict(p);
+            if (pt) points.push(pt);
+        }
+        return { points };
+    }
+    return { points: [] };
+}
+
 /** Normalize a point from stdin: either [x, y] or { x, y }; coordinates may be numbers or numeric strings. */
 function parsePoint(p: unknown): { x: number; y: number } | null {
     if (Array.isArray(p) && p.length >= 2) {
@@ -278,12 +305,12 @@ export const toDomainArtGallery = (api: ApiArtGallery): Gallery => {
     const artGallery = ArtGallery.fromDict({
         boundary: api.boundary,
         obstacles: Object.values(api.obstacles),
-        guards: Object.values(api.guards ?? {}),
-        ...(api.stitched != null && { stitched: api.stitched as { points: Array<{ x: number; y: number }> } }),
-        ...(api.ears != null && { ears: api.ears as ArtGalleryDict['ears'] }),
-        ...(api.convex_components != null && { convex_components: api.convex_components as ArtGalleryDict['convex_components'] }),
-        ...(api.visibility != null && { visibility: Object.values(api.visibility) }),
-        ...(api.stitches != null && { stitches: api.stitches as ArtGalleryDict["stitches"] }),
+        guards: api.guards ?? {},
+        ...(api.stitched != null && { stitched: api.stitched as ArtGalleryDict["stitched"] }),
+        ...(api.ears != null && Object.keys(api.ears).length > 0 && { ears: api.ears as ArtGalleryDict["ears"] }),
+        ...(api.convex_components != null && Object.keys(api.convex_components).length > 0 && { convex_components: api.convex_components as ArtGalleryDict["convex_components"] }),
+        ...(api.visibility != null && Object.keys(api.visibility).length > 0 && { visibility: api.visibility as ArtGalleryDict["visibility"] }),
+        ...(api.stitches != null && Array.isArray(api.stitches) && api.stitches.length > 0 && { stitches: api.stitches as ArtGalleryDict["stitches"] }),
     });
     return {
         id: api.id,
@@ -364,21 +391,34 @@ export const artGalleryToValidationPayload = (artGallery: ArtGallery): {
 
 export const fromApiArtGallery = (raw: unknown): ApiArtGallery => {
     const d = raw as Record<string, unknown>;
-    const boundary = (d.boundary as ApiPolygon) ?? { points: [] };
-    const obstacles = (d.obstacles as Record<string, ApiPolygon>) ?? {};
-    const guards = (d.guards as Record<string, { x: number; y: number }>) ?? {};
+    const boundary = toPolygonDictShape(d.boundary);
+    const rawObstacles = d.obstacles;
+    const obstacles: Record<string, ApiPolygon> = {};
+    if (rawObstacles != null && typeof rawObstacles === "object" && !Array.isArray(rawObstacles)) {
+        for (const [k, v] of Object.entries(rawObstacles)) {
+            const poly = toPolygonDictShape(v);
+            if (poly.points.length >= 3) obstacles[k] = poly;
+        }
+    }
+    const guards = (d.guards as Record<string, unknown>) ?? {};
     const stitchedRaw = d.stitched ?? d.stiteched ?? null;
+    const stitched =
+        stitchedRaw != null
+            ? toPolygonDictShape(stitchedRaw).points.length >= 2
+                ? toPolygonDictShape(stitchedRaw)
+                : undefined
+            : undefined;
     return {
         id: String(d.id ?? ""),
-        boundary: Array.isArray(boundary.points) ? boundary : { points: [] },
-        obstacles: typeof obstacles === "object" ? obstacles : {},
+        boundary,
+        obstacles,
         owner_job_id: String(d.owner_job_id ?? ""),
         title: d.title != null ? String(d.title) : undefined,
         ears: (d.ears as Record<string, unknown>) ?? {},
         convex_components: (d.convex_components as Record<string, unknown>) ?? {},
-        guards,
-        visibility: (d.visibility as Record<string, { x: number; y: number }[]>) ?? {},
-        stitched: stitchedRaw != null ? (stitchedRaw as ApiArtGallery["stitched"]) : undefined,
+        guards: guards as ApiArtGallery["guards"],
+        visibility: (d.visibility as ApiArtGallery["visibility"]) ?? {},
+        stitched,
         stitches: (d.stitches as ApiArtGallery["stitches"]) ?? undefined,
         created_at: String(d.created_at ?? ""),
         updated_at: String(d.updated_at ?? ""),

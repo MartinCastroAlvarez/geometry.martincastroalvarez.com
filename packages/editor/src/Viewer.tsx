@@ -37,18 +37,22 @@ export interface ViewerProps {
     size: number;
     /** When true, pan and interaction are enabled. Default false. */
     interactive?: boolean;
+    /** When true, guard vertices are shown; when false, hidden. When interactive is true, vertices are always shown. Default false. */
+    vertices?: boolean;
 }
 
 export const Viewer = ({
     artGallery,
     size,
     interactive = false,
+    vertices = false,
 }: ViewerProps) => {
     return (
         <ViewerInner
             artGallery={artGallery}
             size={size}
             interactive={interactive}
+            vertices={vertices}
         />
     );
 };
@@ -90,12 +94,15 @@ const ViewerInner = ({
     artGallery,
     size,
     interactive = false,
+    vertices: showVerticesProp = false,
 }: {
     artGallery?: ArtGallery | null;
     size: number;
     interactive?: boolean;
+    vertices?: boolean;
 }) => {
     const readonly = !interactive;
+    const showVertices = interactive || showVerticesProp;
     const containerRef = useRef<HTMLDivElement>(null);
     const stageWrapperRef = useRef<HTMLDivElement>(null);
     const [containerSize, setContainerSize] = useState({ width: 0, height: size });
@@ -322,16 +329,17 @@ const ViewerInner = ({
                                         scale={scale * layerScale}
                                     />
                                 ))}
-                                {guardVertices.map((vertex, i) => (
-                                    <Vertex
-                                        key={vertex.id}
-                                        vertex={vertex}
-                                        index={vertices.length + i}
-                                        draggable={false}
-                                        scale={scale * layerScale}
-                                        primary
-                                    />
-                                ))}
+                                {showVertices &&
+                                    guardVertices.map((vertex, i) => (
+                                        <Vertex
+                                            key={vertex.id}
+                                            vertex={vertex}
+                                            index={vertices.length + i}
+                                            draggable={false}
+                                            scale={scale * layerScale}
+                                            size="lg"
+                                        />
+                                    ))}
                             </Layer>
                         </Stage>
                     </div>

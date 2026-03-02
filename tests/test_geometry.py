@@ -42,15 +42,15 @@ class TestAdjacencyBag:
         bag = Bag(c)
         bag += hash(d)
         assert len(bag) == 1
-        assert hash(d) in bag.adjacent
+        assert hash(d) in bag.items
         bag += hash(d)  # idempotent
         assert len(bag) == 1
 
     def test_bag_contains(self):
         c = ConvexComponent([Point([0, 0]), Point([1, 0]), Point([0.5, 1])])
         bag = Bag(c)
-        bag.adjacent.add(42)
-        bag.adjacent.add(17)
+        bag.items.add(42)
+        bag.items.add(17)
         assert 42 in bag
         assert 17 in bag
         assert bag.serialize() == [17, 42]
@@ -71,8 +71,8 @@ class TestAdjacencyBag:
         bag_right = built[right]
         assert len(bag_left) == 1
         assert len(bag_right) == 1
-        assert right.id in bag_left.adjacent
-        assert left.id in bag_right.adjacent
+        assert right.id in bag_left.items
+        assert left.id in bag_right.items
 
 
 class TestConvexComponent:

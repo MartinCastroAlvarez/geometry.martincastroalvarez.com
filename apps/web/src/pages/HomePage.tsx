@@ -2,8 +2,8 @@
  * Home page (landing): list of published art galleries in a Pinterest-style masonry.
  *
  * Context: Fetches galleries via useArtGalleries from @geometry/data. Displays each as a Pin:
- * Viewer (non-interactive) + Title only; clicking navigates to /:id. useSession keeps loading
- * state consistent; HomePageSkeleton shown while session or galleries load.
+ * Viewer (non-interactive) + Title only; clicking navigates to /:id. Pinterest random=true
+ * assigns each Pin a size (Pinterest handles padded/spaced; no Container wrapper needed).
  */
 import { useNavigate } from "react-router-dom";
 import type { Gallery } from "@geometry/domain";
@@ -13,15 +13,14 @@ import { useArtGalleries, useSession } from "@geometry/data";
 import { useLocale } from "@geometry/i18n";
 import { HomePageSkeleton } from "../skeletons";
 
-/** Variable heights for masonry effect (cycle per index). */
-const HEIGHTS = [200, 260, 220, 280, 240, 300];
+const DEFAULT_CELL_HEIGHT = 240;
 
 interface CellProps {
     gallery: Gallery;
-    height: number;
+    height?: number;
 }
 
-const Cell = ({ gallery, height }: CellProps) => {
+const Cell = ({ gallery, height = DEFAULT_CELL_HEIGHT }: CellProps) => {
     const navigate = useNavigate();
     const { t } = useLocale();
     const title =
@@ -68,18 +67,13 @@ export const HomePage = () => {
 
     return (
         <Page>
-            <Container padded spaced>
-                <Pinterest>
-                    {galleries.data.map((gallery, i) => (
-                        <Pin key={gallery.id}>
-                            <Cell
-                                gallery={gallery}
-                                height={HEIGHTS[i % HEIGHTS.length]}
-                            />
-                        </Pin>
-                    ))}
-                </Pinterest>
-            </Container>
+            <Pinterest random>
+                {galleries.data.map((gallery) => (
+                    <Pin key={gallery.id}>
+                        <Cell gallery={gallery} />
+                    </Pin>
+                ))}
+            </Pinterest>
         </Page>
     );
 };

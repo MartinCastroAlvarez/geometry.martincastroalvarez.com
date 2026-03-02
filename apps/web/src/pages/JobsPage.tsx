@@ -41,7 +41,7 @@ const Cell = ({ job }: CellProps) => {
     return (
         <Container padded spaced rounded left onClick={() => navigate(`/jobs/${job.id}`)}>
             <Container size={12}>
-                <Viewer artGallery={job.artGallery ?? undefined} size={VIEWER_HEIGHT} />
+                <Viewer artGallery={job.artGallery ?? undefined} size={VIEWER_HEIGHT} vertices />
             </Container>
             <Container size={8} left>
                 <Title left truncate>{title}</Title>

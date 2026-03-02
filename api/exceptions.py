@@ -633,6 +633,15 @@ class GuardCoverageFailureError(GeometryException):
         super().__init__(message)
 
 
+class GuardNotInComponentIdByPointError(GeometryException):
+    """Guard point is not in component_id_by_point; invalid state (prepare() not run or guard not a vertex)."""
+
+    code: http.HTTPStatus = http.HTTPStatus.BAD_REQUEST
+
+    def __init__(self, message: str = "Guard not in component_id_by_point; invalid state"):
+        super().__init__(message)
+
+
 class AdjacencyNotBuiltError(GeometryException):
     """Adjacency table was never built (e.g. convex step exited without building)."""
 

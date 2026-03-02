@@ -2,7 +2,7 @@
  * Public gallery view by ID.
  *
  * Context: Displays a single published art gallery by URL param :id. useArtGallery(id) from
- * @geometry/data fetches the gallery. Viewer in interactive mode; below: 2 cols (desktop/tablet),
+ * @geometry/data fetches the gallery. Viewer (non-interactive); below: 2 cols (desktop/tablet),
  * 1 on mobile—left: title (no badges), muted "Updated" + humanized timestamp; right: Edit button
  * that navigates to /design with same shape and "Copy of" + title. GalleryPageSkeleton while loading.
  */
@@ -79,12 +79,12 @@ export const GalleryPage = () => {
     return (
         <Page>
             <Container padded spaced>
-                <Viewer artGallery={gallery!.artGallery} size={VIEWER_HEIGHT} interactive />
-            </Container>
-            <Container padded spaced>
                 <Container size={12} left center>
                     <Summary artGallery={gallery!.artGallery} />
                 </Container>
+            </Container>
+            <Container padded spaced>
+                <Viewer artGallery={gallery!.artGallery} size={VIEWER_HEIGHT} vertices />
             </Container>
             <Container padded spaced>
                 <Container size={isMobile ? 12 : 6} left={!isMobile} center={isMobile}>

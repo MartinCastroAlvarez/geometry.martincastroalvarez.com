@@ -51,8 +51,10 @@ export interface ApiArtGallery {
     title?: string;
     ears?: Record<string, unknown>;
     convex_components?: Record<string, unknown>;
-    guards?: Record<string, ApiPoint>;
-    visibility?: Record<string, ApiPoint[]>;
+    /** Guard id -> point as { x, y } or [x, y] (API may send array). */
+    guards?: Record<string, ApiPoint | [number, number]>;
+    /** Guard id -> visible region as array of points (API sends [x,y][]). */
+    visibility?: Record<string, ApiPoint[] | Array<[number, number]>>;
     /** Optional stitched polygon (list of points or { points } from API). */
     stitched?: ApiPolygon | Array<{ x: number; y: number } | [number, number]>;
     /** Optional list of bridge edges from stitching step; each segment is [[x,y],[x,y]]. */

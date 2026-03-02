@@ -63,7 +63,7 @@ class TestArtGalleryAdjacency:
         gallery = ArtGallery.unserialize(data)
         assert len(gallery.adjacency) == 1
         adj = list(gallery.adjacency)[0]
-        assert Identifier(999) in adj.adjacent
+        assert Identifier(999) in adj.items
 
     def test_serialize_includes_adjacency(self):
         data = {

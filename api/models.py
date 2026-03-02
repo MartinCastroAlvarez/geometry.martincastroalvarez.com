@@ -470,7 +470,7 @@ class ArtGallery(Model):
             "convex_components": self.convex_components.serialize(),
             "adjacency": self.adjacency.serialize(),
             "guards": self.guards.serialize(),
-            "visibility": {str(hash(bag.key)): [p.serialize() for p in bag.adjacent] for bag in self.visibility},
+            "visibility": {str(hash(bag.key)): [p.serialize() for p in bag.items] for bag in self.visibility},
             "stitched": self.stitched.serialize(),
             "stitches": [s.serialize() for s in self.stitches],
         }

@@ -43,7 +43,7 @@ export const Stats: React.FC<StatsProps> = ({ value, percent, tooltip, children 
         <Container name="geometry-stats">
             <Container size={12} center>
                 <span
-                    className="text-5xl md:text-6xl lg:text-7xl font-semibold font-title text-slate-800 dark:text-slate-100 tabular-nums"
+                    className="text-6xl md:text-7xl lg:text-8xl font-semibold font-title text-slate-800 dark:text-slate-100 tabular-nums"
                     aria-hidden
                 >
                     {display}

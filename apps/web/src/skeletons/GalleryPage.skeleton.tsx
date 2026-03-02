@@ -1,5 +1,5 @@
 /**
- * Skeleton for public Gallery view. Matches GalleryPage layout: Viewer (interactive height),
+ * Skeleton for public Gallery view. Matches GalleryPage layout: Summary first, then Viewer,
  * then 2 cols (desktop/tablet) or 1 (mobile): left title + muted timestamp, right Edit button.
  */
 import { Skeleton, Page, Container, TitleSkeleton, TextSkeleton, ButtonSkeleton, Toolbar, useDevice } from "@geometry/ui";
@@ -15,12 +15,12 @@ export const GalleryPageSkeleton = () => {
         <Skeleton>
             <Page>
                 <Container padded spaced>
-                    <ViewerSkeleton height={VIEWER_HEIGHT} />
-                </Container>
-                <Container padded spaced>
                     <Container size={12} left center>
                         <SummarySkeleton />
                     </Container>
+                </Container>
+                <Container padded spaced>
+                    <ViewerSkeleton height={VIEWER_HEIGHT} />
                 </Container>
                 <Container padded spaced>
                     <Container size={colSize} left={!isMobile} center={isMobile}>
@@ -28,7 +28,7 @@ export const GalleryPageSkeleton = () => {
                             <TitleSkeleton xl width="14rem" />
                         </Container>
                         <Container size={12} left={!isMobile} center={isMobile}>
-                            <TextSkeleton md width="10rem" />
+                            <TextSkeleton xs width="10rem" />
                         </Container>
                     </Container>
                     <Container size={colSize} center={isMobile} right={!isMobile}>

@@ -84,8 +84,7 @@ class ConvexComponent(Polygon):
             else:
                 raise ValidationError("ConvexComponent merge: shared edge not found in other")
         merged: list[Point] = list(left)[:-2] + [a] + list(right)[2:] + [b]
-        deduped: Sequence[Point] = Sequence(merged).dedup()
-        return ConvexComponent(list(deduped))
+        return ConvexComponent(list(Sequence(merged)))
 
     @classmethod
     def unserialize(cls, data: SerializedPolygon) -> ConvexComponent:

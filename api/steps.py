@@ -38,6 +38,7 @@ from enums import StepName
 from exceptions import BridgeFailureError
 from exceptions import EarClippingFailureError
 from exceptions import GuardCoverageFailureError
+from exceptions import GuardNotInComponentIdByPointError
 from exceptions import PolygonNotSimpleError
 from exceptions import PolygonsDoNotShareEdgeError
 from exceptions import StepNotHandledError
@@ -494,7 +495,7 @@ class ConvexComponentOptimizationStep(SequenceStep):
             for edge in component.edges:
                 for other in components_by_edge[edge]:
                     if other is not component:
-                        bag.adjacent.add(other.id)
+                        bag += other.id
             result.add(bag)
         return result
 
@@ -543,65 +544,62 @@ class GuardPlacementStep(SequenceStep):
     1. Remaining state: all convex components and all stitched points (vertices to cover).
     2. Sort remaining components by size (signed area, largest first).
     3. Pick the largest component; its vertices are the guard candidates.
-    4. Score each candidate via explore(guard, largest, remaining_components): returns a Bag of points
-       visible from that guard. Exploration restricts visibility checks to the current component,
-       its adjacent components, and then adjacent-of-adjacent only for components that yielded at
-       least one visible point (explorable set). Explored set avoids re-entering the same component.
-       Points in the starting component are marked visible in the cache so sees() only reads cache.
+    4. Score each candidate via explore(guard): returns a Bag of points visible from that guard.
+       explore uses component_id_by_point to find all components the guard belongs to, hydrates
+       visibility_by_segment and the visibility bag with all points of those components, then
+       explorable = adjacent of those components; only adds adjacent-of-adjacent when the current
+       component yielded at least one visible point.
     5. Best guard = candidate that sees the most remaining points (using explore). Add that guard and
        its full visibility (all stitched points seen) to the gallery; remove the largest component
        and any other component fully covered; remove from remaining points all points that guard sees.
     6. Repeat until no points remain.
 
-    explore(guard, convex_component, remaining_components): initializes self.explored = {convex_component},
-    pre-fills visibility cache and bag with all points of that component, then explorable = adjacent
-    components (in remaining). While explorable non-empty: take a component, skip if in explored, add
-    to explored, compute visibility of its points via sees(), add visible to bag; if at least one
-    point visible, add its adjacent (in remaining, not in explored) to explorable. Returns the bag.
+    explore(guard): gets guard's component ids from component_id_by_point; initializes explored with
+    those ids and hydrates visibility + visibility_by_segment with all points of those components;
+    explorable = union of adjacency of those components. While explorable - explored non-empty:
+    take an adjacent component, add to explored, compute visibility of its points via sees(), add
+    visible to bag; if at least one visible, add its adjacent to explorable. Returns the bag.
 
     Returns guards and visibility as Table.serialize().
 
     Complexity: O(n^4) in the worst case; the exploration heuristic reduces visibility checks in practice.
     """
 
-    def explore(
-        self,
-        guard: Point,
-        convex_component: ConvexComponent,
-    ) -> Bag[Point, Point]:
+    def explore(self, guard: Point) -> Bag[Point, Point]:
         """
-        Return a Bag(guard) of points visible from guard by exploring from convex_component.
-        Pre-fills cache with points of convex_component (so sees() only reads cache for them).
-        Then expands via adjacent components; only adds adjacent-of-adjacent to explorable when
-        the current component yielded at least one visible point. Uses self.explored to avoid
-        re-entering the same component.
+        Return a Bag(guard) of points visible from guard. Uses component_id_by_point to find
+        all components the guard belongs to; hydrates visibility_by_segment and the visibility
+        bag with all points of those components. Then expands via adjacent components; only
+        adds adjacent-of-adjacent to explorable when the current component yielded at least
+        one visible point.
         """
         visibility: Bag[Point, Point] = Bag(guard)
 
-        # All the points in the guard's component are instantly visible.
-        for point in convex_component:
-            segment: Segment = guard.to(point)
-            self.visibility_by_pair[segment] = True
-            visibility += point
+        if hash(guard) not in self.component_id_by_point:
+            raise GuardNotInComponentIdByPointError("Guard not in component_id_by_point; invalid state (prepare() not run or guard not a vertex).")
 
-        # Track all the components that have already been explored.
-        explored: set[Identifier] = {convex_component.id}
+        explored: set[Identifier] = set(self.component_id_by_point[guard].items)
+        explorable: set[Identifier] = {
+            adj_id for component_id in explored for adj_id in self.gallery.adjacency[self.gallery.convex_components[component_id]].items
+        }
 
-        # Track all the components that can be explored.
-        bag_adj = self.gallery.adjacency[convex_component]
-        explorable: set[Identifier] = set(bag_adj.adjacent)
+        # Hydrate visibility and cache with all points of every component the guard belongs to.
+        for component_id in explored:
+            component: ConvexComponent = self.gallery.convex_components[component_id]
+            for point in component:
+                segment: Segment = guard.to(point)
+                self.visibility_by_segment[segment] = True
+                visibility += point
 
         # Continue exploring explorable components until no more are available.
         while explorable - explored:
-            adjacent_id = (explorable - explored).pop()
-            adjacent = next(
-                (comp for comp in self.gallery.convex_components if comp.id == adjacent_id),
-                None,
-            )
-            if adjacent is None:
-                explored.add(adjacent_id)
-                continue
-            explored.add(adjacent.id)
+
+            # Find the adjacent component to explore.
+            adjacent_id: Identifier = (explorable - explored).pop()
+            adjacent: ConvexComponent = self.gallery.convex_components[adjacent_id]
+
+            # Mark the component as explored.
+            explored.add(adjacent_id)
 
             # Check if that adjacent component is visible.
             visible = False
@@ -612,41 +610,41 @@ class GuardPlacementStep(SequenceStep):
 
             # If the component is visible, explore its adjacent components.
             if visible:
-                adj_bag = self.gallery.adjacency[adjacent]
-                explorable.update(adj_bag.adjacent)
+                explorable.update(self.gallery.adjacency[adjacent].items)
 
         return visibility
 
     def sees(self, guard: Point, target: Point) -> bool:
         """
-        True if target is visible from guard in the art gallery. Uses self.gallery. Caches by segment in visibility_by_pair.
+        True if target is visible from guard in the art gallery. Uses self.gallery. Caches by segment in visibility_by_segment.
+        If both points belong to the same convex component, they are visible.
         """
 
         # If the guard and target are the same, they are visible.
         if guard == target:
             return True
 
-        # Check if the segment has already been evaluated.
+        # Check if the segment has already been evaluated (explore() pre-fills same-component segments).
         segment: Segment = guard.to(target)
-        if segment in self.visibility_by_pair:
-            return self.visibility_by_pair[segment]
+        if segment in self.visibility_by_segment:
+            return self.visibility_by_segment[segment]
 
         # Check if the segment is inside the boundary.
         if not self.gallery.boundary.contains(segment, inclusive=True):
-            self.visibility_by_pair[segment] = False
+            self.visibility_by_segment[segment] = False
             return False
 
         # Check if the segment intersects any obstacles.
         for obstacle in self.gallery.obstacles:
             if obstacle.intersects(segment, inclusive=False):
-                self.visibility_by_pair[segment] = False
+                self.visibility_by_segment[segment] = False
                 return False
             if obstacle.contains(segment.midpoint, inclusive=False):
-                self.visibility_by_pair[segment] = False
+                self.visibility_by_segment[segment] = False
                 return False
 
         # The segment is visible if no checks failed.
-        self.visibility_by_pair[segment] = True
+        self.visibility_by_segment[segment] = True
         return True
 
     def measure(self, convex_component: ConvexComponent) -> Decimal:
@@ -655,11 +653,30 @@ class GuardPlacementStep(SequenceStep):
             self.signed_area_by_component[convex_component] = convex_component.signed_area
         return self.signed_area_by_component[convex_component]
 
+    def prepare(self) -> None:
+        """
+        Hydrate self.component_id_by_point: for each convex component and each point in it,
+        map the point to that component's id. Points on shared edges appear in multiple components.
+        """
+        self.component_id_by_point = Table()
+        for component in self.gallery.convex_components:
+            for point in component:
+                probe: Bag[Point, Identifier] = Bag(point)
+                if probe in self.component_id_by_point:
+                    bag: Bag[Point, Identifier] = self.component_id_by_point[probe]
+                    bag += component.id
+                else:
+                    bag = Bag(point)
+                    bag += component.id
+                    self.component_id_by_point.add(bag)
+
     def run(self, **kwargs: Any) -> dict[str, Any]:
         self.gallery = ArtGallery.unserialize(self.job.stdout)
-        self.visibility_by_pair: dict[Segment, bool] = {}
+        self.visibility_by_segment: dict[Segment, bool] = {}
         self.signed_area_by_component: dict[ConvexComponent, Decimal] = {}
-        self.explored: set[ConvexComponent] = set()
+        self.component_id_by_point: Table[Bag[Point, Identifier]] = Table()
+
+        self.prepare()
 
         remaining_points: set[Point] = set(self.gallery.stitched)
         remaining_components: set[ConvexComponent] = set(self.gallery.convex_components)
@@ -680,7 +697,7 @@ class GuardPlacementStep(SequenceStep):
             best_count: int = -1
             best_visibility: Bag[Point, Point] | None = None
             for guard in largest:
-                bag: Bag[Point, Point] = self.explore(guard, largest)
+                bag: Bag[Point, Point] = self.explore(guard)
                 count: int = sum(1 for point in remaining_points if point in bag) or 1
                 if count > best_count:
                     best_count = count
@@ -698,7 +715,7 @@ class GuardPlacementStep(SequenceStep):
             self.gallery.visibility += best_visibility
 
             # Remove the component and the points from the remaining sets.
-            remaining_points -= set(best_visibility.adjacent)
+            remaining_points -= set(best_visibility.items)
             remaining_components -= {largest}
 
             # Remove any component fully covered by best_guard using best_visibility (avoids redundant sees() calls).
