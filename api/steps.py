@@ -376,10 +376,7 @@ class StitchingStep(SequenceStep):
                         continue
 
                     # Exit early if the segment crosses the current obstacle (except at anchor).
-                    if any(
-                        not segment.connects(edge) and segment.intersects(edge, inclusive=False)
-                        for edge in obstacle.edges
-                    ):
+                    if any(not segment.connects(edge) and segment.intersects(edge, inclusive=False) for edge in obstacle.edges):
                         continue
 
                     # Exit early if the segment is collinear with any boundary edge.

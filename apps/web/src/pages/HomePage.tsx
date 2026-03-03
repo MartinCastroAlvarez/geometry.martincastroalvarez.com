@@ -66,17 +66,17 @@ const Cell = ({ gallery, height = DEFAULT_CELL_HEIGHT }: CellProps) => {
                     <Container size={isMobile ? 12 : 6} left>
                         <Title left truncate>{title}</Title>
                     </Container>
-                    <Container size={isMobile ? 12 : 6} left center>
-                        <Container size={6} left center>
-                            <div className="flex items-center gap-1.5">
+                    <Container size={isMobile ? 12 : 6} right>
+                        <Container size={6} right>
+                            <div className="flex items-center justify-end gap-1.5">
                                 <CircleDotDashed size={16} className="shrink-0 text-slate-600 dark:text-slate-400" aria-hidden />
-                                <Title sm left>{stitchedPointsCount}</Title>
+                                <Title sm right>{stitchedPointsCount}</Title>
                             </div>
                         </Container>
-                        <Container size={6} left center>
-                            <div className="flex items-center gap-1.5">
+                        <Container size={6} right>
+                            <div className="flex items-center justify-end gap-1.5">
                                 <UserStar size={20} className="shrink-0 text-slate-600 dark:text-slate-400" aria-hidden />
-                                <Title sm left>{guardsCount}</Title>
+                                <Title sm right>{guardsCount}</Title>
                             </div>
                         </Container>
                     </Container>
@@ -93,6 +93,11 @@ export const HomePage = () => {
     const { galleries, isLoading: galleriesLoading } = useArtGalleries({ limit: 20 });
     const loading = sessionLoading || galleriesLoading;
 
+    const rows = useMemo(
+        () => buildRows(galleries?.data ?? [], isMobile),
+        [galleries?.data, isMobile]
+    );
+
     if (galleries == null || loading) {
         return <HomePageSkeleton />;
     }
@@ -106,11 +111,6 @@ export const HomePage = () => {
             </Page>
         );
     }
-
-    const rows = useMemo(
-        () => buildRows(galleries.data, isMobile),
-        [galleries.data, isMobile]
-    );
 
     return (
         <Page>

@@ -45,7 +45,7 @@ class ConvexComponent(Polygon):
         super().__init__(value)
         if len(self) >= 3 and not self.is_convex():
             raise ValidationError("ConvexComponent must be convex")
-        if not self.is_simple():
+        if len(self) >= 3 and not self.is_simple():
             raise ConvexComponentNotSimpleError("Convex component must be simple")
 
     def __and__(self, other: Polygon) -> ConvexComponent:
