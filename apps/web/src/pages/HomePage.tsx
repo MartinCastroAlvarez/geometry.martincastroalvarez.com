@@ -1,12 +1,15 @@
 /**
- * Home page (landing): list of published art galleries in a Pinterest-style masonry.
+ * Home page (landing): list of published art galleries in a grid of rows.
  *
- * Context: Fetches galleries via useArtGalleries from @geometry/data. Displays each as a Pin:
- * Viewer (non-interactive) + title row (title truncated + 4 stats); clicking navigates to /:id.
+ * Context: Fetches galleries via useArtGalleries from @geometry/data. Displays each in a
+ * Container: Viewer (non-interactive) + title row; clicking navigates to /:id.
+ * Row layout: on mobile each cell is full width (12); otherwise each row uses a random
+ * pattern [4,4,4], [4,8], or [8,4] for cell sizes.
  */
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Gallery } from "@geometry/domain";
-import { Page, Container, Title, Text, Pinterest, Pin, useDevice } from "@geometry/ui";
+import { Page, Container, Title, Text, useDevice } from "@geometry/ui";
 import { Viewer } from "@geometry/editor";
 import { useArtGalleries, useSession } from "@geometry/data";
 import { useLocale } from "@geometry/i18n";
@@ -14,6 +17,23 @@ import { CircleDotDashed, UserStar } from "lucide-react";
 import { HomePageSkeleton } from "../skeletons";
 
 const DEFAULT_CELL_HEIGHT = 240;
+
+const ROW_PATTERNS: readonly number[][] = [[4, 4, 4], [4, 8], [8, 4]];
+
+function buildRows<T>(items: T[], isMobile: boolean): { pattern: number[]; items: T[] }[] {
+    if (isMobile) {
+        return items.map((item) => ({ pattern: [12], items: [item] }));
+    }
+    const rows: { pattern: number[]; items: T[] }[] = [];
+    let i = 0;
+    while (i < items.length) {
+        const pattern = ROW_PATTERNS[Math.floor(Math.random() * ROW_PATTERNS.length)] as number[];
+        const chunk = items.slice(i, i + pattern.length);
+        rows.push({ pattern, items: chunk });
+        i += pattern.length;
+    }
+    return rows;
+}
 
 interface CellProps {
     gallery: Gallery;
@@ -68,6 +88,7 @@ const Cell = ({ gallery, height = DEFAULT_CELL_HEIGHT }: CellProps) => {
 
 export const HomePage = () => {
     const { t } = useLocale();
+    const { isMobile } = useDevice();
     const { isLoading: sessionLoading } = useSession();
     const { galleries, isLoading: galleriesLoading } = useArtGalleries({ limit: 20 });
     const loading = sessionLoading || galleriesLoading;
@@ -86,15 +107,22 @@ export const HomePage = () => {
         );
     }
 
+    const rows = useMemo(
+        () => buildRows(galleries.data, isMobile),
+        [galleries.data, isMobile]
+    );
+
     return (
         <Page>
-            <Pinterest random>
-                {galleries.data.map((gallery) => (
-                    <Pin key={gallery.id}>
-                        <Cell gallery={gallery} />
-                    </Pin>
-                ))}
-            </Pinterest>
+            <Container padded spaced>
+                {rows.flatMap((row) =>
+                    row.items.map((gallery, j) => (
+                        <Container key={gallery.id} size={row.pattern[j]}>
+                            <Cell gallery={gallery} />
+                        </Container>
+                    ))
+                )}
+            </Container>
         </Page>
     );
 };

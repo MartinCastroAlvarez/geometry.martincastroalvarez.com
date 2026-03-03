@@ -1,7 +1,7 @@
 """
 Test that api/steps.py runs the full pipeline (validation, stitching, ear clipping,
 convex component merge, guard placement) for polygon A (boundary + one obstacle).
-Expects 2 guards for sufficient coverage.
+Expects 1 guard for sufficient coverage.
 """
 
 from attributes import Email
@@ -43,10 +43,10 @@ POLYGON_A_STDIN = {
 }
 
 
-def test_polygon_a_full_pipeline_requires_two_guards():
+def test_polygon_a_full_pipeline_requires_one_guard():
     """
     Run validation → stitching → ear clipping → convex component merge → guard placement
-    for polygon A. Asserts 2 guards for sufficient coverage.
+    for polygon A. Asserts 1 guard for sufficient coverage.
     """
     stdout = {}
 
@@ -165,8 +165,8 @@ def test_polygon_a_full_pipeline_requires_two_guards():
                         f"{edge[0]}–{edge[1]}."
                     )
 
-    assert len(guard_out["guards"]) == 2, (
-        f"Polygon A expects 2 guards for sufficient coverage; got {len(guard_out['guards'])}. "
+    assert len(guard_out["guards"]) == 1, (
+        f"Polygon A expects 1 guard for sufficient coverage; got {len(guard_out['guards'])}. "
         f"The guards are: {guard_out['guards']}. "
         f"The visibility is: {guard_out['visibility']}. "
     )

@@ -663,3 +663,10 @@ class AdjacencyNotBuiltError(GeometryException):
 
     def __init__(self, message: str = "Adjacency table was not built"):
         super().__init__(message)
+
+
+class ConvexComponentNotSimpleError(ValidationError):
+    """Convex component must be simple."""
+
+    def __init__(self, message: str = "Convex component must be simple"):
+        super().__init__(message)

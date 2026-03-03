@@ -1,48 +1,38 @@
 /**
- * Skeleton for Home (galleries list). Matches HomePage Pinterest layout: masonry-style column
- * grid with cells of ViewerSkeleton + TitleSkeleton (no badge). Same column count as Pinterest.
+ * Skeleton for Home (galleries list). Matches HomePage Container grid: rows of cells
+ * (ViewerSkeleton + TitleSkeleton). Uses same row patterns [4,4,4], [4,8], [8,4] or full width on mobile.
  */
 import { Skeleton, Page, Container, TitleSkeleton, useDevice } from "@geometry/ui";
 import { ViewerSkeleton } from "@geometry/editor";
 
-const GAP = 8;
-const HEIGHTS = [200, 260, 220, 280, 240, 300];
+const HEIGHT = 240;
 const CELL_COUNT = 8;
 
-const CellSkeleton = ({ height }: { height: number }) => (
-    <div
-        className="geometry-pinterest-item break-inside-avoid rounded-xl overflow-hidden"
-        style={{ marginBottom: GAP }}
-    >
-        <div className="p-2">
-            <ViewerSkeleton height={height} />
-            <div className="pt-2">
-                <TitleSkeleton width="70%" />
-            </div>
+const CellSkeleton = () => (
+    <div className="p-2 rounded-xl overflow-hidden">
+        <ViewerSkeleton height={HEIGHT} />
+        <div className="pt-2">
+            <TitleSkeleton width="70%" />
         </div>
     </div>
 );
 
+/** Sizes matching HomePage row patterns: first row 4+4+4, second 4+8, third 8+4. */
+const SKELETON_SIZES = [4, 4, 4, 4, 8, 4, 8, 4];
+
 export const HomePageSkeleton = () => {
-    const { isMobile, isTablet } = useDevice();
-    const columnCount = isMobile ? 1 : isTablet ? 2 : 4;
+    const { isMobile } = useDevice();
+    const size = isMobile ? 12 : undefined;
 
     return (
         <Skeleton>
             <Page>
                 <Container padded spaced>
-                    <div
-                        className="geometry-pinterest w-full min-w-0 max-w-full"
-                        style={{
-                            columnCount,
-                            columnGap: GAP,
-                            columnFill: "balance",
-                        }}
-                    >
-                        {Array.from({ length: CELL_COUNT }, (_, i) => (
-                            <CellSkeleton key={i} height={HEIGHTS[i % HEIGHTS.length]} />
-                        ))}
-                    </div>
+                    {Array.from({ length: CELL_COUNT }, (_, i) => (
+                        <Container key={i} size={size ?? SKELETON_SIZES[i]}>
+                            <CellSkeleton />
+                        </Container>
+                    ))}
                 </Container>
             </Page>
         </Skeleton>

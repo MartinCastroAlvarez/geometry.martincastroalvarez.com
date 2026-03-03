@@ -37,6 +37,7 @@ from attributes import Signature
 from enums import Status
 from enums import StepName
 from exceptions import BridgeFailureError
+from exceptions import ConvexComponentNotSimpleError
 from exceptions import EarClippingFailureError
 from exceptions import GuardCoverageFailureError
 from exceptions import GuardNotInComponentIdByPointError
@@ -374,6 +375,13 @@ class StitchingStep(SequenceStep):
                     if any(other.intersects(segment, inclusive=False) for other in self.obstacles if other is not obstacle):
                         continue
 
+                    # Exit early if the segment crosses the current obstacle (except at anchor).
+                    if any(
+                        not segment.connects(edge) and segment.intersects(edge, inclusive=False)
+                        for edge in obstacle.edges
+                    ):
+                        continue
+
                     # Exit early if the segment is collinear with any boundary edge.
                     if any(
                         Walk(start=edge[0], center=edge[1], end=segment[0]).is_collinear()
@@ -440,6 +448,9 @@ class EarClippingStep(SequenceStep):
     """
 
     def clip(self, titanic: Polygon) -> Generator[Ear, None, None]:
+        # Enforce global CCW once so ear detection, diagonal tests, and final merge are consistent.
+        if not titanic.is_ccw():
+            titanic = Polygon(list(reversed(titanic)))
         # Ear clipping: while polygon has more than 3 vertices, find and clip an ear.
         while len(titanic) > 3:
             n: int = len(titanic)
@@ -466,7 +477,8 @@ class EarClippingStep(SequenceStep):
 
                 # Check if the triangle contains any other vertices.
                 triangle: Polygon = Polygon([left, center, right])
-                if any(triangle.contains(titanic[k], inclusive=False) for k in range(n) if k not in ((j - 1) % n, j, (j + 1) % n)):
+                excluded = ((j - 1) % n, j, (j + 1) % n)
+                if any(triangle.contains(titanic[k], inclusive=False) for k in range(n) if k not in excluded):
                     continue
 
                 # Add the ear to the table.
@@ -479,7 +491,7 @@ class EarClippingStep(SequenceStep):
 
                 # Remove ear tip from polygon by index (position), not by point value;
                 # the same point may appear at other indices and must be kept.
-                titanic.pop(j)
+                titanic = Polygon([titanic[i] for i in range(n) if i != j])
                 break
 
             # Safecheck against bugs.
@@ -566,7 +578,7 @@ class ConvexComponentOptimizationStep(SequenceStep):
                     adjacent: ConvexComponent = components_table[adjacent_id]
                     try:
                         merge: ConvexComponent = component + adjacent
-                    except (ValidationError, PolygonsDoNotShareEdgeError):
+                    except (ValidationError, ConvexComponentNotSimpleError, PolygonsDoNotShareEdgeError):
                         continue
                     if best_area is None or abs(merge.signed_area) > best_area:
                         best_area = abs(merge.signed_area)

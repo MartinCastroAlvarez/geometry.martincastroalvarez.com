@@ -22,6 +22,7 @@ Examples:
 from __future__ import annotations
 
 from attributes import Signature
+from exceptions import ConvexComponentNotSimpleError
 from exceptions import ValidationError
 from geometry.point import Point
 from geometry.polygon import Polygon
@@ -44,6 +45,8 @@ class ConvexComponent(Polygon):
         super().__init__(value)
         if len(self) >= 3 and not self.is_convex():
             raise ValidationError("ConvexComponent must be convex")
+        if not self.is_simple():
+            raise ConvexComponentNotSimpleError("Convex component must be simple")
 
     def __and__(self, other: Polygon) -> ConvexComponent:
         """Shared edge; returns ConvexComponent (2-point edge allowed)."""
