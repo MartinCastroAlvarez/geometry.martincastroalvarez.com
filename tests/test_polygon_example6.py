@@ -58,7 +58,6 @@ EXAMPLE6_STDIN = {"boundary": EXAMPLE6_BOUNDARY, "obstacles": EXAMPLE6_HOLES}
 
 
 def test_example6_full_pipeline_requires_six_guards():
-    return  # TODO: Uncomment this when we have a fix for the stitching step.
     stdout = {}
     job_validate = Job(id=Identifier("ex6-v"), step_name=StepName.VALIDATE_POLYGONS, stdin=dict(EXAMPLE6_STDIN))
     stdout.update(ValidationPolygonStep(job=job_validate, user=_user()).run())

@@ -1,7 +1,7 @@
 """
 Test that api/steps.py rejects lab/example4.py gallery (20 vertices, 3 holes).
 Example4 has invalid input per lab docs: one obstacle is not strictly inside the boundary
-(touches or intersects it). Validation is expected to raise PolygonNotSimpleError.
+(touches or intersects it). Validation is expected to raise ValidationObstacleNotContainedError.
 """
 
 import pytest
@@ -9,7 +9,7 @@ import pytest
 from attributes import Email
 from attributes import Identifier
 from enums import StepName
-from exceptions import PolygonNotSimpleError
+from exceptions import ValidationObstacleNotContainedError
 from models import Job
 from models import User
 from steps import ValidationPolygonStep
@@ -53,7 +53,7 @@ EXAMPLE4_STDIN = {
 def test_example4_validation_raises_polygon_not_simple_obstacle_not_inside():
     """
     Example4 has an obstacle not strictly inside the boundary (per lab docs).
-    Validation step must raise PolygonNotSimpleError with message about obstacle not strictly inside.
+    Validation step must raise ValidationObstacleNotContainedError with message about obstacle not strictly inside.
     """
     job_validate = Job(
         id=Identifier("ex4-v"),
@@ -61,6 +61,6 @@ def test_example4_validation_raises_polygon_not_simple_obstacle_not_inside():
         stdin=dict(EXAMPLE4_STDIN),
     )
     step = ValidationPolygonStep(job=job_validate, user=_user())
-    with pytest.raises(PolygonNotSimpleError) as exc_info:
+    with pytest.raises(ValidationObstacleNotContainedError) as exc_info:
         step.run()
     assert "Obstacle is not strictly inside" in str(exc_info.value)

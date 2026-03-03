@@ -10,9 +10,8 @@ Context
 Walk represents three consecutive points (start, center, end) and computes
 the signed area (2x2 determinant) and Orientation (COLLINEAR, CLOCKWISE,
 COUNTER_CLOCKWISE). Used by Segment.contains (collinearity check), Polygon
-is_convex (all turns same orientation), and orientation tests. Indexable
-as [0]=start, [1]=center, [2]=end. is_cw(), is_ccw(), is_collinear() are
-convenience predicates.
+is_convex (all turns same orientation), and orientation tests. Indexable as [0]=start, [1]=center, [2]=end. Iterable: for p in walk yields
+start, center, end. is_cw(), is_ccw(), is_collinear() are convenience predicates.
 
 Examples:
 >>> walk = Walk(start=p0, center=p1, end=p2)
@@ -24,6 +23,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 from functools import cached_property
+from typing import Iterator
 
 from enums import Orientation
 from geometry.point import Point
@@ -79,3 +79,16 @@ class Walk:
         elif index == 2:
             return self.end
         raise IndexError("Walk index out of range")
+
+    def __len__(self) -> int:
+        return 3
+
+    def __invert__(self) -> Walk:
+        """Reverse the walk (swap start and end). CCW becomes CW, collinear stays collinear."""
+        return Walk(start=self.end, center=self.center, end=self.start)
+
+    def __iter__(self) -> Iterator[Point]:
+        """Yield start, center, end so you can iterate: for p in walk."""
+        yield self.start
+        yield self.center
+        yield self.end

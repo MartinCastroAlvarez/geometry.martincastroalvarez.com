@@ -29,6 +29,7 @@ from collections import defaultdict
 from decimal import Decimal
 from functools import cached_property
 from typing import Any
+from typing import Generator
 from typing import Type
 
 from attributes import Identifier
@@ -45,6 +46,7 @@ from exceptions import StepNotHandledError
 from exceptions import StitchWinnerSubsequenceError
 from exceptions import ValidationBoundaryNotCCWError
 from exceptions import ValidationError
+from exceptions import ValidationObstacleNotContainedError
 from exceptions import ValidationObstacleNotCWError
 from geometry import Point
 from geometry import Polygon
@@ -259,7 +261,7 @@ class ValidationPolygonStep(SequenceStep):
         """
         assert self.boundary is not None
         if any(not all(self.boundary.contains(point, inclusive=False) for point in obstacle) for obstacle in self.obstacles):
-            raise PolygonNotSimpleError(f"Obstacle is not strictly inside the boundary ({self.boundary}).")
+            raise ValidationObstacleNotContainedError(f"Obstacle is not strictly inside the boundary ({self.boundary}).")
 
     def validate_intersections(self) -> None:
         """
@@ -352,17 +354,27 @@ class StitchingStep(SequenceStep):
             anchor: Point | None = None
 
             # Find valid bridge from polygon to obstacle anchor (bucket of candidates).
+            i: int = 0
             for anchor in obstacle:
                 bridge = None
-                bucket: list[Segment] = []
+
                 for candidate in points << points.rightmost:
+
+                    # Exit early if the candidate is the anchor.
                     if candidate == anchor:
                         continue
+
                     segment: Segment = candidate.to(anchor)
+
+                    # Exit early if the segment is not contained in the boundary.
                     if not self.boundary.contains(segment, inclusive=True):
                         continue
-                    if any(other.intersects(segment, inclusive=False) for other in self.obstacles):
+
+                    # Exit early if the segment intersects any other obstacle.
+                    if any(other.intersects(segment, inclusive=False) for other in self.obstacles if other is not obstacle):
                         continue
+
+                    # Exit early if the segment is collinear with any boundary edge.
                     if any(
                         Walk(start=edge[0], center=edge[1], end=segment[0]).is_collinear()
                         and Walk(start=edge[0], center=edge[1], end=segment[1]).is_collinear()
@@ -370,16 +382,23 @@ class StitchingStep(SequenceStep):
                         if not edge.connects(segment)
                     ):
                         continue
-                    if any(edge.intersects(segment) for edge in edges if not edge.connects(segment)):
+
+                    # Exit early if the segment intersects any other segment.
+                    if any(edge.intersects(segment, inclusive=False) for edge in edges if not edge.connects(segment)):
                         continue
-                    bucket.append(segment)
-                    bucket.sort(key=lambda segment: segment.size)
-                    bucket = bucket[:STITCH_BUCKET_SIZE]
-                    if len(bucket) >= STITCH_BUCKET_SIZE:
-                        bridge = bucket[0]
+
+                    # Exit early if the bucket is full.
+                    # Optimization: It might not be the shortest, but who cares...
+                    if i >= STITCH_BUCKET_SIZE:
                         break
+
+                    # Candidate is bucket-eligible; count it.
+                    i += 1
+                    # Track the shortest segment among candidates seen so far.
                     if bridge is None or segment.size < bridge.size:
                         bridge = segment
+
+                # Exit early if a bridge is found.
                 if bridge is not None:
                     break
 
@@ -420,110 +439,85 @@ class EarClippingStep(SequenceStep):
     Complexity: O(n^3), n = number of vertices of the stitched polygon.
     """
 
-    @staticmethod
-    def _has_repeated_positions(points: Polygon) -> bool:
-        seen: set[tuple[Decimal, Decimal]] = set()
-        for i in range(len(points)):
-            key = (points[i].x, points[i].y)
-            if key in seen:
-                return True
-            seen.add(key)
-        return False
-
-    @staticmethod
-    def _diagonal_inside_allowing_vertex_touch(polygon: Polygon, diagonal: Segment) -> bool:
-        """True if diagonal is inside polygon, allowing touch at polygon vertices (for repeated-vertex polygons)."""
-        if not polygon.box.contains(diagonal, inclusive=True):
-            return False
-        if not polygon.contains(diagonal[0], inclusive=True) or not polygon.contains(diagonal[1], inclusive=True):
-            return False
-        if not polygon.contains(diagonal.midpoint, inclusive=True):
-            return False
-        for edge in polygon.edges:
-            if edge.connects(diagonal):
-                continue
-            if not edge.intersects(diagonal, inclusive=True):
-                continue
-            if diagonal.contains(edge[0], inclusive=True) or diagonal.contains(edge[1], inclusive=True):
-                continue
-            return False
-        return True
-
-    def run(self, **kwargs: Any) -> dict[str, Any]:
-        gallery: ArtGallery = ArtGallery.unserialize(self.job.stdout)
-        points: Polygon = gallery.stitched
-        if not points.is_ccw():
-            points = Polygon(list(reversed(points)))
-        table: Table[Ear] = Table()
-        logger.info("EarClippingStep.run() | job.id=%s vertices=%s", self.job.id, len(points))
-
+    def clip(self, titanic: Polygon) -> Generator[Ear, None, None]:
         # Ear clipping: while polygon has more than 3 vertices, find and clip an ear.
-        while len(points) > 3:
-            titanic: Polygon = Polygon(list(points))
-            n: int = len(points)
-            found: int | None = None
+        while len(titanic) > 3:
+            n: int = len(titanic)
+            found: bool = False
             for j in range(n):
-                left: Point = points[j - 1]
-                center: Point = points[j]
-                right: Point = points[j + 1]
+
+                # Only clip if we would leave at least 3 vertices (the last 3 are the final triangle).
+                left: Point = titanic[j - 1]
+                center: Point = titanic[j]
+                right: Point = titanic[j + 1]
+
+                # Check if the triangle is a valid ear.
                 walk: Walk = Walk(start=left, center=center, end=right)
                 if walk.is_collinear():
                     continue
+                walk = walk if walk.is_ccw() else ~walk
                 if not walk.is_ccw():
-                    continue
+                    raise EarClippingFailureError(f"Triangle is not CCW: {walk}. " f"The polygon is: {titanic}.")
+
+                # Check if the diagonal is inside the polygon.
                 diagonal: Segment = left.to(right)
-                diagonal_ok: bool = titanic.contains(diagonal, inclusive=True)
-                if not diagonal_ok and self._has_repeated_positions(points):
-                    diagonal_ok = self._diagonal_inside_allowing_vertex_touch(titanic, diagonal)
-                if not diagonal_ok:
+                if not titanic.contains(diagonal, inclusive=True):
                     continue
+
+                # Check if the triangle contains any other vertices.
                 triangle: Polygon = Polygon([left, center, right])
-                triangle_positions: set[tuple[Decimal, Decimal]] = {(left.x, left.y), (center.x, center.y), (right.x, right.y)}
-
-                def on_ear_edge(p: Point) -> bool:
-                    return (
-                        left.to(center).contains(p, inclusive=True)
-                        or center.to(right).contains(p, inclusive=True)
-                        or right.to(left).contains(p, inclusive=True)
-                    )
-
-                if any(
-                    triangle.contains(points[k], inclusive=False)
-                    for k in range(n)
-                    if k not in ((j - 1) % n, j, (j + 1) % n) and (points[k].x, points[k].y) not in triangle_positions and not on_ear_edge(points[k])
-                ):
+                if any(triangle.contains(titanic[k], inclusive=False) for k in range(n) if k not in ((j - 1) % n, j, (j + 1) % n)):
                     continue
-                found = j
-                table += Ear([left, center, right])
+
+                # Add the ear to the table.
+                ear = Ear([left, center, right])
+                ear.sort("ccw")
+                yield ear
+
+                # Safecheck against bugs.
+                found = True
+
+                # Remove ear tip from polygon by index (position), not by point value;
+                # the same point may appear at other indices and must be kept.
+                titanic.pop(j)
                 break
 
             # Safecheck against bugs.
-            if found is None:
-                raise EarClippingFailureError(
-                    f"No ear found for: {points}. "
-                    "The polygon may have repeated (non-consecutive) vertices or be self-intersecting; "
-                    "ear clipping requires a simple polygon. "
-                    f"The temporary polygon is: {points}."
-                )
+            if not found:
+                raise EarClippingFailureError(f"Iteration completed but no ear found for: {titanic}. ")
 
-            # Remove ear tip from polygon by index (position), not by point value;
-            # the same point may appear at other indices and must be kept.
-            points = Polygon([points[i] for i in range(n) if i != found])
-            if not points.is_ccw():
-                points = Polygon(list(reversed(points)))
+        # The remainder should contain exactly 3 vertices.
+        if len(titanic) != 3:
+            raise EarClippingFailureError(f"Expected 3 vertices or less; got {len(titanic)}." f"The polygon is: {titanic}.")
 
         # Add final triangle as last ear (ccw or reversed if cw).
-        if len(points) == 3:
-            path: Walk = Walk(start=points[0], center=points[1], end=points[2])
-            if path.is_collinear():
-                pass
-            elif path.is_ccw():
-                table += Ear([points[0], points[1], points[2]])
-            else:
-                table += Ear([points[2], points[1], points[0]])
+        path: Walk = Walk(start=titanic[0], center=titanic[1], end=titanic[2])
+        if path.is_collinear():
+            raise EarClippingFailureError(f"Final triangle is collinear: {path}. " f"The polygon is: {titanic}.")
+        ear = Ear([titanic[0], titanic[1], titanic[2]])
+        ear.sort("ccw")
+        yield ear
 
-        logger.info("EarClippingStep.run() | job.id=%s ears=%s", self.job.id, len(table))
-        return {"ears": table.serialize()}
+    def run(self, **kwargs: Any) -> dict[str, Any]:
+        self.gallery = ArtGallery.unserialize(self.job.stdout)
+
+        # Ear clipping: while polygon has more than 3 vertices, find and clip an ear.
+        # clip() uses self.gallery.obstacles to reject ears that overlap a hole.
+        ears: Table[Ear] = Table()
+        for ear in self.clip(Polygon(list(self.gallery.stitched))):
+            ears.add(ear)
+
+        # There must be n - 2 ears (one per triangle in the triangulation).
+        # NOTE: This is not true for polygons with repeated vertices.
+        # if len(ears) != len(gallery.stitched) - 2:
+        #     raise EarClippingFailureError(
+        #         f"Expected {len(gallery.stitched) - 2} ears; got {len(ears)}. "
+        #         f"The polygon is: {gallery.stitched}. "
+        #         f"The ears are: {ears}. "
+        #     )
+
+        logger.info("EarClippingStep.run() | job.id=%s ears=%s", self.job.id, len(ears))
+        return {"ears": ears.serialize()}
 
 
 class ConvexComponentOptimizationStep(SequenceStep):
@@ -693,14 +687,33 @@ class GuardPlacementStep(SequenceStep):
             self.visibility_by_segment[segment] = False
             return False
 
-        # Check if the segment intersects any obstacles.
-        for obstacle in self.gallery.obstacles:
-            if obstacle.intersects(segment, inclusive=False):
+        # Reject if the segment crosses any boundary edge in the interior (not at endpoints).
+        # This catches visibility lines that connect two boundary points but pass outside the gallery,
+        # e.g. from a point on edge (8,2)-(10,10) to (7,10) crossing that same edge.
+        for edge in self.gallery.boundary.edges:
+
+            if edge.connects(segment):
+                continue
+
+            if segment.intersects(edge, inclusive=True):
                 self.visibility_by_segment[segment] = False
                 return False
+
+        # Check if the segment intersects any obstacles (must not cross an obstacle edge in the interior).
+        for obstacle in self.gallery.obstacles:
+
+            # Exit early: segment is inside the obstacle.
             if obstacle.contains(segment.midpoint, inclusive=False):
                 self.visibility_by_segment[segment] = False
                 return False
+
+            # Check if the segment intersects any obstacle edge (must not cross an obstacle edge in the interior).
+            for edge in obstacle.edges:
+                if edge.connects(segment):
+                    continue
+                if segment.intersects(edge, inclusive=False):
+                    self.visibility_by_segment[segment] = False
+                    return False
 
         # The segment is visible if no checks failed.
         self.visibility_by_segment[segment] = True
@@ -720,14 +733,11 @@ class GuardPlacementStep(SequenceStep):
         self.component_id_by_point = Table()
         for component in self.gallery.convex_components:
             for point in component:
-                probe: Bag[Point, Identifier] = Bag(point)
-                if probe in self.component_id_by_point:
-                    bag: Bag[Point, Identifier] = self.component_id_by_point[probe]
-                    bag += component.id
-                else:
-                    bag = Bag(point)
-                    bag += component.id
-                    self.component_id_by_point.add(bag)
+                key: int = hash(point)
+                if key not in self.component_id_by_point:
+                    self.component_id_by_point.add(Bag(point))
+                bag = self.component_id_by_point[key]
+                bag += component.id
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
         self.gallery = ArtGallery.unserialize(self.job.stdout)
@@ -748,25 +758,24 @@ class GuardPlacementStep(SequenceStep):
             if not remaining_components:
                 raise GuardCoverageFailureError("Failed to cover all points; no remaining convex components.")
 
-            # Evaluate the largest convex (remaining) component.
-            sorted_by_size: list[ConvexComponent] = sorted(remaining_components, key=lambda c: abs(self.measure(c)), reverse=True)
-            largest: ConvexComponent = sorted_by_size[0]
-
-            # Calculate the visibility of each candidate guard (vertices of largest component).
+            # Choose the guard (from any remaining component) that covers the most remaining points.
             best_guard: Point | None = None
             best_count: int = -1
             best_visibility: Bag[Point, Point] | None = None
-            for guard in largest:
-                bag: Bag[Point, Point] = self.explore(guard)
-                count: int = sum(1 for point in remaining_points if point in bag)
-                if count > best_count:
-                    best_count = count
-                    best_guard = guard
-                    best_visibility = bag
+            best_component: ConvexComponent | None = None
+            for component in remaining_components:
+                for guard in component:
+                    bag: Bag[Point, Point] = self.explore(guard)
+                    count: int = sum(1 for point in remaining_points if point in bag)
+                    if count > best_count:
+                        best_count = count
+                        best_guard = guard
+                        best_visibility = bag
+                        best_component = component
 
             # Safecheck against bugs.
-            if best_guard is None or best_count == 0 or best_visibility is None:
-                raise GuardCoverageFailureError("Failed to cover all convex components.")
+            if best_guard is None or best_count == 0 or best_visibility is None or best_component is None:
+                raise GuardCoverageFailureError("Failed to find a guard that covers any remaining points.")
             if best_guard in self.gallery.guards:
                 raise GuardCoverageFailureError("Best guard is already in the gallery.")
 
@@ -776,7 +785,7 @@ class GuardPlacementStep(SequenceStep):
 
             # Remove the component and the points from the remaining sets.
             remaining_points -= set(best_visibility.items)
-            remaining_components -= {largest}
+            remaining_components -= {best_component}
 
             # Remove any component fully covered by best_guard using best_visibility (avoids redundant sees() calls).
             for comp in list(remaining_components):

@@ -43,6 +43,7 @@ from exceptions import GalleryHasNoStitchedError
 from exceptions import GalleryHasNoStitchesError
 from exceptions import GalleryHasNoVisibilityError
 from exceptions import GalleryHasStitchesWithoutObstaclesError
+from exceptions import JobAlreadyExistsError
 from exceptions import JobNotFinishedToPublishError
 from exceptions import JobNotSuccessToUpdateError
 from exceptions import MetaKeysMustBeStringsError
@@ -211,6 +212,9 @@ class JobMutation(PrivateControllerMixin, Mutation):
         if failed:
             raise PolygonValidationError("Polygon validation failed: " + ", ".join(failed))
         job_id = Identifier(Signature(f"{hash(boundary)}_{hash(obstacles)}"))
+        repo = JobsRepository(user=self.user)
+        if repo.exists(job_id):
+            raise JobAlreadyExistsError("Job already exists for this boundary and obstacles")
         title = validated_input.get("title") or UNTITLED_ART_GALLERY_NAME
         job = Job(
             id=job_id,
@@ -220,7 +224,6 @@ class JobMutation(PrivateControllerMixin, Mutation):
             },
             meta={"title": title},
         )
-        repo = JobsRepository(user=self.user)
         repo.save(job)
         queue.put(Message(action=Action.START, job_id=job.id, user_email=self.user.email))
         JobsPrivateIndex(user_email=self.user.email).index(

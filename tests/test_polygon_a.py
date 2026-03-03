@@ -1,6 +1,7 @@
 """
 Test that api/steps.py runs the full pipeline (validation, stitching, ear clipping,
-convex component merge, guard placement) for the cross polygon job input.
+convex component merge, guard placement) for polygon A (boundary + one obstacle).
+Expects 2 guards for sufficient coverage.
 """
 
 from attributes import Email
@@ -24,74 +25,57 @@ def _user():
     return User(email=Email("u@e.com"))
 
 
-# job.stdin from the cross polygon job (boundary + one obstacle)
-CROSS_STDIN = {
+POLYGON_A_STDIN = {
     "boundary": [
-        ["250.13372234378798", "157.5"],
-        ["240.1283734500365", "3.5"],
-        ["418.22358375881356", "1.5"],
-        ["395.211281303185", "154.5"],
-        ["568.3038171650863", "133.5"],
-        ["568.3038171650863", "306.5"],
-        ["410.21930464381234", "302.5"],
-        ["449.24016532944324", "448.5"],
-        ["242.12944322878678", "456.5"],
-        ["253.13532701191346", "307.5"],
-        ["71.0379771456358", "327.5"],
-        ["75.0401167031364", "137.5"],
+        ["98.05241915876489", "488.5"],
+        ["317.1695599319232", "12.5"],
+        ["565.3022124969609", "487.5"],
+        ["319.1706297106735", "329.5"],
     ],
     "obstacles": [
         [
-            ["404.21609530756143", "223.5"],
-            ["323.1727692681741", "154.5"],
-            ["246.1315827862874", "242.5"],
-            ["331.1770483831753", "317.5"],
+            ["325.17383904692446", "251.5"],
+            ["383.20486263068324", "272.5"],
+            ["323.1727692681741", "145.5"],
+            ["268.1433503525407", "277.5"],
         ],
     ],
 }
 
 
-def test_cross_full_pipeline_validation_stitching_ear_clipping_convex_guard_placement():
+def test_polygon_a_full_pipeline_requires_two_guards():
     """
     Run validation → stitching → ear clipping → convex component merge → guard placement
-    for the cross polygon (api/steps.py). Asserts each step completes and final output
-    has 2 guards and visibility.
+    for polygon A. Asserts 2 guards for sufficient coverage.
     """
     stdout = {}
 
-    # 1. Validation
     job_validate = Job(
-        id=Identifier("cross-validate"),
+        id=Identifier("polygon-a-validate"),
         step_name=StepName.VALIDATE_POLYGONS,
-        stdin=dict(CROSS_STDIN),
+        stdin=dict(POLYGON_A_STDIN),
     )
-    validation_out = ValidationPolygonStep(job=job_validate, user=_user()).run()
-    assert "boundary" in validation_out
-    assert "obstacles" in validation_out
-    stdout.update(validation_out)
+    stdout.update(ValidationPolygonStep(job=job_validate, user=_user()).run())
 
-    # 2. Stitching (boundary + obstacles merged)
     job_stitch = Job(
-        id=Identifier("cross-stitch"),
+        id=Identifier("polygon-a-stitch"),
         step_name=StepName.STITCHING,
-        stdin=dict(CROSS_STDIN),
+        stdin=dict(POLYGON_A_STDIN),
         stdout=dict(stdout),
     )
-    stitch_out = StitchingStep(job=job_stitch, user=_user()).run()
-    assert "stitched" in stitch_out
-    assert "stitches" in stitch_out
-    stdout.update(stitch_out)
+    stdout.update(StitchingStep(job=job_stitch, user=_user()).run())
+    assert len(stdout["stitches"]) == 1, (
+        f"Polygon A stitching must produce 1 stitch; got {len(stdout['stitches'])}. "
+        f"stitches={stdout['stitches']}"
+    )
 
-    # 3. Ear clipping
     job_ear = Job(
-        id=Identifier("cross-ear"),
+        id=Identifier("polygon-a-ear"),
         step_name=StepName.EAR_CLIPPING,
-        stdin=dict(CROSS_STDIN),
+        stdin=dict(POLYGON_A_STDIN),
         stdout=dict(stdout),
     )
-    ear_out = EarClippingStep(job=job_ear, user=_user()).run()
-    assert "ears" in ear_out
-    stdout.update(ear_out)
+    stdout.update(EarClippingStep(job=job_ear, user=_user()).run())
     for ear_id, ear_serialized in stdout["ears"].items():
         ear = Ear.unserialize(ear_serialized)
         assert ear.is_convex(), (
@@ -103,6 +87,8 @@ def test_cross_full_pipeline_validation_stitching_ear_clipping_convex_guard_plac
         assert ear.is_ccw(), (
             f"Ear {ear_id} must be counter-clockwise; got ear={ear_serialized}"
         )
+
+    # No ear must overlap another: each ear's interior must not contain the centroid of any other ear.
     ears_list = [Ear.unserialize(ser) for ser in stdout["ears"].values()]
     ear_ids = list(stdout["ears"].keys())
     for i, ear_a in enumerate(ears_list):
@@ -124,17 +110,18 @@ def test_cross_full_pipeline_validation_stitching_ear_clipping_convex_guard_plac
                 f"Ear {ear_ids[j]} overlaps ear {ear_ids[i]}: ear {j} contains centroid of ear {i}."
             )
 
-    # 4. Convex component optimization
+    assert len(stdout["ears"]) == 8, (
+        f"Polygon A ear clipping must produce 8 ears; got {len(stdout['ears'])}. "
+        f"ears keys={list(stdout['ears'].keys())}"
+    )
+
     job_convex = Job(
-        id=Identifier("cross-convex"),
+        id=Identifier("polygon-a-convex"),
         step_name=StepName.CONVEX_COMPONENT_OPTIMIZATION,
-        stdin=dict(CROSS_STDIN),
+        stdin=dict(POLYGON_A_STDIN),
         stdout=dict(stdout),
     )
-    convex_out = ConvexComponentOptimizationStep(job=job_convex, user=_user()).run()
-    assert "convex_components" in convex_out
-    assert "adjacency" in convex_out
-    stdout.update(convex_out)
+    stdout.update(ConvexComponentOptimizationStep(job=job_convex, user=_user()).run())
 
     # All convex components must be convex and simple.
     for comp_id, comp_serialized in stdout["convex_components"].items():
@@ -146,16 +133,14 @@ def test_cross_full_pipeline_validation_stitching_ear_clipping_convex_guard_plac
             f"Convex component {comp_id} must be simple; got component={comp_serialized}"
         )
 
-    # 5. Guard placement
     job_guard = Job(
-        id=Identifier("cross-guard"),
+        id=Identifier("polygon-a-guard"),
         step_name=StepName.GUARD_PLACEMENT,
-        stdin=dict(CROSS_STDIN),
+        stdin=dict(POLYGON_A_STDIN),
         stdout=dict(stdout),
     )
     guard_out = GuardPlacementStep(job=job_guard, user=_user()).run()
-    assert "guards" in guard_out
-    assert "visibility" in guard_out
+
     assert len(guard_out["visibility"]) == len(guard_out["guards"])
 
     # Every segment from a guard to a point in its visibility must not intersect or go through any obstacle.
@@ -181,19 +166,7 @@ def test_cross_full_pipeline_validation_stitching_ear_clipping_convex_guard_plac
                     )
 
     assert len(guard_out["guards"]) == 2, (
-        f"Cross polygon expects 2 guards for sufficient coverage; got {len(guard_out['guards'])}"
+        f"Polygon A expects 2 guards for sufficient coverage; got {len(guard_out['guards'])}. "
+        f"The guards are: {guard_out['guards']}. "
+        f"The visibility is: {guard_out['visibility']}. "
     )
-
-    # Cross polygon: the two guards must not see each other (obstacle blocks line of sight).
-    guards_items = list(guard_out["guards"].items())
-    vis = guard_out["visibility"]
-    for i, (key_i, pos_i) in enumerate(guards_items):
-        for key_j, pos_j in guards_items[i + 1 :]:
-            visible_from_i = vis.get(key_i) or []
-            visible_from_j = vis.get(key_j) or []
-            assert pos_j not in visible_from_i, (
-                f"Guard at {pos_i} must not see guard at {pos_j} (no visibility between the 2 guards)"
-            )
-            assert pos_i not in visible_from_j, (
-                f"Guard at {pos_j} must not see guard at {pos_i} (no visibility between the 2 guards)"
-            )

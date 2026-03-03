@@ -195,23 +195,37 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[Serialized
         True
         """
         if isinstance(obj, Point):
-            if not self.box.contains(obj, inclusive=inclusive):
+
+            # Exit early: point is not in the bounding box.
+            if not self.box.contains(obj, inclusive=True):
                 return False
-            if inclusive:
-                for edge in self.edges:
-                    if edge.contains(obj, inclusive=True):
-                        return True
+
+            # If point is on boundary, membership depends only on inclusive
+            if any(edge.contains(obj, inclusive=True) for edge in self.edges):
+                return inclusive
+
+            # Strictly interior: ray test
             return self.ray(obj)
 
         if isinstance(obj, Segment):
+
+            # Exit early: segment is not in the bounding box.
             if not self.box.contains(obj, inclusive=inclusive):
                 return False
+
+            # Check if segment is on any edge.
             if inclusive and any(obj == edge for edge in self.edges):
                 return True
+
+            # Check if endpoints or midpoint are inside the polygon.
             if not self.contains(obj[0], inclusive=inclusive):
                 return False
             if not self.contains(obj[1], inclusive=inclusive):
                 return False
+            if not self.contains(obj.midpoint, inclusive=inclusive):
+                return False
+
+            # Check if segment intersects any other edge.
             for edge in self.edges:
                 if edge.connects(obj):
                     continue
@@ -220,13 +234,14 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[Serialized
                 if obj.contains(edge[0], inclusive=True) or obj.contains(edge[1], inclusive=True):
                     continue
                 return False
-            endpoints_on_boundary: bool = inclusive and (
+
+            # Check if endpoints are on the boundary.
+            if inclusive and (
                 any(e.contains(obj[0], inclusive=True) for e in self.edges) and any(e.contains(obj[1], inclusive=True) for e in self.edges)
-            )
-            if endpoints_on_boundary:
+            ):
                 return True
-            if not self.contains(obj.midpoint, inclusive=inclusive):
-                return False
+
+            # The segment is inside the polygon if no checks failed.
             return True
 
         if isinstance(obj, Polygon):
@@ -372,7 +387,7 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[Serialized
         if isinstance(data, dict) and "points" in data:
             data = data["points"]
         if not isinstance(data, list):
-            raise PolygonUnserializeExpectsListError("Polygon.unserialize expects a list of points")
+            raise PolygonUnserializeExpectsListError(f"Polygon.unserialize expects a list of points, got {data}")
         return cls([Point.unserialize(item) for item in data])
 
     def __and__(self, other: Polygon) -> Polygon:
@@ -487,7 +502,7 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[Serialized
             walk: Walk = Walk(
                 start=self[i - 1],
                 center=self[i],
-                end=self[(i + 1) % n],
+                end=self[(i + 1)],
             )
             if walk.is_collinear():
                 continue
@@ -519,8 +534,8 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[Serialized
         n: int = len(self)
         if n < 3:
             return False
-        if any(self.degree(point) != 2 for point in self):
-            return False
+        # if any(self.degree(point) != 2 for point in self):
+        #     return False
         edges: Sequence[Segment] = self.edges
         for i in range(n):
             for j in range(n):

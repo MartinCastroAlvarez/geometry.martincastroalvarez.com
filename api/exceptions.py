@@ -391,6 +391,13 @@ class JobNotSuccessToUpdateError(ValidationError):
         super().__init__(message)
 
 
+class JobAlreadyExistsError(ConflictError):
+    """Job already exists for this boundary and obstacles (duplicate create)."""
+
+    def __init__(self, message: str = "Job already exists for this boundary and obstacles"):
+        super().__init__(message)
+
+
 class JobStdoutMissingGeometryError(ValidationError):
     """Job stdout has no boundary or obstacles; cannot publish gallery."""
 
@@ -514,6 +521,13 @@ class ValidationObstacleNotCWError(ValidationError):
     """Obstacle polygon must be clockwise (CW)."""
 
     def __init__(self, message: str = "obstacle must be clockwise (CW)"):
+        super().__init__(message)
+
+
+class ValidationObstacleNotContainedError(ValidationError):
+    """Obstacle is not strictly inside the boundary (invalid hole placement)."""
+
+    def __init__(self, message: str = "obstacle must be strictly inside the boundary"):
         super().__init__(message)
 
 

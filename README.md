@@ -17,6 +17,17 @@ Computational geometry project: art gallery algorithms, convex decomposition, an
 | **lab/** | Python prototype and example scripts for art gallery pipeline; see [lab/README.md](lab/README.md). |
 | **tests/** | API tests (pytest); run with `pnpm run build:api:pytest` or `pnpm run build:api:coverage`. |
 
+## Convex vs concave components
+
+The pipeline decomposes polygons into **convex components**: regions that can be merged from the triangulation while staying convex. The figure below illustrates the distinction.
+
+![Convex vs concave components](components.png)
+
+- **Convex:** every internal angle is less than 180°. Any line segment between two points inside the polygon stays inside it. The blue pentagon is convex.
+- **Concave:** at least one internal angle is greater than 180° (a reflex angle). Some line segments between interior points cross the boundary. The green shape has an indentation and is concave.
+
+The convex-decomposition step repeatedly merges adjacent triangles (or larger convex pieces) only when their union remains convex, so every component in the final partition is convex.
+
 ## Lab examples
 
 The [lab](lab/) directory contains a Python prototype and example galleries. Each example builds an art gallery (polygon with holes), runs the pipeline (stitched boundary, ear-clipping triangulation, convex components, guards), and can be visualized (save the figure as `exampleN.png`).

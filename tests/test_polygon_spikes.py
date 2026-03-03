@@ -6,6 +6,8 @@ convex component merge, guard placement) for the spikes polygon job input.
 from attributes import Email
 from attributes import Identifier
 from enums import StepName
+from geometry import Ear
+from geometry import Point
 from models import Job
 from models import User
 from steps import ConvexComponentOptimizationStep
@@ -83,6 +85,37 @@ def test_spikes_full_pipeline_validation_stitching_ear_clipping_convex_guard_pla
     ear_out = EarClippingStep(job=job_ear, user=_user()).run()
     assert "ears" in ear_out
     stdout.update(ear_out)
+    for ear_id, ear_serialized in stdout["ears"].items():
+        ear = Ear.unserialize(ear_serialized)
+        assert ear.is_convex(), (
+            f"Ear {ear_id} must be convex; got ear={ear_serialized}"
+        )
+        assert ear.is_simple(), (
+            f"Ear {ear_id} must be simple; got ear={ear_serialized}"
+        )
+        assert ear.is_ccw(), (
+            f"Ear {ear_id} must be counter-clockwise; got ear={ear_serialized}"
+        )
+    ears_list = [Ear.unserialize(ser) for ser in stdout["ears"].values()]
+    ear_ids = list(stdout["ears"].keys())
+    for i, ear_a in enumerate(ears_list):
+        centroid_a = Point([
+            sum(p.x for p in ear_a) / len(ear_a),
+            sum(p.y for p in ear_a) / len(ear_a),
+        ])
+        for j, ear_b in enumerate(ears_list):
+            if i == j:
+                continue
+            centroid_b = Point([
+                sum(p.x for p in ear_b) / len(ear_b),
+                sum(p.y for p in ear_b) / len(ear_b),
+            ])
+            assert not ear_a.contains(centroid_b, inclusive=False), (
+                f"Ear {ear_ids[i]} overlaps ear {ear_ids[j]}: ear {i} contains centroid of ear {j}."
+            )
+            assert not ear_b.contains(centroid_a, inclusive=False), (
+                f"Ear {ear_ids[j]} overlaps ear {ear_ids[i]}: ear {j} contains centroid of ear {i}."
+            )
 
     # 4. Convex component optimization
     job_convex = Job(

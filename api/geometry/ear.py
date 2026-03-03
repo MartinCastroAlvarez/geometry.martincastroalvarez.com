@@ -56,3 +56,7 @@ class Ear(ConvexComponent):
     def unserialize(cls, data: SerializedPolygon) -> Ear:
         """Build Ear from list of 3 point coords (each [x, y])."""
         return cls(list(Polygon.unserialize(data)))
+
+    def __invert__(self) -> Ear:
+        """Reverse the ear (swap start and end). CCW becomes CW, collinear stays collinear."""
+        return Ear(list(reversed(self)))

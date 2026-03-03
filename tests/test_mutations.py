@@ -77,6 +77,7 @@ class TestJobMutation:
     def test_execute_creates_job(self, mock_countdown_cls, mock_index_cls, mock_repo_cls, mock_queue):
         user = User.test()
         mock_repo = MagicMock()
+        mock_repo.exists.return_value = False  # job does not exist yet → create path
         mock_repo_cls.return_value = mock_repo
         mock_index = MagicMock()
         mock_index_cls.return_value = mock_index
@@ -88,6 +89,7 @@ class TestJobMutation:
         boundary = Polygon.unserialize([[0, 0], [2, 0], [1, 2]])
         obstacles = Table.unserialize([])
         req = {"boundary": boundary, "obstacles": obstacles}
+        
         result = handler.execute(req)
         assert "id" in result
         mock_repo.save.assert_called_once()

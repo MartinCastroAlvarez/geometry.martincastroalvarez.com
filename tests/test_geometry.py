@@ -554,6 +554,22 @@ class TestWalk:
         with pytest.raises(IndexError):
             w[3]
 
+    def test_invert_collinear_stays_collinear(self):
+        """~walk of a collinear walk is still collinear."""
+        w = Walk(start=[0, 0], center=[1, 0], end=[2, 0])
+        assert w.is_collinear() is True
+        inv = ~w
+        assert inv.is_collinear() is True
+        assert inv.start == w.end and inv.end == w.start and inv.center == w.center
+
+    def test_invert_ccw_gives_cw(self):
+        """~walk of a CCW walk results in a CW walk."""
+        w = Walk(start=[0, 0], center=[1, 0], end=[0, 1])
+        assert w.is_ccw() is True
+        inv = ~w
+        assert inv.is_cw() is True
+        assert inv.start == w.end and inv.end == w.start and inv.center == w.center
+
 
 class TestEar:
     """Test Ear (triangle, ccw or cw)."""
