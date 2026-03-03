@@ -26,6 +26,7 @@ from geometry.convex import ConvexComponent
 from geometry.point import Point
 from geometry.polygon import Polygon
 from geometry.polygon import SerializedPolygon
+from geometry.segment import Segment
 from structs import Sequence
 
 
@@ -43,6 +44,11 @@ class Ear(ConvexComponent):
             raise ValidationError("Ear must have exactly 3 points")
         if not self.is_ccw() and not self.is_cw():
             raise ValidationError("Ear must be either counter-clockwise or clockwise")
+
+    @property
+    def diagonal(self) -> Segment:
+        """Chord opposite the ear tip (segment between first and last vertex)."""
+        return self[0].to(self[2])
 
     def __and__(self, other: Ear | ConvexComponent | Polygon) -> ConvexComponent:
         """Wrap self and other as ConvexComponent and return their __and__ (always ConvexComponent)."""

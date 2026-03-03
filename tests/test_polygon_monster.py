@@ -1,7 +1,7 @@
 """
 Test that api/steps.py runs the full pipeline (validation, stitching, ear clipping,
 convex component merge, guard placement) for the monster polygon (boundary + 5 obstacles).
-Expects 10 guards and 49 convex components.
+Expects 10 guards and 46 convex components (obstacle-safe merges only).
 """
 
 from attributes import Email
@@ -14,6 +14,10 @@ from geometry import Polygon
 from geometry import Segment
 from models import Job
 from models import User
+from tests.utils import assert_convex_components_simple_convex_no_obstacle_intersection
+from tests.utils import assert_convex_components_visibility_within_component
+from tests.utils import assert_ears_no_obstacle_intersection
+from tests.utils import assert_ears_simple_and_convex
 from steps import ConvexComponentOptimizationStep
 from steps import EarClippingStep
 from steps import GuardPlacementStep
@@ -132,14 +136,10 @@ def test_polygon_monster_full_pipeline_ten_guards_forty_nine_convex_components()
         stdout=dict(stdout),
     )
     stdout.update(EarClippingStep(job=job_ear, user=_user()).run())
+    assert_ears_simple_and_convex(stdout["ears"])
+    assert_ears_no_obstacle_intersection(stdout["ears"], stdout["obstacles"])
     for ear_id, ear_serialized in stdout["ears"].items():
         ear = Ear.unserialize(ear_serialized)
-        assert ear.is_convex(), (
-            f"Ear {ear_id} must be convex; got ear={ear_serialized}"
-        )
-        assert ear.is_simple(), (
-            f"Ear {ear_id} must be simple; got ear={ear_serialized}"
-        )
         assert ear.is_ccw(), (
             f"Ear {ear_id} must be counter-clockwise; got ear={ear_serialized}"
         )
@@ -173,18 +173,15 @@ def test_polygon_monster_full_pipeline_ten_guards_forty_nine_convex_components()
     convex_out = ConvexComponentOptimizationStep(job=job_convex, user=_user()).run()
     stdout.update(convex_out)
 
-    # All convex components must be convex and simple.
-    for comp_id, comp_serialized in stdout["convex_components"].items():
-        component = ConvexComponent.unserialize(comp_serialized)
-        assert component.is_convex(), (
-            f"Convex component {comp_id} must be convex; got component={comp_serialized}"
-        )
-        assert component.is_simple(), (
-            f"Convex component {comp_id} must be simple; got component={comp_serialized}"
-        )
+    assert_convex_components_simple_convex_no_obstacle_intersection(
+        stdout["convex_components"], stdout["obstacles"]
+    )
+    assert_convex_components_visibility_within_component(
+        stdout["convex_components"], stdout["obstacles"]
+    )
 
-    assert len(convex_out["convex_components"]) == 49, (
-        f"Monster polygon expects 49 convex components; got {len(convex_out['convex_components'])}"
+    assert len(convex_out["convex_components"]) == 46, (
+        f"Monster polygon expects 46 convex components; got {len(convex_out['convex_components'])}"
     )
 
     job_guard = Job(
@@ -218,14 +215,17 @@ def test_polygon_monster_full_pipeline_ten_guards_forty_nine_convex_components()
                         f"Visibility line from guard {guard} to {visible_pt} goes over obstacle: "
                         f"interior point at t={t} ({interior_pt}) is inside obstacle."
                     )
-                # The segment must not cross any obstacle edge (shared endpoints allowed).
+                # The segment must not cross any obstacle edge; touching at segment endpoint is allowed.
                 for edge in obstacle.edges:
                     if edge.connects(segment):
                         continue
-                    assert not segment.intersects(edge, inclusive=False), (
-                        f"Visibility line from guard {guard} to {visible_pt} crosses obstacle: "
-                        f"segment intersects obstacle edge {edge[0]}–{edge[1]}."
-                    )
+                    if segment.intersects(edge, inclusive=False):
+                        if edge.contains(segment[0], inclusive=True) or edge.contains(segment[1], inclusive=True):
+                            continue
+                        raise AssertionError(
+                            f"Visibility line from guard {guard} to {visible_pt} crosses obstacle: "
+                            f"segment intersects obstacle edge {edge[0]}–{edge[1]}."
+                        )
 
     assert len(guard_out["guards"]) == 10, (
         f"Monster polygon expects 10 guards for sufficient coverage; got {len(guard_out['guards'])}. "

@@ -13,6 +13,10 @@ from geometry import Polygon
 from geometry import Segment
 from models import Job
 from models import User
+from tests.utils import assert_convex_components_simple_convex_no_obstacle_intersection
+from tests.utils import assert_convex_components_visibility_within_component
+from tests.utils import assert_ears_no_obstacle_intersection
+from tests.utils import assert_ears_simple_and_convex
 from steps import ConvexComponentOptimizationStep
 from steps import EarClippingStep
 from steps import GuardPlacementStep
@@ -92,14 +96,10 @@ def test_cross_full_pipeline_validation_stitching_ear_clipping_convex_guard_plac
     ear_out = EarClippingStep(job=job_ear, user=_user()).run()
     assert "ears" in ear_out
     stdout.update(ear_out)
+    assert_ears_simple_and_convex(stdout["ears"])
+    assert_ears_no_obstacle_intersection(stdout["ears"], stdout["obstacles"])
     for ear_id, ear_serialized in stdout["ears"].items():
         ear = Ear.unserialize(ear_serialized)
-        assert ear.is_convex(), (
-            f"Ear {ear_id} must be convex; got ear={ear_serialized}"
-        )
-        assert ear.is_simple(), (
-            f"Ear {ear_id} must be simple; got ear={ear_serialized}"
-        )
         assert ear.is_ccw(), (
             f"Ear {ear_id} must be counter-clockwise; got ear={ear_serialized}"
         )
@@ -136,15 +136,12 @@ def test_cross_full_pipeline_validation_stitching_ear_clipping_convex_guard_plac
     assert "adjacency" in convex_out
     stdout.update(convex_out)
 
-    # All convex components must be convex and simple.
-    for comp_id, comp_serialized in stdout["convex_components"].items():
-        component = ConvexComponent.unserialize(comp_serialized)
-        assert component.is_convex(), (
-            f"Convex component {comp_id} must be convex; got component={comp_serialized}"
-        )
-        assert component.is_simple(), (
-            f"Convex component {comp_id} must be simple; got component={comp_serialized}"
-        )
+    assert_convex_components_simple_convex_no_obstacle_intersection(
+        stdout["convex_components"], stdout["obstacles"]
+    )
+    assert_convex_components_visibility_within_component(
+        stdout["convex_components"], stdout["obstacles"]
+    )
 
     # 5. Guard placement
     job_guard = Job(

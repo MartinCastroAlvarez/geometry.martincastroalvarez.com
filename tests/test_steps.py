@@ -162,7 +162,13 @@ class TestSimpleSteps:
             id=Identifier("j1"),
             step_name=StepName.GUARD_PLACEMENT,
             stdin={"boundary": stitched, "obstacles": []},
-            stdout={"stitched": stitched, "convex_components": convex_out["convex_components"]},
+            stdout={
+                "boundary": stitched,
+                "obstacles": [],
+                "stitched": stitched,
+                "convex_components": convex_out["convex_components"],
+                "adjacency": convex_out["adjacency"],
+            },
         )
         step = GuardPlacementStep(job=job, user=_user())
         out = step.run()

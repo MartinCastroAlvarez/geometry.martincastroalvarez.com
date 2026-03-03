@@ -14,6 +14,10 @@ from geometry import Polygon
 from geometry import Segment
 from models import Job
 from models import User
+from tests.utils import assert_convex_components_simple_convex_no_obstacle_intersection
+from tests.utils import assert_convex_components_visibility_within_component
+from tests.utils import assert_ears_no_obstacle_intersection
+from tests.utils import assert_ears_simple_and_convex
 from steps import ConvexComponentOptimizationStep
 from steps import EarClippingStep
 from steps import GuardPlacementStep
@@ -76,14 +80,10 @@ def test_polygon_a_full_pipeline_requires_one_guard():
         stdout=dict(stdout),
     )
     stdout.update(EarClippingStep(job=job_ear, user=_user()).run())
+    assert_ears_simple_and_convex(stdout["ears"])
+    assert_ears_no_obstacle_intersection(stdout["ears"], stdout["obstacles"])
     for ear_id, ear_serialized in stdout["ears"].items():
         ear = Ear.unserialize(ear_serialized)
-        assert ear.is_convex(), (
-            f"Ear {ear_id} must be convex; got ear={ear_serialized}"
-        )
-        assert ear.is_simple(), (
-            f"Ear {ear_id} must be simple; got ear={ear_serialized}"
-        )
         assert ear.is_ccw(), (
             f"Ear {ear_id} must be counter-clockwise; got ear={ear_serialized}"
         )
@@ -123,15 +123,12 @@ def test_polygon_a_full_pipeline_requires_one_guard():
     )
     stdout.update(ConvexComponentOptimizationStep(job=job_convex, user=_user()).run())
 
-    # All convex components must be convex and simple.
-    for comp_id, comp_serialized in stdout["convex_components"].items():
-        component = ConvexComponent.unserialize(comp_serialized)
-        assert component.is_convex(), (
-            f"Convex component {comp_id} must be convex; got component={comp_serialized}"
-        )
-        assert component.is_simple(), (
-            f"Convex component {comp_id} must be simple; got component={comp_serialized}"
-        )
+    assert_convex_components_simple_convex_no_obstacle_intersection(
+        stdout["convex_components"], stdout["obstacles"]
+    )
+    assert_convex_components_visibility_within_component(
+        stdout["convex_components"], stdout["obstacles"]
+    )
 
     job_guard = Job(
         id=Identifier("polygon-a-guard"),
@@ -160,10 +157,14 @@ def test_polygon_a_full_pipeline_requires_one_guard():
                 for edge in obstacle.edges:
                     if edge.connects(segment):
                         continue
-                    assert not segment.intersects(edge, inclusive=False), (
-                        f"Segment from guard {guard} to visible point {visible_pt} intersects obstacle edge "
-                        f"{edge[0]}–{edge[1]}."
-                    )
+                    if segment.intersects(edge, inclusive=False):
+                        # Touching at segment endpoint (guard or visible point on obstacle edge) is allowed.
+                        if edge.contains(segment[0], inclusive=True) or edge.contains(segment[1], inclusive=True):
+                            continue
+                        raise AssertionError(
+                            f"Segment from guard {guard} to visible point {visible_pt} intersects obstacle edge "
+                            f"{edge[0]}–{edge[1]}."
+                        )
 
     assert len(guard_out["guards"]) == 1, (
         f"Polygon A expects 1 guard for sufficient coverage; got {len(guard_out['guards'])}. "

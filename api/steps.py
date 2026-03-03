@@ -225,6 +225,9 @@ class ValidationPolygonStep(SequenceStep):
     Complexity: O(n^2), n = total vertices (boundary + all obstacles).
     """
 
+    boundary: Polygon | None
+    obstacles: list[Polygon]
+
     def __init__(self, job: Job, user: User) -> None:
         super().__init__(job, user)
         self.boundary: Polygon | None = None
@@ -235,7 +238,6 @@ class ValidationPolygonStep(SequenceStep):
         Ensure boundary and every obstacle are simple (degree 2, no self-intersection).
         Required so later steps (ear clipping, stitching) operate on well-defined polygons.
         """
-        assert self.boundary is not None
         if not self.boundary.is_simple():
             raise PolygonNotSimpleError("Boundary polygon is not simple.")
         if any(not obstacle.is_simple() for obstacle in self.obstacles):
@@ -246,21 +248,15 @@ class ValidationPolygonStep(SequenceStep):
         Ensure boundary is CCW (outer ring) and every obstacle is CW (hole).
         Convention required for containment tests and stitching (bridge/merge logic).
         """
-        assert self.boundary is not None
         self.boundary.sort("ccw")
-        if not self.boundary.is_ccw():
-            raise ValidationBoundaryNotCCWError()
         for obstacle in self.obstacles:
             obstacle.sort("cw")
-        if any(not obstacle.is_cw() for obstacle in self.obstacles):
-            raise ValidationObstacleNotCWError()
 
     def validate_containment(self) -> None:
         """
         Ensure every obstacle vertex lies strictly inside the boundary.
         Obstacles must be holes fully enclosed by the outer polygon for valid stitching.
         """
-        assert self.boundary is not None
         if any(not all(self.boundary.contains(point, inclusive=False) for point in obstacle) for obstacle in self.obstacles):
             raise ValidationObstacleNotContainedError(f"Obstacle is not strictly inside the boundary ({self.boundary}).")
 
@@ -270,7 +266,6 @@ class ValidationPolygonStep(SequenceStep):
         (except at shared vertices), no obstacle vertex on a boundary edge, and no
         two obstacles may intersect or touch. Prevents ambiguous topology for bridging.
         """
-        assert self.boundary is not None
         if any(
             edge.intersects(boundary_edge, inclusive=True) and not edge.connects(boundary_edge)
             for obstacle in self.obstacles
@@ -320,11 +315,9 @@ class StitchingStep(SequenceStep):
     Complexity: O(n^3), n = total vertices (boundary + all obstacles); bucket early exit often reduces work.
     """
 
-    def __init__(self, job: Job, user: User) -> None:
-        super().__init__(job, user)
-        self.boundary: Polygon | None = None
-        self.obstacles: list[Polygon] = []
-        self.points: Polygon | None = None
+    boundary: Polygon
+    obstacles: list[Polygon]
+    points: Polygon
 
     def sort(self) -> None:
         """Sort obstacles in place by rightmost vertex (x, y) descending for bridge order."""
@@ -343,7 +336,6 @@ class StitchingStep(SequenceStep):
 
         # Sort obstacles by rightmost vertex (desc) and init working polygon and its edges.
         self.sort()
-        assert self.boundary is not None
         logger.info("StitchingStep.run() | job.id=%s obstacles=%s boundary_points=%s", self.job.id, len(self.obstacles), len(self.boundary))
         points: Polygon = Polygon(list(self.boundary))
         edges: list[Segment] = list(points.edges)
@@ -421,10 +413,8 @@ class StitchingStep(SequenceStep):
             stitches.append(bridge)
             left: Polygon = Polygon(list(points >> vertex))
             right: Polygon = Polygon(list(obstacle << anchor))
-            if not left.is_ccw():
-                raise StitchWinnerSubsequenceError("Left is not CCW; cannot stitch")
-            if not right.is_cw():
-                raise StitchWinnerSubsequenceError("Right is not CW; cannot stitch")
+            right.sort("ccw")
+            left.sort("ccw")
             merged: list[Point] = list(left) + list(right) + [anchor, vertex]
             points = Polygon(merged)
             edges = list(points.edges)
@@ -440,14 +430,17 @@ class EarClippingStep(SequenceStep):
     Ear clipping step. Reads stitched polygon from job.stdout (from stitching step).
     Runs ear clipping only; returns ears as Table.serialize().
     Polygon.unserialize() raises if stitched is missing or invalid.
+    Rejects any ear whose segments (vertex–vertex or vertex–edge-midpoint) cross an obstacle,
+    so that downstream steps can assume components are obstacle-safe.
 
     Complexity: O(n^3), n = number of vertices of the stitched polygon.
     """
 
+    gallery: ArtGallery
+
     def clip(self, titanic: Polygon) -> Generator[Ear, None, None]:
         # Enforce global CCW once so ear detection, diagonal tests, and final merge are consistent.
-        if not titanic.is_ccw():
-            titanic = Polygon(list(reversed(titanic)))
+        titanic.sort("ccw")
         # Ear clipping: while polygon has more than 3 vertices, find and clip an ear.
         while len(titanic) > 3:
             n: int = len(titanic)
@@ -463,19 +456,23 @@ class EarClippingStep(SequenceStep):
                 walk: Walk = Walk(start=left, center=center, end=right)
                 if walk.is_collinear():
                     continue
-                walk = walk if walk.is_ccw() else ~walk
-                if not walk.is_ccw():
-                    raise EarClippingFailureError(f"Triangle is not CCW: {walk}. " f"The polygon is: {titanic}.")
 
-                # Check if the diagonal is inside the polygon.
-                diagonal: Segment = left.to(right)
-                if not titanic.contains(diagonal, inclusive=True):
+                # Build the ear from the CCW walk.
+                walk = walk if walk.is_ccw() else ~walk
+                ear = Ear(list(walk))
+                ear.sort("ccw")
+
+                # The ear must be fully inside the boundary.
+                if not titanic.contains(ear.diagonal, inclusive=True):
                     continue
 
-                # Check if the triangle contains any other vertices.
-                triangle: Polygon = Polygon([left, center, right])
+                # The ear must not cross any obstacles (check only the diagonal; ear edges are polygon edges).
+                if any(obstacle.intersects(ear.diagonal, inclusive=False) for obstacle in self.gallery.obstacles):
+                    continue
+
+                # The ear must not contain any other vertices.
                 excluded = ((j - 1) % n, j, (j + 1) % n)
-                if any(triangle.contains(titanic[k], inclusive=False) for k in range(n) if k not in excluded):
+                if any(ear.contains(titanic[k], inclusive=False) for k in range(n) if k not in excluded):
                     continue
 
                 # Add the ear to the table.
@@ -512,21 +509,22 @@ class EarClippingStep(SequenceStep):
 
         # Ear clipping: while polygon has more than 3 vertices, find and clip an ear.
         # clip() uses self.gallery.obstacles to reject ears that overlap a hole.
-        ears: Table[Ear] = Table()
+        self.gallery.ears = Table()
         for ear in self.clip(Polygon(list(self.gallery.stitched))):
-            ears.add(ear)
+            self.gallery.ears.add(ear)
 
         # There must be n - 2 ears (one per triangle in the triangulation).
-        # NOTE: This is not true for polygons with repeated vertices.
-        # if len(ears) != len(gallery.stitched) - 2:
-        #     raise EarClippingFailureError(
-        #         f"Expected {len(gallery.stitched) - 2} ears; got {len(ears)}. "
-        #         f"The polygon is: {gallery.stitched}. "
-        #         f"The ears are: {ears}. "
-        #     )
+        # If for any reason there are not n - 2 ears, then it means there
+        # is a problem in the ear clipping step above, not here.
+        if len(self.gallery.ears) != len(self.gallery.stitched) - 2:
+            raise EarClippingFailureError(
+                f"Expected {len(self.gallery.stitched) - 2} ears; got {len(self.gallery.ears)}. "
+                f"The polygon is: {self.gallery.stitched}. "
+                f"The ears are: {self.gallery.ears}. "
+            )
 
-        logger.info("EarClippingStep.run() | job.id=%s ears=%s", self.job.id, len(ears))
-        return {"ears": ears.serialize()}
+        logger.info("EarClippingStep.run() | job.id=%s ears=%s", self.job.id, len(self.gallery.ears))
+        return {"ears": self.gallery.ears.serialize()}
 
 
 class ConvexComponentOptimizationStep(SequenceStep):
@@ -535,8 +533,14 @@ class ConvexComponentOptimizationStep(SequenceStep):
     Merges adjacent convex components; returns convex_components as Table.serialize().
     Ear.unserialize() raises if ears data is missing or invalid.
 
+    Assumes ears do not intersect obstacles (enforced by ear clipping and unit tests).
+    Since ears are convex and obstacle-safe, merging two adjacent convex components
+    yields a convex component that does not intersect any obstacle.
+
     Complexity: O(n^3), n = number of ears (triangles), on the order of stitched vertices.
     """
+
+    gallery: ArtGallery
 
     def build_adjacency_table(self, table: Table[ConvexComponent]) -> Table[Bag[ConvexComponent, Identifier]]:
         """
@@ -559,8 +563,8 @@ class ConvexComponentOptimizationStep(SequenceStep):
         return result
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
-        gallery: ArtGallery = ArtGallery.unserialize(self.job.stdout)
-        ears: Table[Ear] = gallery.ears
+        self.gallery = ArtGallery.unserialize(self.job.stdout)
+        ears: Table[Ear] = self.gallery.ears
         components_table: Table[ConvexComponent] = Table.unserialize([ConvexComponent(ear) for ear in ears])
         adjacency_table: Table[Bag[ConvexComponent, Identifier]] = self.build_adjacency_table(components_table)
         logger.info("ConvexComponentOptimizationStep.run() | job.id=%s components=%s", self.job.id, len(components_table))
@@ -626,6 +630,11 @@ class GuardPlacementStep(SequenceStep):
     Complexity: O(n^4) in the worst case; the exploration heuristic reduces visibility checks in practice.
     """
 
+    gallery: ArtGallery
+    component_id_by_point: Table[Bag[Point, Identifier]]
+    visibility_by_segment: dict[Segment, bool]
+    signed_area_by_component: dict[ConvexComponent, Decimal]
+
     def explore(self, guard: Point) -> Bag[Point, Point]:
         """
         Return a Bag(guard) of points visible from guard. Uses component_id_by_point to find
@@ -640,18 +649,28 @@ class GuardPlacementStep(SequenceStep):
             raise GuardNotInComponentIdByPointError("Guard not in component_id_by_point; invalid state (prepare() not run or guard not a vertex).")
 
         # Record the components that are already visible due to being a vertex of the guard's component.
-        explored: set[Identifier] = set(self.component_id_by_point[guard].items)
+        explored: set[Identifier] = set(self.component_id_by_point[guard])
         explorable: set[Identifier] = {
             adj_id for component_id in explored for adj_id in self.gallery.adjacency[self.gallery.convex_components[component_id]].items
         }
 
         # Hydrate visibility and cache with all points of every component the guard belongs to.
+        # Since a convex component should be convex (otherwise there is a problem in the previous step),
+        # then a guard that is located at any vertex of a convex component can see all the points of that
+        # component, without having to check the visibility of the edges of the component.
+        # As a result, we skip a lot of computation when there are no obstacles.
+        # When there are obstacles, the same component can have vertices on both sides of a hole, so the
+        # segment guard→point can cross the obstacle; we must use sees() in that case.
         for component_id in explored:
             component: ConvexComponent = self.gallery.convex_components[component_id]
             for point in component:
                 segment: Segment = guard.to(point)
                 self.visibility_by_segment[segment] = True
                 visibility += point
+            for edge in component.edges:
+                segment = guard.to(edge.midpoint)
+                self.visibility_by_segment[segment] = True
+                visibility += edge.midpoint
 
         # Continue exploring explorable components until no more are available.
         while explorable - explored:
@@ -663,16 +682,20 @@ class GuardPlacementStep(SequenceStep):
             # Mark the component as explored.
             explored.add(adjacent_id)
 
-            # Check if that adjacent component is visible.
+            # Check if that adjacent component is visible (vertices or edge midpoints).
             visible = False
             for point in adjacent:
                 if self.sees(guard, point):
                     visibility += point
                     visible = True
+            for edge in adjacent.edges:
+                if self.sees(guard, edge.midpoint):
+                    visibility += edge.midpoint
+                    visible = True
 
             # If the component is visible, explore its adjacent components.
             if visible:
-                explorable.update(self.gallery.adjacency[adjacent].items)
+                explorable.update(self.gallery.adjacency[adjacent])
 
         return visibility
 
@@ -750,9 +773,9 @@ class GuardPlacementStep(SequenceStep):
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
         self.gallery = ArtGallery.unserialize(self.job.stdout)
-        self.visibility_by_segment: dict[Segment, bool] = {}
-        self.signed_area_by_component: dict[ConvexComponent, Decimal] = {}
-        self.component_id_by_point: Table[Bag[Point, Identifier]] = Table()
+        self.visibility_by_segment = {}
+        self.signed_area_by_component = {}
+        self.component_id_by_point = Table()
 
         self.prepare()
 
@@ -793,13 +816,19 @@ class GuardPlacementStep(SequenceStep):
             self.gallery.visibility += best_visibility
 
             # Remove the component and the points from the remaining sets.
-            remaining_points -= set(best_visibility.items)
-            remaining_components -= {best_component}
+            remaining_points -= set(best_visibility)
 
             # Remove any component fully covered by best_guard using best_visibility (avoids redundant sees() calls).
-            for comp in list(remaining_components):
-                if all(point in best_visibility for point in comp):
-                    remaining_components -= {comp}
+            # This should already include the best_component, but we'll be safe and remove it anyway.
+            # The guard was placed inside the `best_component`, so it is guaranteed to be covered by the best_visibility.
+            # However, we don't explicitely remove it here, just to make sure the following code works.
+            for component in list(remaining_components):
+                if not all(point in best_visibility for point in component):
+                    continue
+                if not all(segment.midpoint in best_visibility for segment in component.edges):
+                    continue
+                remaining_components -= {component}
+            assert best_component not in remaining_components, "Best component is still in remaining components."
 
             logger.info("GuardPlacementStep.run() | job.id=%s points_remaining=%s", self.job.id, len(remaining_points))
 

@@ -8,6 +8,10 @@ from attributes import Identifier
 from enums import StepName
 from geometry import ConvexComponent
 from models import Job
+from tests.utils import assert_convex_components_simple_convex_no_obstacle_intersection
+from tests.utils import assert_convex_components_visibility_within_component
+from tests.utils import assert_ears_no_obstacle_intersection
+from tests.utils import assert_ears_simple_and_convex
 from models import User
 from steps import ConvexComponentOptimizationStep
 from steps import EarClippingStep
@@ -65,18 +69,17 @@ def test_triangle_full_pipeline_requires_two_guards():
     stdout.update(StitchingStep(job=job_stitch, user=_user()).run())
     job_ear = Job(id=Identifier("tri-e"), step_name=StepName.EAR_CLIPPING, stdin=dict(TRIANGLE_STDIN), stdout=dict(stdout))
     stdout.update(EarClippingStep(job=job_ear, user=_user()).run())
+    assert_ears_simple_and_convex(stdout["ears"])
+    assert_ears_no_obstacle_intersection(stdout["ears"], stdout["obstacles"])
     job_convex = Job(id=Identifier("tri-c"), step_name=StepName.CONVEX_COMPONENT_OPTIMIZATION, stdin=dict(TRIANGLE_STDIN), stdout=dict(stdout))
     stdout.update(ConvexComponentOptimizationStep(job=job_convex, user=_user()).run())
 
-    # All convex components must be convex and simple.
-    for comp_id, comp_serialized in stdout["convex_components"].items():
-        component = ConvexComponent.unserialize(comp_serialized)
-        assert component.is_convex(), (
-            f"Convex component {comp_id} must be convex; got component={comp_serialized}"
-        )
-        assert component.is_simple(), (
-            f"Convex component {comp_id} must be simple; got component={comp_serialized}"
-        )
+    assert_convex_components_simple_convex_no_obstacle_intersection(
+        stdout["convex_components"], stdout["obstacles"]
+    )
+    assert_convex_components_visibility_within_component(
+        stdout["convex_components"], stdout["obstacles"]
+    )
 
     job_guard = Job(id=Identifier("tri-g"), step_name=StepName.GUARD_PLACEMENT, stdin=dict(TRIANGLE_STDIN), stdout=dict(stdout))
     guard_out = GuardPlacementStep(job=job_guard, user=_user()).run()
