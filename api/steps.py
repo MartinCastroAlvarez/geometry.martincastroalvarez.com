@@ -45,10 +45,8 @@ from exceptions import PolygonNotSimpleError
 from exceptions import PolygonsDoNotShareEdgeError
 from exceptions import StepNotHandledError
 from exceptions import StitchWinnerSubsequenceError
-from exceptions import ValidationBoundaryNotCCWError
 from exceptions import ValidationError
 from exceptions import ValidationObstacleNotContainedError
-from exceptions import ValidationObstacleNotCWError
 from geometry import Point
 from geometry import Polygon
 from geometry.convex import ConvexComponent
@@ -337,8 +335,7 @@ class StitchingStep(SequenceStep):
         # Sort obstacles by rightmost vertex (desc) and init working polygon and its edges.
         self.sort()
         logger.info("StitchingStep.run() | job.id=%s obstacles=%s boundary_points=%s", self.job.id, len(self.obstacles), len(self.boundary))
-        points: Polygon = Polygon(list(self.boundary))
-        edges: list[Segment] = list(points.edges)
+        stitched: Polygon = Polygon(list(self.boundary))
         stitches: list[Segment] = []
 
         for obstacle in self.obstacles:
@@ -351,7 +348,7 @@ class StitchingStep(SequenceStep):
             for anchor in obstacle:
                 bridge = None
 
-                for candidate in points << points.rightmost:
+                for candidate in stitched << stitched.rightmost:
 
                     # Exit early if the candidate is the anchor.
                     if candidate == anchor:
@@ -381,7 +378,7 @@ class StitchingStep(SequenceStep):
                         continue
 
                     # Exit early if the segment intersects any other segment.
-                    if any(edge.intersects(segment, inclusive=False) for edge in edges if not edge.connects(segment)):
+                    if any(edge.intersects(segment, inclusive=False) for edge in stitched.edges if not edge.connects(segment)):
                         continue
 
                     # Exit early if the bucket is full.
@@ -404,23 +401,32 @@ class StitchingStep(SequenceStep):
 
             # Reject if bridge is a contiguous subsequence of polygon or obstacle (cannot stitch).
             vertex: Point = bridge[0]
-            if bridge in points:
+            if bridge in stitched:
                 raise StitchWinnerSubsequenceError("Winner is a subsequence of boundary points; cannot stitch")
             if bridge in obstacle:
                 raise StitchWinnerSubsequenceError("Winner is a subsequence of obstacle; cannot stitch")
 
             # Rotate polygon so vertex is last, obstacle so anchor is first; require CCW/CW; merge and update.
-            stitches.append(bridge)
-            left: Polygon = Polygon(list(points >> vertex))
-            right: Polygon = Polygon(list(obstacle << anchor))
-            right.sort("ccw")
-            left.sort("ccw")
-            merged: list[Point] = list(left) + list(right) + [anchor, vertex]
-            points = Polygon(merged)
-            edges = list(points.edges)
 
-        points.sort("ccw")
-        self.points = points
+            left: Polygon = Polygon(list(stitched))
+            right: Polygon = Polygon(list(obstacle))
+
+            left.sort("ccw")
+            right.sort("cw")
+
+            left = left >> vertex
+            right = right << anchor
+
+            assert right[0] == anchor, f"Right polygon does not start with anchor: {right}"
+            assert left[-1] == vertex, f"Left polygon does not end with vertex: {left}"
+
+            # Update the stitched polygon after adding the bridge.
+            merged: list[Point] = list(left) + list(right) + [anchor, vertex]
+            stitched = Polygon(merged)
+            stitches.append(bridge)
+
+        assert stitched.is_ccw(), f"Stitched polygon is not CCW: {stitched}"
+        self.points = stitched
         logger.info("StitchingStep.run() | job.id=%s stitched_points=%s bridge_edges=%s", self.job.id, len(self.points), len(stitches))
         return {"stitched": self.points.serialize(), "stitches": [stitch.serialize() for stitch in stitches]}
 
@@ -441,26 +447,25 @@ class EarClippingStep(SequenceStep):
     def clip(self, titanic: Polygon) -> Generator[Ear, None, None]:
         # Enforce global CCW once so ear detection, diagonal tests, and final merge are consistent.
         titanic.sort("ccw")
+
         # Ear clipping: while polygon has more than 3 vertices, find and clip an ear.
-        while len(titanic) > 3:
+        found: bool = True
+        while len(titanic) > 3 and found:
             n: int = len(titanic)
-            found: bool = False
+            found = False
             for j in range(n):
 
                 # Only clip if we would leave at least 3 vertices (the last 3 are the final triangle).
-                left: Point = titanic[j - 1]
-                center: Point = titanic[j]
-                right: Point = titanic[j + 1]
-
                 # Check if the triangle is a valid ear.
-                walk: Walk = Walk(start=left, center=center, end=right)
-                if walk.is_collinear():
+                walk: Walk = Walk(start=titanic[j - 1], center=titanic[j], end=titanic[j + 1])
+
+                # CW ears are not valid because they contain empty space.
+                if walk.is_cw() or walk.is_collinear():
                     continue
 
                 # Build the ear from the CCW walk.
-                walk = walk if walk.is_ccw() else ~walk
+                # walk = walk if walk.is_ccw() else ~walk
                 ear = Ear(list(walk))
-                ear.sort("ccw")
 
                 # The ear must be fully inside the boundary.
                 if not titanic.contains(ear.diagonal, inclusive=True):
@@ -476,25 +481,26 @@ class EarClippingStep(SequenceStep):
                     continue
 
                 # Add the ear to the table.
-                ear = Ear([left, center, right])
-                ear.sort("ccw")
                 yield ear
-
-                # Safecheck against bugs.
-                found = True
 
                 # Remove ear tip from polygon by index (position), not by point value;
                 # the same point may appear at other indices and must be kept.
-                titanic = Polygon([titanic[i] for i in range(n) if i != j])
+                titanic.pop(j)
+
+                # Continue searching for an ear.
+                found = True
                 break
 
-            # Safecheck against bugs.
-            if not found:
-                raise EarClippingFailureError(f"Iteration completed but no ear found for: {titanic}. ")
-
         # The remainder should contain exactly 3 vertices.
+        # If there are more than 3 vertices, then it means there
+        # is a problem in the ear clipping step above, not here.
+        # Some iteration failed to detect an ear propertly.
         if len(titanic) != 3:
-            raise EarClippingFailureError(f"Expected 3 vertices or less; got {len(titanic)}." f"The polygon is: {titanic}.")
+            raise EarClippingFailureError(
+                f"Expected 3 vertices or less; got {len(titanic)}."
+                f"The (remaining) polygon is: {titanic}."
+                f"The ears found so far are: {self.gallery.ears}."
+            )
 
         # Add final triangle as last ear (ccw or reversed if cw).
         path: Walk = Walk(start=titanic[0], center=titanic[1], end=titanic[2])

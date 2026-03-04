@@ -71,6 +71,9 @@ class Walk:
     def is_collinear(self) -> bool:
         return self.orientation == Orientation.COLLINEAR
 
+    def __repr__(self) -> str:
+        return f"Walk(start={self.start!r}, center={self.center!r}, end={self.end!r})"
+
     def __getitem__(self, index: int) -> Point:
         if index == 0:
             return self.start

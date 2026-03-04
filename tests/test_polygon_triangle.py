@@ -7,6 +7,7 @@ from attributes import Email
 from attributes import Identifier
 from enums import StepName
 from geometry import ConvexComponent
+from geometry import Polygon
 from models import Job
 from tests.utils import assert_convex_components_simple_convex_no_obstacle_intersection
 from tests.utils import assert_convex_components_visibility_within_component
@@ -67,6 +68,10 @@ def test_triangle_full_pipeline_requires_two_guards():
     stdout.update(ValidationPolygonStep(job=job_validate, user=_user()).run())
     job_stitch = Job(id=Identifier("tri-s"), step_name=StepName.STITCHING, stdin=dict(TRIANGLE_STDIN), stdout=dict(stdout))
     stdout.update(StitchingStep(job=job_stitch, user=_user()).run())
+    stitched = Polygon.unserialize(stdout["stitched"])
+    assert stitched.is_simple(), (
+        f"Stitched polygon must be simple; got stitched with {len(stitched)} vertices"
+    )
     job_ear = Job(id=Identifier("tri-e"), step_name=StepName.EAR_CLIPPING, stdin=dict(TRIANGLE_STDIN), stdout=dict(stdout))
     stdout.update(EarClippingStep(job=job_ear, user=_user()).run())
     assert_ears_simple_and_convex(stdout["ears"])

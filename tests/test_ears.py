@@ -13,9 +13,12 @@ from geometry import Ear
 from geometry import Point
 from geometry import Polygon
 from geometry import Segment
+from geometry import Walk
 from models import Job
 from models import User
 from steps import EarClippingStep
+from steps import StitchingStep
+from steps import ValidationPolygonStep
 
 
 def _point(x: int | float | Decimal, y: int | float | Decimal) -> Point:
@@ -125,3 +128,96 @@ def test_ears_triangle_stitched_single_ear():
     assert ear.is_convex() and ear.is_simple()
     ok, msg = _ear_edge_crosses_or_overlaps_stitched(ear, stitched)
     assert not ok, msg
+
+
+def test_ears_no_collinear_even_when_input_has_consecutive_equal_points():
+    """
+    When the input polygon has a sequence of equal points, Polygon (Sequence) dedups them
+    automatically. Ear clipping must not produce any collinear ear.
+    """
+    # Square with (1,0) repeated three times; Sequence.dedup() in Polygon constructor removes contiguous duplicates.
+    stitched = Polygon([_point(x, y) for x, y in [(0, 0), (1, 0), (1, 0), (1, 0), (1, 1), (0, 1)]])
+    assert len(stitched) == 4, "dedup() must reduce to 4 vertices"
+    ears = _run_ear_clipping(stitched)
+    assert len(ears) == 2, "Deduped square must produce 2 ears"
+    for ear in ears:
+        assert not Walk(start=ear[0], center=ear[1], end=ear[2]).is_collinear(), (
+            f"Ear must not be collinear; got ear with points {ear[0]}, {ear[1]}, {ear[2]}"
+        )
+        assert ear.is_convex() and ear.is_simple()
+
+
+# Same polygon as test_polygon_triangle.py (boundary + 3 obstacles).
+TRIANGLE_STDIN = {
+    "boundary": {
+        "points": [
+            [619.3310965232191, 482.5],
+            [14.007488451252128, 332.5],
+            [361.1930950644299, 274.5],
+            [358.1914903963044, 9.5],
+        ]
+    },
+    "obstacles": [
+        {
+            "points": [
+                [506.2706540238269, 416.5],
+                [506.2706540238269, 333.5],
+                [450.2407002188184, 312.5],
+                [444.2374908825675, 395.5],
+            ]
+        },
+        {
+            "points": [
+                [405.21663019693653, 385.5],
+                [406.2171650863117, 319.5],
+                [269.1438852419159, 343.5],
+            ]
+        },
+        {
+            "points": [
+                [404.21609530756143, 281.5],
+                [463.2476537806954, 276.5],
+                [424.22679309506447, 223.5],
+            ]
+        },
+    ],
+    "guards": [],
+}
+
+
+def test_triangle_polygon_ear_clipping_output():
+    """
+    Run validation, stitching, then ear clipping for the triangle polygon.
+    Assert ear clipping output: ear count, ears simple and convex, no obstacle intersection.
+    """
+    from tests.utils import assert_ears_no_obstacle_intersection
+    from tests.utils import assert_ears_simple_and_convex
+
+    stdout = {}
+    job_validate = Job(
+        id=Identifier("tri-ears-validate"),
+        step_name=StepName.VALIDATE_POLYGONS,
+        stdin=dict(TRIANGLE_STDIN),
+    )
+    stdout.update(ValidationPolygonStep(job=job_validate, user=_user()).run())
+    job_stitch = Job(
+        id=Identifier("tri-ears-stitch"),
+        step_name=StepName.STITCHING,
+        stdin=dict(TRIANGLE_STDIN),
+        stdout=dict(stdout),
+    )
+    stdout.update(StitchingStep(job=job_stitch, user=_user()).run())
+    job_ear = Job(
+        id=Identifier("tri-ears-run"),
+        step_name=StepName.EAR_CLIPPING,
+        stdin=dict(TRIANGLE_STDIN),
+        stdout=dict(stdout),
+    )
+    stdout.update(EarClippingStep(job=job_ear, user=_user()).run())
+
+    n_stitched = len(Polygon.unserialize(stdout["stitched"]))
+    assert len(stdout["ears"]) == n_stitched - 2, (
+        f"Expected {n_stitched - 2} ears; got {len(stdout['ears'])}"
+    )
+    assert_ears_simple_and_convex(stdout["ears"])
+    assert_ears_no_obstacle_intersection(stdout["ears"], stdout["obstacles"])
