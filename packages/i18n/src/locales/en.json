@@ -107,7 +107,7 @@
     "tooltipViewerConvexComponent": "Convex components",
     "tooltipViewerStitching": "Stitching",
     "tooltipViewerCoverage": "Diamonds",
-    "tooltipViewerVisibility": "Guard coverage"
+    "tooltipViewerVisibility": "Guards"
   },
   "common": {
     "defaultConfirmMessage": "Are you sure?",

@@ -84,7 +84,7 @@ export const GalleryPage = () => {
                 </Container>
             </Container>
             <Container padded spaced>
-                <Viewer artGallery={gallery!.artGallery} size={VIEWER_HEIGHT} vertices />
+                <Viewer artGallery={gallery!.artGallery} size={VIEWER_HEIGHT} interactive vertices />
             </Container>
             <Container padded spaced>
                 <Container size={isMobile ? 12 : 6} left={!isMobile} center={isMobile}>

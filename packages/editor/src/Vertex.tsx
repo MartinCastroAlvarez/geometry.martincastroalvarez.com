@@ -33,6 +33,8 @@ export interface VertexProps {
     scale?: number;
     /** When "lg" or "xl", vertex is drawn larger (lg is slightly smaller than xl). */
     size?: "lg" | "xl";
+    /** When true, vertex uses same color and opacity as muted Edge (--color-edge-muted, 0.3). Default false. */
+    muted?: boolean;
     /** Optional tooltip content; when set, parent should pass onTooltipShow/onTooltipHide and render Tooltip outside Konva. */
     tooltip?: React.ReactNode;
     /** Called when pointer enters and tooltip is set; parent should show tooltip at (clientX, clientY). */
@@ -54,6 +56,7 @@ const VertexComponent = ({
     contentBounds,
     scale = 1,
     size,
+    muted = false,
     tooltip,
     onTooltipShow,
     onTooltipHide,
@@ -99,12 +102,16 @@ const VertexComponent = ({
         if (tooltip != null && onTooltipHide) onTooltipHide();
     };
 
+    const fill = muted ? getColor("--color-edge-muted") : getColor("--color-polygon");
+    const opacity = muted ? 0.3 : 1;
+
     return (
         <Circle
             x={vertex.x}
             y={vertex.y}
             radius={radius}
-            fill={getColor("--color-polygon")}
+            fill={fill}
+            opacity={opacity}
             draggable={draggable && !!onDragMove}
             cursor="pointer"
             dragBoundFunc={dragBoundFunc}

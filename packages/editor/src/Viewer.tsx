@@ -379,7 +379,7 @@ const ViewerInner = ({
                                             index={vertices.length + guardVertices.length + i}
                                             draggable={false}
                                             scale={scale * layerScale}
-                                            size="lg"
+                                            muted
                                             tooltip={`(${vertex.x}, ${vertex.y})`}
                                             onTooltipShow={(content, x, y) => setVertexTooltip({ content, x, y })}
                                             onTooltipHide={() => setVertexTooltip(null)}
