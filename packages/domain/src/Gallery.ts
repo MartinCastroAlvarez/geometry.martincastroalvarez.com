@@ -9,11 +9,13 @@
  */
 import { ArtGallery } from './ArtGallery';
 
-/** Published gallery with metadata (id, title, updated_at) and geometry */
+/** Published gallery with metadata (id, title, updated_at, duration) and geometry */
 export interface Gallery {
     id: string;
     title?: string;
     /** ISO date string from API */
     updated_at?: string;
+    /** Duration in milliseconds (from job when published). */
+    duration?: number;
     artGallery: ArtGallery;
 }

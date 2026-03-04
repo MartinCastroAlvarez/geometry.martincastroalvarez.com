@@ -184,6 +184,40 @@ class Timestamp(str):
         return str(self)
 
 
+class Duration(int):
+    """
+    Non-negative integer duration in milliseconds.
+
+    Constructor accepts int >= 0 (or Duration). Use from_timestamps to build
+    from finished_at and started_at (difference in seconds is converted to milliseconds).
+
+    For example, to build duration from step timestamps:
+    >>> finished = Timestamp.from_iso("2024-01-01T12:00:05.000000Z")
+    >>> started = Timestamp.from_iso("2024-01-01T12:00:00.000000Z")
+    >>> d = Duration.from_timestamps(finished, started)
+    >>> d >= 0
+    True
+    """
+
+    def __new__(cls, value: Any) -> Duration:
+        if isinstance(value, Duration):
+            return super().__new__(cls, int(value))
+        try:
+            raw: int = int(value)
+        except (TypeError, ValueError):
+            raise ValidationError("Duration must be an integer")
+        if raw < 0:
+            raise ValidationError("Duration must be >= 0")
+        return super().__new__(cls, raw)
+
+    @classmethod
+    def from_timestamps(cls, finished_at: Timestamp, started_at: Timestamp) -> Duration:
+        """Build Duration from two timestamps; elapsed seconds (float) are converted to milliseconds."""
+        delta_seconds: float = (finished_at.to_datetime() - started_at.to_datetime()).total_seconds()
+        ms: int = int(round(delta_seconds * 1000))
+        return cls(max(0, ms))
+
+
 class Countdown(int):
     """
     Integer sort key for "newest first": (FAR_FUTURE - value) in total_seconds, multiplied by 10**PRECISION.

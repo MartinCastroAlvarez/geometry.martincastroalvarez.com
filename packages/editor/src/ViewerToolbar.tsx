@@ -2,7 +2,7 @@
  * Viewer toolbar: mode buttons in order — polygon, stitch, ear clipping, convex, guard visibility.
  * One mode is active at a time; active button gets the active prop.
  */
-import { TriangleDashed, Hexagon, SquareDashed, Waypoints, Eye } from "lucide-react";
+import { TriangleDashed, Hexagon, SquareDashed, Waypoints, Gem, Eye } from "lucide-react";
 import { Container, Toolbar, Button } from "@geometry/ui";
 import { useLocale } from "@geometry/i18n";
 import { ViewerMode } from "./ViewerMode";
@@ -12,6 +12,7 @@ const MODE_ICONS: Record<ViewerMode, React.ReactNode> = {
     [ViewerMode.EarClipping]: <TriangleDashed size={14} className="shrink-0" aria-hidden />,
     [ViewerMode.ConvexComponent]: <SquareDashed size={14} className="shrink-0" aria-hidden />,
     [ViewerMode.Stitching]: <Waypoints size={14} className="shrink-0" aria-hidden />,
+    [ViewerMode.Coverage]: <Gem size={14} className="shrink-0" aria-hidden />,
     [ViewerMode.Visibility]: <Eye size={14} className="shrink-0" aria-hidden />,
 };
 
@@ -58,6 +59,14 @@ export const ViewerToolbar = ({ mode, onModeChange, alignRight = false }: Viewer
                     onClick={() => onModeChange(ViewerMode.ConvexComponent)}
                     aria-label={t("toolbar.tooltipViewerConvexComponent")}
                     tooltip={t("toolbar.tooltipViewerConvexComponent")}
+                />
+                <Button
+                    sm
+                    active={mode === ViewerMode.Coverage}
+                    icon={MODE_ICONS[ViewerMode.Coverage]}
+                    onClick={() => onModeChange(ViewerMode.Coverage)}
+                    aria-label={t("toolbar.tooltipViewerCoverage")}
+                    tooltip={t("toolbar.tooltipViewerCoverage")}
                 />
                 <Button
                     sm

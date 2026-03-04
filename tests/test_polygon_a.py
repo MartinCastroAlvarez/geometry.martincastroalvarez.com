@@ -1,7 +1,7 @@
 """
 Test that api/steps.py runs the full pipeline (validation, stitching, ear clipping,
 convex component merge, guard placement) for polygon A (boundary + one obstacle).
-Expects 1 guard for sufficient coverage.
+Expects 2 guards for sufficient coverage. Asserts coverage (stitched + convex edge midpoints) in output.
 """
 
 from attributes import Email
@@ -139,6 +139,11 @@ def test_polygon_a_full_pipeline_requires_one_guard():
     guard_out = GuardPlacementStep(job=job_guard, user=_user()).run()
 
     assert len(guard_out["visibility"]) == len(guard_out["guards"])
+    assert "coverage" in guard_out, "Guard placement must return coverage (stitched points + convex edge midpoints)."
+    assert isinstance(guard_out["coverage"], list), "coverage must be a list of points."
+    assert len(guard_out["coverage"]) >= len(stdout["stitched"]), (
+        "coverage must include at least all stitched vertices."
+    )
 
     # Every segment from a guard to a point in its visibility must not intersect or go through any obstacle.
     obstacle_polygons = [Polygon.unserialize(obs) for obs in stdout["obstacles"]]
@@ -166,8 +171,8 @@ def test_polygon_a_full_pipeline_requires_one_guard():
                             f"{edge[0]}–{edge[1]}."
                         )
 
-    assert len(guard_out["guards"]) == 1, (
-        f"Polygon A expects 1 guard for sufficient coverage; got {len(guard_out['guards'])}. "
+    assert len(guard_out["guards"]) == 2, (
+        f"Polygon A expects 2 guards for sufficient coverage; got {len(guard_out['guards'])}. "
         f"The guards are: {guard_out['guards']}. "
         f"The visibility is: {guard_out['visibility']}. "
     )

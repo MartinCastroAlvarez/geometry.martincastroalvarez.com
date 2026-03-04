@@ -13,10 +13,12 @@ import { Container } from "./Container";
 import { Tooltip } from "./Tooltip";
 
 export interface StatsProps {
-    /** Numeric value to display (mutually exclusive with percent). */
+    /** Numeric value to display (mutually exclusive with percent and labelValue). */
     value?: number;
-    /** Percentage to display with "%" suffix (mutually exclusive with value). */
+    /** Percentage to display with "%" suffix (mutually exclusive with value and labelValue). */
     percent?: number;
+    /** Optional preformatted string to display (e.g. "1K" for duration); mutually exclusive with value and percent. */
+    labelValue?: string;
     /** Optional tooltip text shown on hover. */
     tooltip?: string;
     children: React.ReactNode;
@@ -26,18 +28,19 @@ function hasValue(v: number | undefined | null): v is number {
     return typeof v === "number";
 }
 
-export const Stats: React.FC<StatsProps> = ({ value, percent, tooltip, children }) => {
+export const Stats: React.FC<StatsProps> = ({ value, percent, labelValue, tooltip, children }) => {
     const hasVal = hasValue(value);
     const hasPct = hasValue(percent);
-    if (!hasVal && !hasPct) {
-        throw new Error("Stats: either value or percent must be passed (accepts zero, not null/undefined).");
+    const hasLabel = labelValue != null && labelValue !== "";
+    if (!hasVal && !hasPct && !hasLabel) {
+        throw new Error("Stats: one of value, percent, or labelValue must be passed.");
     }
-    if (hasVal && hasPct) {
-        throw new Error("Stats: pass only one of value or percent.");
+    if ([hasVal, hasPct, hasLabel].filter(Boolean).length > 1) {
+        throw new Error("Stats: pass only one of value, percent, or labelValue.");
     }
 
     const display =
-        hasVal ? String(value) : `${percent}%`;
+        hasLabel ? labelValue : hasVal ? String(value) : `${percent}%`;
 
     const content = (
         <Container name="geometry-stats">

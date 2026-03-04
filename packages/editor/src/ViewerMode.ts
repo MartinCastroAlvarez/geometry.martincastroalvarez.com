@@ -14,6 +14,8 @@ export enum ViewerMode {
     ConvexComponent = "convex_component",
     /** Boundary, obstacles, and stitched polygon edges. */
     Stitching = "stitching",
+    /** Coverage points (stitched + convex edge midpoints) as diamonds. */
+    Coverage = "coverage",
     /** Visibility / guards view (reserved). */
     Visibility = "visibility",
 }

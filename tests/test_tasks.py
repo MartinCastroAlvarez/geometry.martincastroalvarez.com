@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
+from attributes import Duration
 from attributes import Email
 from attributes import Identifier
 from enums import Action
@@ -289,3 +290,5 @@ class TestReportTask:
         assert parent.meta["step:ear-clipping:started_at"] == "2026-03-02T01:00:05"
         assert parent.meta["step:ear-clipping:finished_at"] == "2026-03-02T01:00:10"
         assert "step:art-gallery:finished_at" in parent.meta
+        assert isinstance(parent.duration, Duration)
+        assert parent.duration >= 0

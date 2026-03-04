@@ -26,4 +26,6 @@ export interface Job {
     artGallery?: ArtGallery;
     /** Child job IDs from the API (parent has children_ids). */
     children_ids?: string[];
+    /** Total run duration in milliseconds (set when job completes). */
+    duration?: number;
 }

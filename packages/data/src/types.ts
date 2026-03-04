@@ -29,6 +29,8 @@ export interface ApiJob {
     stdout: Record<string, unknown>;
     meta: Record<string, unknown>;
     stderr: Record<string, unknown>;
+    /** Duration in milliseconds (optional; 0 or absent for older records). */
+    duration?: number;
     created_at: string;
     updated_at: string;
 }
@@ -59,6 +61,10 @@ export interface ApiArtGallery {
     stitched?: ApiPolygon | Array<{ x: number; y: number } | [number, number]>;
     /** Optional list of bridge edges from stitching step; each segment is [[x,y],[x,y]]. */
     stitches?: Array<Array<{ x: number; y: number } | [number, number]>>;
+    /** Optional duration in milliseconds (from job when published). */
+    duration?: number;
+    /** Optional coverage points (stitched + convex edge midpoints from guard placement). */
+    coverage?: Array<{ x: number; y: number } | [number, number]>;
     created_at: string;
     updated_at: string;
 }

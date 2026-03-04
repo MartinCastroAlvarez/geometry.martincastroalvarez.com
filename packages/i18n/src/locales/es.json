@@ -106,6 +106,7 @@
     "tooltipViewerEarClipping": "Triangulación",
     "tooltipViewerConvexComponent": "Componentes convexos",
     "tooltipViewerStitching": "Unión de polígono y obstáculos",
+    "tooltipViewerCoverage": "Diamantes",
     "tooltipViewerVisibility": "Cobertura de guardias"
   },
   "common": {
@@ -118,7 +119,10 @@
     "points": "Puntos",
     "obstacles": "Obstáculos",
     "guards": "Guardias",
-    "components": "Componentes"
+    "components": "Componentes",
+    "duration": "{{value}}",
+    "durationLabel": "Duración",
+    "seconds": "Segundos"
   },
   "validation": {
     "resultsTitle": "Resultados de validación",

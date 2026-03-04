@@ -226,8 +226,8 @@ export const JobPage = () => {
                         />
                     </Container>
                     <Container spaced>
-                        <Container size={12} left>
-                            <Text muted xxs left>
+                        <Container size={12} left={!isMobile} center={isMobile}>
+                            <Text muted xxs left={!isMobile} center={isMobile}>
                                 {updatedLabel}
                             </Text>
                         </Container>

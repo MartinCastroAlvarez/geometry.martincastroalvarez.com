@@ -1,5 +1,7 @@
 /**
- * Summary: 4-column stats grid (Points, Obstacles, Guards, Components) from an ArtGallery.
+ * Summary: 4-column stats grid (Points, Obstacles, Guards, Components/Duration) from an ArtGallery.
+ * When artGallery.duration is set (e.g. published galleries), the fourth column shows humanized
+ * duration instead of the number of components; points, obstacles, and guards are always shown.
  * Responsive: size 3 on desktop/tablet, 6 on mobile (2x2). Uses localized strings.
  *
  * Example:
@@ -23,6 +25,20 @@ function countPoints(gallery: ArtGallery): number {
     return n;
 }
 
+/** Humanize seconds for display (e.g. 1000 -> "1K", 50000 -> "50K", 1.5 -> "1.5"). */
+function humanizeDurationSeconds(seconds: number): string {
+    if (seconds >= 1e6) {
+        const m = seconds / 1e6;
+        return (m % 1 === 0 ? String(m) : m.toFixed(1)) + "M";
+    }
+    if (seconds >= 1000) {
+        const k = seconds / 1000;
+        return (k % 1 === 0 ? String(k) : k.toFixed(1)) + "K";
+    }
+    if (seconds % 1 === 0) return String(Math.round(seconds));
+    return seconds.toFixed(1);
+}
+
 export const Summary: React.FC<SummaryProps> = ({ artGallery }) => {
     const { t } = useLocale();
     const { isMobile } = useDevice();
@@ -31,7 +47,11 @@ export const Summary: React.FC<SummaryProps> = ({ artGallery }) => {
     const points = countPoints(artGallery);
     const obstacles = artGallery.obstacles.length;
     const guards = artGallery.guards.length;
-    const components = artGallery.convex_components.length;
+    const durationMs = artGallery.duration;
+
+    // When duration is set (e.g. published galleries), show duration in place of components only
+    const hasDuration = durationMs != null && durationMs >= 0;
+    const fourthLabel = hasDuration ? t("summary.seconds") : t("summary.components");
 
     return (
         <Container name="geometry-summary" spaced>
@@ -45,7 +65,11 @@ export const Summary: React.FC<SummaryProps> = ({ artGallery }) => {
                 <Stats value={guards}>{t("summary.guards")}</Stats>
             </Container>
             <Container size={colSize} left center>
-                <Stats value={components}>{t("summary.components")}</Stats>
+                {hasDuration ? (
+                    <Stats labelValue={humanizeDurationSeconds(durationMs / 1000)}>{fourthLabel}</Stats>
+                ) : (
+                    <Stats value={artGallery.convex_components.length}>{fourthLabel}</Stats>
+                )}
             </Container>
         </Container>
     );

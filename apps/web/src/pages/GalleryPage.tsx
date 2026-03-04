@@ -94,7 +94,7 @@ export const GalleryPage = () => {
                         </Title>
                     </Container>
                     <Container size={12} left={!isMobile} center={isMobile}>
-                        <Text muted xxs left>
+                        <Text muted xxs left={!isMobile} center={isMobile}>
                             {updatedLabel}
                         </Text>
                     </Container>

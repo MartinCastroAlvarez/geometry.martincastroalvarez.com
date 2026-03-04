@@ -32,6 +32,10 @@ export interface ArtGalleryDict {
     convex_components?: PolygonDict[] | Record<string, PolygonDict | number[][] | unknown>;
     /** Optional visibility (API dict key->points; or array of paths; or VisibilityDict[]). */
     visibility?: Record<string, PointDict[] | number[][]> | PointDict[][] | VisibilityDict[];
+    /** Optional duration in milliseconds (from job when published). */
+    duration?: number;
+    /** Optional coverage points (stitched vertices + convex edge midpoints from guard placement). */
+    coverage?: PointDict[] | number[][];
 }
 
 function parseVisibilityFromDict(dict: ArtGalleryDict): Visibility[] {
@@ -77,8 +81,12 @@ export class ArtGallery {
         public readonly ears: Ear[] = [],
         /** Optional convex components from decomposition. */
         public readonly convex_components: ConvexComponent[] = [],
-        /** Optional visibility (one per guard; guard and visible region points). */
-        public readonly visibility: Visibility[] = []
+    /** Optional visibility (one per guard; guard and visible region points). */
+    public readonly visibility: Visibility[] = [],
+        /** Optional total run duration in milliseconds (from job when published). */
+        public readonly duration?: number,
+        /** Optional coverage points (stitched + convex edge midpoints). */
+        public readonly coverage: Point[] = []
     ) { }
 
     static fromDict(dict: ArtGalleryDict): ArtGallery {
@@ -128,6 +136,17 @@ export class ArtGallery {
                     Point.fromDict(Array.isArray(g) ? { x: Number(g[0]), y: Number(g[1]) } : g as PointDict)
                   )
                 : []);
+        const duration =
+            dict.duration != null && typeof dict.duration === 'number' && dict.duration >= 0
+                ? dict.duration
+                : undefined;
+        const rawCoverage = dict.coverage;
+        const coverage: Point[] =
+            Array.isArray(rawCoverage)
+                ? rawCoverage.map((p: PointDict | number[]) =>
+                    Point.fromDict(Array.isArray(p) ? { x: Number(p[0]), y: Number(p[1]) } : p as PointDict)
+                  )
+                : [];
         return new ArtGallery(
             Polygon.fromDict(dict.boundary),
             dict.obstacles.map(Polygon.fromDict),
@@ -136,7 +155,9 @@ export class ArtGallery {
             stitches,
             ears,
             convex_components,
-            visibility
+            visibility,
+            duration,
+            coverage
         );
     }
 
@@ -161,6 +182,12 @@ export class ArtGallery {
         if (this.visibility.length > 0) {
             out.visibility = this.visibility.map((v) => v.toDict());
         }
+        if (this.duration != null && this.duration >= 0) {
+            out.duration = this.duration;
+        }
+        if (this.coverage.length > 0) {
+            out.coverage = this.coverage.map((p) => p.toDict());
+        }
         return out;
     }
 
@@ -173,7 +200,9 @@ export class ArtGallery {
             this.stitches,
             this.ears,
             this.convex_components,
-            this.visibility
+            this.visibility,
+            this.duration,
+            this.coverage
         );
     }
 
@@ -187,7 +216,9 @@ export class ArtGallery {
             this.stitches,
             this.ears,
             this.convex_components,
-            this.visibility
+            this.visibility,
+            this.duration,
+            this.coverage
         );
     }
 
@@ -200,7 +231,9 @@ export class ArtGallery {
             this.stitches,
             this.ears,
             this.convex_components,
-            this.visibility
+            this.visibility,
+            this.duration,
+            this.coverage
         );
     }
 
@@ -213,7 +246,9 @@ export class ArtGallery {
             this.stitches,
             this.ears,
             this.convex_components,
-            this.visibility
+            this.visibility,
+            this.duration,
+            this.coverage
         );
     }
 }

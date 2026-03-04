@@ -30,6 +30,7 @@ from dataclasses import dataclass
 from dataclasses import field
 from typing import Any
 
+from attributes import Duration
 from attributes import Email
 from attributes import Identifier
 from attributes import Signature
@@ -239,6 +240,7 @@ class Job(Model):
     stdout: dict[str, Any] = field(default_factory=dict)
     meta: dict[str, Any] = field(default_factory=dict)
     stderr: dict[str, Any] = field(default_factory=dict)
+    duration: Duration = field(default_factory=lambda: Duration(0))
     created_at: Timestamp = field(default_factory=Timestamp.now)
     updated_at: Timestamp = field(default_factory=Timestamp.now)
 
@@ -296,6 +298,8 @@ class Job(Model):
         status: Status = Status.parse(status_raw) if status_raw else Status.PENDING
         step_name_raw = data.get("step_name") or data.get("stage") or data.get("task")
         step_name: StepName = StepName.parse(step_name_raw) if step_name_raw else StepName.ART_GALLERY
+        duration_raw = data.get("duration")
+        duration: Duration = Duration(int(duration_raw)) if duration_raw is not None else Duration(0)
         return cls(
             id=Identifier(data.get("id", "")),
             parent_id=parent_id,
@@ -306,6 +310,7 @@ class Job(Model):
             stdout=dict(data.get("stdout") or {}),
             meta=dict(data.get("meta") or {}),
             stderr=dict(data.get("stderr") or {}),
+            duration=duration,
             created_at=Timestamp(data.get("created_at")),
             updated_at=Timestamp(data.get("updated_at")),
         )
@@ -321,6 +326,7 @@ class Job(Model):
             "stdout": dict(self.stdout),
             "meta": dict(self.meta),
             "stderr": dict(self.stderr),
+            "duration": int(self.duration),
             "created_at": str(self.created_at),
             "updated_at": str(self.updated_at),
         }
@@ -344,6 +350,7 @@ class ArtGallery(Model):
     boundary: Polygon
     owner_job_id: Identifier
     title: Title
+    duration: Duration = field(default_factory=lambda: Duration(0))
     created_at: Timestamp = field(default_factory=Timestamp.now)
     updated_at: Timestamp = field(default_factory=Timestamp.now)
     obstacles: Table[Polygon] = field(default_factory=Table)
@@ -354,6 +361,7 @@ class ArtGallery(Model):
     visibility: Table[Bag[Point, Point]] = field(default_factory=Table)
     stitched: Polygon = field(default_factory=lambda: Polygon([]))
     stitches: list[Segment] = field(default_factory=list)
+    coverage: set[Point] = field(default_factory=set)
 
     def __str__(self) -> str:
         return f"ArtGallery(id={self.id})"
@@ -387,6 +395,11 @@ class ArtGallery(Model):
         stitched = Polygon.unserialize(stitched_raw) if stitched_raw else Polygon([])
         stitches_raw = data.get("stitches") or []
         stitches = [Segment.unserialize(stitch) for stitch in stitches_raw] if stitches_raw else []
+        coverage_raw = data.get("coverage") or []
+        coverage: set[Point] = set()
+        if isinstance(coverage_raw, list):
+            for p in coverage_raw:
+                coverage.add(Point.unserialize(p))
 
         ears_sequence = ears_raw.values() if isinstance(ears_raw, dict) else ears_raw
         ears = Table.unserialize([Ear.unserialize(ser) for ser in ears_sequence])
@@ -440,12 +453,15 @@ class ArtGallery(Model):
 
         id_raw = (data.get("id") or "").strip()
         owner_raw = (data.get("owner_job_id") or "").strip()
+        duration_raw = data.get("duration")
+        duration: Duration = Duration(int(duration_raw)) if duration_raw is not None else Duration(0)
         return cls(
             id=Identifier(id_raw or "art-gallery"),
             boundary=Polygon.unserialize(boundary),
             obstacles=Table.unserialize([Polygon.unserialize(obstacle) for obstacle in obstacles_list]),
             owner_job_id=Identifier(owner_raw or "art-gallery"),
             title=Title(data.get("title", UNTITLED_ART_GALLERY_NAME)),
+            duration=duration,
             created_at=Timestamp(data.get("created_at")),
             updated_at=Timestamp(data.get("updated_at")),
             ears=ears,
@@ -455,6 +471,7 @@ class ArtGallery(Model):
             visibility=visibility_table,
             stitched=stitched,
             stitches=stitches,
+            coverage=coverage,
         )
 
     def serialize(self) -> ArtGalleryDict:
@@ -464,6 +481,7 @@ class ArtGallery(Model):
             "obstacles": self.obstacles.serialize(),
             "owner_job_id": str(self.owner_job_id),
             "title": str(self.title),
+            "duration": int(self.duration),
             "created_at": str(self.created_at),
             "updated_at": str(self.updated_at),
             "ears": self.ears.serialize(),
@@ -473,4 +491,5 @@ class ArtGallery(Model):
             "visibility": {str(hash(bag.key)): [p.serialize() for p in bag.items] for bag in self.visibility},
             "stitched": self.stitched.serialize(),
             "stitches": [s.serialize() for s in self.stitches],
+            "coverage": [p.serialize() for p in self.coverage],
         }

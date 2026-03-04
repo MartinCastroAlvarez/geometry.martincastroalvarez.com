@@ -51,6 +51,7 @@ class JobDict(ModelDict):
     stdout: dict[str, Any]
     meta: dict[str, Any]
     stderr: dict[str, Any]
+    duration: int
 
 
 class ArtGalleryDict(ModelDict):
@@ -67,3 +68,5 @@ class ArtGalleryDict(ModelDict):
     visibility: dict[str, Any]
     stitched: list[Any]
     stitches: list[Any]
+    duration: int
+    coverage: list[Any]

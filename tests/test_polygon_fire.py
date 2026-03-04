@@ -99,7 +99,7 @@ def test_fire_full_pipeline_requires_four_guards():
 
     job_guard = Job(id=Identifier("fire-g"), step_name=StepName.GUARD_PLACEMENT, stdin=dict(FIRE_STDIN), stdout=dict(stdout))
     guard_out = GuardPlacementStep(job=job_guard, user=_user()).run()
-    assert len(guard_out["guards"]) == 5, f"Fire gallery expects 5 guards; got {len(guard_out['guards'])}"
+    assert len(guard_out["guards"]) == 9, f"Fire gallery expects 9 guards; got {len(guard_out['guards'])}"
     assert len(guard_out["visibility"]) == len(guard_out["guards"])
 
 

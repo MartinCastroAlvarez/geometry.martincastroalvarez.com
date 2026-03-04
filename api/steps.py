@@ -785,7 +785,12 @@ class GuardPlacementStep(SequenceStep):
 
         self.prepare()
 
-        remaining_points: set[Point] = set(self.gallery.stitched)
+        # Build coverage: stitched vertices plus midpoint of every edge of every convex component.
+        self.gallery.coverage = set(self.gallery.stitched)
+        for component in self.gallery.convex_components:
+            for edge in component.edges:
+                self.gallery.coverage.add(edge.midpoint)
+        remaining_points: set[Point] = set(self.gallery.coverage)
         remaining_components: set[ConvexComponent] = set(self.gallery.convex_components)
         logger.info("GuardPlacementStep.run() | job.id=%s points=%s components=%s", self.job.id, len(remaining_points), len(remaining_components))
 
@@ -842,4 +847,5 @@ class GuardPlacementStep(SequenceStep):
         return {
             "guards": self.gallery.guards.serialize(),
             "visibility": self.gallery.visibility.serialize(),
+            "coverage": [p.serialize() for p in self.gallery.coverage],
         }

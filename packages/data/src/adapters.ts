@@ -246,7 +246,11 @@ function parseGuardsAndVisibility(data: Record<string, unknown>): { guards: Poin
  * (key "stitched" or "stiteched"). Parses ears, convex_components, guards, visibility when present.
  * API may send boundary/obstacles/points as [x,y] with numeric or string coordinates.
  */
-export function artGalleryFromPolygonData(_jobId: string, data: Record<string, unknown>): ArtGallery | undefined {
+export function artGalleryFromPolygonData(
+    _jobId: string,
+    data: Record<string, unknown>,
+    durationMs?: number
+): ArtGallery | undefined {
     const boundary = parseBoundary(data);
     if (!boundary) return undefined;
     const obstacles = parseObstacles(data);
@@ -276,16 +280,38 @@ export function artGalleryFromPolygonData(_jobId: string, data: Record<string, u
     const { guards, visibility } = parseGuardsAndVisibility(data);
     const ears = parseEars(data);
     const convex_components = parseConvexComponents(data);
-    return new ArtGallery(boundary, obstacles, guards, stitched, stitches, ears, convex_components, visibility);
+    const duration =
+        durationMs != null && typeof durationMs === "number" && durationMs >= 0 ? durationMs : undefined;
+    const rawCoverage = data.coverage;
+    const coverage: Point[] = Array.isArray(rawCoverage)
+        ? rawCoverage
+              .map((p: unknown) => parsePoint(p))
+              .filter((pt): pt is { x: number; y: number } => pt != null)
+              .map((pt) => new Point(pt.x, pt.y))
+        : [];
+    return new ArtGallery(
+        boundary,
+        obstacles,
+        guards,
+        stitched,
+        stitches,
+        ears,
+        convex_components,
+        visibility,
+        duration,
+        coverage
+    );
 }
 
 export const toDomainJob = (api: ApiJob): Job => {
     const stdin = api.stdin ?? {};
     const stdout = api.stdout ?? {};
     const hasStdout = Object.keys(stdout).length > 0;
+    const durationMs =
+        api.duration != null && typeof api.duration === "number" && api.duration >= 0 ? api.duration : undefined;
     const artGallery =
-        (hasStdout ? artGalleryFromPolygonData(api.id, stdout) : undefined) ??
-        artGalleryFromPolygonData(api.id, stdin);
+        (hasStdout ? artGalleryFromPolygonData(api.id, stdout, durationMs) : undefined) ??
+        artGalleryFromPolygonData(api.id, stdin, durationMs);
     return {
         id: api.id,
         status: parseStatus(api.status),
@@ -297,6 +323,7 @@ export const toDomainJob = (api: ApiJob): Job => {
         created_at: api.created_at ?? undefined,
         updated_at: api.updated_at ?? undefined,
         children_ids: api.children_ids ?? [],
+        ...(api.duration != null && api.duration >= 0 ? { duration: api.duration } : {}),
         ...(artGallery != null ? { artGallery } : {}),
     };
 };
@@ -311,11 +338,16 @@ export const toDomainArtGallery = (api: ApiArtGallery): Gallery => {
         ...(api.convex_components != null && Object.keys(api.convex_components).length > 0 && { convex_components: api.convex_components as ArtGalleryDict["convex_components"] }),
         ...(api.visibility != null && Object.keys(api.visibility).length > 0 && { visibility: api.visibility as ArtGalleryDict["visibility"] }),
         ...(api.stitches != null && Array.isArray(api.stitches) && api.stitches.length > 0 && { stitches: api.stitches as ArtGalleryDict["stitches"] }),
+        ...(api.duration != null && api.duration >= 0 ? { duration: api.duration } : {}),
+        ...(api.coverage != null && Array.isArray(api.coverage) && api.coverage.length > 0
+            ? { coverage: api.coverage as ArtGalleryDict["coverage"] }
+            : {}),
     });
     return {
         id: api.id,
         title: api.title,
         updated_at: api.updated_at,
+        ...(api.duration != null && api.duration >= 0 ? { duration: api.duration } : {}),
         artGallery,
     };
 };
@@ -332,6 +364,7 @@ export const fromApiJob = (raw: unknown): ApiJob => {
         stdout: (d.stdout as Record<string, unknown>) ?? {},
         meta: (d.meta as Record<string, unknown>) ?? {},
         stderr: (d.stderr as Record<string, unknown>) ?? {},
+        duration: d.duration != null && typeof d.duration === "number" ? d.duration : undefined,
         created_at: String(d.created_at ?? ""),
         updated_at: String(d.updated_at ?? ""),
     };
@@ -420,6 +453,8 @@ export const fromApiArtGallery = (raw: unknown): ApiArtGallery => {
         visibility: (d.visibility as ApiArtGallery["visibility"]) ?? {},
         stitched,
         stitches: (d.stitches as ApiArtGallery["stitches"]) ?? undefined,
+        duration: d.duration != null && typeof d.duration === "number" ? d.duration : undefined,
+        coverage: Array.isArray(d.coverage) ? (d.coverage as ApiArtGallery["coverage"]) : undefined,
         created_at: String(d.created_at ?? ""),
         updated_at: String(d.updated_at ?? ""),
     };

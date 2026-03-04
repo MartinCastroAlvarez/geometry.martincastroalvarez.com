@@ -244,6 +244,61 @@ class TestUrl:
             Url("gopher://example.com")
 
 
+class TestDuration:
+    """Test Duration attribute (non-negative int, milliseconds)."""
+
+    def test_from_int_zero(self):
+        from attributes import Duration
+
+        assert Duration(0) == 0
+
+    def test_from_int_positive(self):
+        from attributes import Duration
+
+        assert Duration(1000) == 1000
+        assert Duration(50000) == 50000
+
+    def test_from_duration_instance(self):
+        from attributes import Duration
+
+        d = Duration(1500)
+        assert Duration(d) == 1500
+
+    def test_negative_raises(self):
+        from attributes import Duration
+
+        with pytest.raises(ValidationError, match=">= 0"):
+            Duration(-1)
+
+    def test_non_int_raises(self):
+        from attributes import Duration
+
+        with pytest.raises(ValidationError, match="integer"):
+            Duration("x")
+        with pytest.raises(ValidationError, match="integer"):
+            Duration([])
+
+    def test_from_timestamps(self):
+        from attributes import Duration
+        from attributes import Timestamp
+
+        started = Timestamp.from_iso("2025-01-01T12:00:00.000000Z")
+        finished = Timestamp.from_iso("2025-01-01T12:00:05.000000Z")
+        d = Duration.from_timestamps(finished, started)
+        assert isinstance(d, int)
+        assert d >= 5000  # 5 seconds in ms
+        assert d <= 5100
+
+    def test_from_timestamps_reversed_returns_zero(self):
+        from attributes import Duration
+        from attributes import Timestamp
+
+        started = Timestamp.from_iso("2025-01-01T12:00:05.000000Z")
+        finished = Timestamp.from_iso("2025-01-01T12:00:00.000000Z")
+        d = Duration.from_timestamps(finished, started)
+        assert d == 0
+
+
 class TestCountdown:
     """Test Countdown attribute."""
 

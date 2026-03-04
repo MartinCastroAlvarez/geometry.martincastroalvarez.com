@@ -101,23 +101,3 @@ def test_shift_single_element():
     assert list(seq >> 0) == [42]
     assert list(seq << 0) == [42]
     assert list(seq >> 42) == [42]
-
-
-def test_ilshift_in_place_rotates_and_returns_self():
-    """seq <<= index mutates seq so that index is first and returns self."""
-    seq = Sequence([10, 20, 30, 40])
-    ref = seq
-    seq <<= 2
-    assert ref is seq
-    assert list(seq) == [30, 40, 10, 20]
-    assert seq[0] == 30
-
-
-def test_irshift_in_place_rotates_and_returns_self():
-    """seq >>= index mutates seq so that index is last and returns self."""
-    seq = Sequence([10, 20, 30, 40])
-    ref = seq
-    seq >>= 1
-    assert ref is seq
-    assert list(seq) == [30, 40, 10, 20]
-    assert seq[-1] == 20

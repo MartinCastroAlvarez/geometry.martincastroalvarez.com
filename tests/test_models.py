@@ -59,11 +59,13 @@ class TestArtGalleryAdjacency:
             "visibility": {},
             "stitched": [],
             "stitches": [],
+            "coverage": [[0, 0], [1, 0], [0.5, 0.5]],
         }
         gallery = ArtGallery.unserialize(data)
         assert len(gallery.adjacency) == 1
         adj = list(gallery.adjacency)[0]
         assert Identifier(999) in adj.items
+        assert len(gallery.coverage) == 3
 
     def test_serialize_includes_adjacency(self):
         data = {
@@ -85,3 +87,7 @@ class TestArtGalleryAdjacency:
         out = gallery.serialize()
         assert "adjacency" in out
         assert isinstance(out["adjacency"], dict)
+        assert "coverage" in out
+        assert isinstance(out["coverage"], list)
+        assert len(gallery.coverage) == 0
+        assert out["coverage"] == []

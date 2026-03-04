@@ -63,7 +63,8 @@ const EMPTY_STATE: {
     edges: [number, number][];
     edgeMuted: boolean[];
     guardVertices: EditorVertex[];
-} = { vertices: [], edges: [], edgeMuted: [], guardVertices: [] };
+    coverageVertices: EditorVertex[];
+} = { vertices: [], edges: [], edgeMuted: [], guardVertices: [], coverageVertices: [] };
 
 function computeFitTransform(
     vertices: EditorVertex[],
@@ -140,7 +141,7 @@ const ViewerInner = ({
     } | null>(null);
     const { isMobile } = useDevice();
 
-    const { vertices, edges, edgeMuted, guardVertices } = useMemo(() => {
+    const { vertices, edges, edgeMuted, guardVertices, coverageVertices } = useMemo(() => {
         if (artGallery == null) return EMPTY_STATE;
         // Set of boundary/obstacle edge keys (direction-invariant) for O(1) muted check; avoids quadratic per-edge scans.
         const boundaryKeys = boundaryObstacleEdgeKeys(artGallery.boundary, artGallery.obstacles);
@@ -149,21 +150,38 @@ const ViewerInner = ({
             x: g.x,
             y: g.y,
         }));
+        const coverageVertices: EditorVertex[] =
+            artGallery.coverage?.map((p, i) => ({
+                id: `coverage-${i}-${p.x}-${p.y}`,
+                x: p.x,
+                y: p.y,
+            })) ?? [];
 
         const mutedByBoundaryKeys = (vs: EditorVertex[], es: [number, number][]) =>
             es.map(([a, b]) => !boundaryKeys.has(edgeKey(vs[a], vs[b])));
 
         if (mode === ViewerMode.Stitching && artGallery.stitched != null && artGallery.stitched.points.length > 0) {
             const { vertices: vs, edges: es } = polygonToEditorState(artGallery.stitched);
-            return { vertices: vs, edges: es, edgeMuted: mutedByBoundaryKeys(vs, es), guardVertices };
+            return { vertices: vs, edges: es, edgeMuted: mutedByBoundaryKeys(vs, es), guardVertices, coverageVertices };
         }
         if (mode === ViewerMode.EarClipping && artGallery.ears.length > 0) {
             const { vertices: vs, edges: es } = earsToEditorState(artGallery.ears);
-            return { vertices: vs, edges: es, edgeMuted: mutedByBoundaryKeys(vs, es), guardVertices };
+            return { vertices: vs, edges: es, edgeMuted: mutedByBoundaryKeys(vs, es), guardVertices, coverageVertices };
         }
         if (mode === ViewerMode.ConvexComponent && artGallery.convex_components.length > 0) {
             const { vertices: vs, edges: es } = convexComponentsToEditorState(artGallery.convex_components);
-            return { vertices: vs, edges: es, edgeMuted: mutedByBoundaryKeys(vs, es), guardVertices };
+            return { vertices: vs, edges: es, edgeMuted: mutedByBoundaryKeys(vs, es), guardVertices, coverageVertices };
+        }
+        if (mode === ViewerMode.Coverage) {
+            const base = artGalleryToEditorState(artGallery);
+            const muted = base.edges.map(() => false);
+            return {
+                vertices: base.vertices,
+                edges: base.edges,
+                edgeMuted: muted,
+                guardVertices,
+                coverageVertices,
+            };
         }
         if (mode === ViewerMode.Visibility && artGallery.visibility.length > 0) {
             const base = artGalleryToEditorState(artGallery);
@@ -178,7 +196,7 @@ const ViewerInner = ({
                 ...base.edges.map(() => false),
                 ...visEs.map(() => true),
             ];
-            return { vertices, edges, edgeMuted, guardVertices };
+            return { vertices, edges, edgeMuted, guardVertices, coverageVertices };
         }
         const base = artGalleryToEditorState(artGallery);
         const muted = base.edges.map(() => false);
@@ -187,6 +205,7 @@ const ViewerInner = ({
             edges: base.edges,
             edgeMuted: muted,
             guardVertices,
+            coverageVertices,
         };
     }, [artGallery, mode]);
 
@@ -203,8 +222,11 @@ const ViewerInner = ({
     );
 
     const fitVertices = useMemo(
-        () => (guardVertices.length > 0 ? [...vertices, ...guardVertices] : vertices),
-        [vertices, guardVertices]
+        () =>
+            guardVertices.length > 0 || coverageVertices.length > 0
+                ? [...vertices, ...guardVertices, ...coverageVertices]
+                : vertices,
+        [vertices, guardVertices, coverageVertices]
     );
     const fitTransform = useMemo(
         () => (fitVertices.length > 0 ? computeFitTransform(fitVertices, stageWidth, stageHeight) : null),
@@ -341,6 +363,20 @@ const ViewerInner = ({
                                             key={vertex.id}
                                             vertex={vertex}
                                             index={vertices.length + i}
+                                            draggable={false}
+                                            scale={scale * layerScale}
+                                            size="lg"
+                                            tooltip={`(${vertex.x}, ${vertex.y})`}
+                                            onTooltipShow={(content, x, y) => setVertexTooltip({ content, x, y })}
+                                            onTooltipHide={() => setVertexTooltip(null)}
+                                        />
+                                    ))}
+                                {mode === ViewerMode.Coverage &&
+                                    coverageVertices.map((vertex, i) => (
+                                        <Vertex
+                                            key={vertex.id}
+                                            vertex={vertex}
+                                            index={vertices.length + guardVertices.length + i}
                                             draggable={false}
                                             scale={scale * layerScale}
                                             size="lg"

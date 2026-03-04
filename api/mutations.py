@@ -121,6 +121,7 @@ class ArtGalleryPublishMutationResponse(MutationResponse):
     obstacles: dict[str, Any]
     owner_job_id: str
     title: str
+    duration: int
     ears: dict[str, Any]
     convex_components: dict[str, Any]
     guards: dict[str, Any]
@@ -305,13 +306,14 @@ class ArtGalleryPublishMutation(PrivateControllerMixin, Mutation):
         if not job.is_finished():
             raise JobNotFinishedToPublishError("Job must be successfully finished to publish")
 
-        # Build the gallery from the job stdout.
+        # Build the gallery from the job stdout; duration comes from the job.
         gallery: ArtGallery = ArtGallery.unserialize(
             {
                 **job.stdout,
                 "id": str(gallery_id_from_job_and_user(job.id, self.user.email)),
                 "owner_job_id": str(job.id),
                 "title": str(job.meta.get("title")).strip() if isinstance(job.meta.get("title"), str) else UNTITLED_ART_GALLERY_NAME,
+                "duration": int(job.duration),
                 "created_at": str(job.created_at),
                 "updated_at": str(job.updated_at),
             }

@@ -30,6 +30,7 @@ from functools import cached_property
 from typing import Any
 from typing import NotRequired
 
+from attributes import Duration
 from attributes import Email
 from attributes import Identifier
 from attributes import Timestamp
@@ -336,8 +337,9 @@ class ReportTask(Task):
             if started_at_key in self.job.meta:
                 started_at = Timestamp.from_iso(self.job.meta[started_at_key])
                 finished_at = Timestamp.from_iso(self.job.meta[finished_at_key])
-                elapsed_seconds: float = (finished_at.to_datetime() - started_at.to_datetime()).total_seconds()
-                self.job.meta[f"step:{slug}:elapsed_time"] = elapsed_seconds
+                elapsed: Duration = Duration.from_timestamps(finished_at, started_at)
+                self.job.meta[f"step:{slug}:elapsed_time"] = elapsed / 1000.0
+                self.job.duration = elapsed
             logger.info("ReportTask.execute() | job completed job_id=%s status=SUCCESS", self.job.id)
 
         self.repository.save(self.job)
