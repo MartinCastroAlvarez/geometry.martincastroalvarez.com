@@ -270,11 +270,11 @@ def test_example3_ear_clipping_output():
 def test_example5_ear_clipping_output():
     """
     Run validation, stitching, ear clipping for example5 polygon (20 vertices, 3 holes).
-    Evaluates stitching and ear quality.
+    Evaluates stitching and ear quality. Tolerance=1 when final triangle is collinear.
     """
     from tests.test_example5 import EXAMPLE5_STDIN
 
-    _run_validate_stitch_ear_clip(EXAMPLE5_STDIN, "ex5-ears")
+    _run_validate_stitch_ear_clip(EXAMPLE5_STDIN, "ex5-ears", tolerance=1)
 
 
 def test_example6_ear_clipping_output():

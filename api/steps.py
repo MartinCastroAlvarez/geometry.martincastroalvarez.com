@@ -447,10 +447,12 @@ class EarClippingStep(SequenceStep):
     def clip(self, titanic: Polygon) -> Generator[Ear, None, None]:
         # Enforce global CCW once so ear detection, diagonal tests, and final merge are consistent.
         titanic.sort("ccw")
+        logger.debug("EarClippingStep.clip() | job.id=%s polygon_vertices=%s", self.job.id, len(titanic))
 
         # Ear clipping: while polygon has more than 3 vertices, find and clip an ear.
         found: bool = True
         while len(titanic) > 3 and found:
+            logger.debug("EarClippingStep.clip() | job.id=%s remaining_vertices=%s", self.job.id, len(titanic))
             n: int = len(titanic)
             found = False
             for j in range(n):
@@ -481,6 +483,13 @@ class EarClippingStep(SequenceStep):
                     continue
 
                 # Add the ear to the table.
+                logger.debug(
+                    "EarClippingStep.clip() | job.id=%s tip_index=%s tip=%s remaining_vertices=%s",
+                    self.job.id,
+                    j,
+                    titanic[j],
+                    n - 1,
+                )
                 yield ear
 
                 # Remove ear tip from polygon by index (position), not by point value;
@@ -491,6 +500,7 @@ class EarClippingStep(SequenceStep):
                 found = True
                 break
 
+        logger.debug("EarClippingStep.clip() | job.id=%s final_triangle_vertices=%s", self.job.id, len(titanic))
         # The remainder should contain exactly 3 vertices.
         # If there are more than 3 vertices, then it means there
         # is a problem in the ear clipping step above, not here.
@@ -507,6 +517,7 @@ class EarClippingStep(SequenceStep):
         if path.is_ccw():
             ear = Ear([titanic[0], titanic[1], titanic[2]])
             ear.sort("ccw")
+            logger.debug("EarClippingStep.clip() | job.id=%s final_ear tip=%s", self.job.id, titanic[1])
             yield ear
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
@@ -562,6 +573,7 @@ class ConvexComponentOptimizationStep(SequenceStep):
 
         # Merge adjacent pairs by largest area until no merge possible.
         while True:
+            logger.debug("ConvexComponentOptimizationStep.run() | job.id=%s components=%s", self.job.id, len(components_table))
             best_area: Decimal | None = None
             best_merge: ConvexComponent | None = None
             best_pair: tuple[ConvexComponent, ConvexComponent] | None = None
@@ -579,9 +591,18 @@ class ConvexComponentOptimizationStep(SequenceStep):
 
             # When no merge occurs, it is time to stop.
             if best_pair is None or best_merge is None:
+                logger.debug("ConvexComponentOptimizationStep.run() | job.id=%s no_merge_candidate stopping", self.job.id)
                 break
 
             # Merge the best pair, and update the tables.
+            logger.debug(
+                "ConvexComponentOptimizationStep.run() | job.id=%s merging pair id_a=%s id_b=%s merged_area=%s components_before=%s",
+                self.job.id,
+                best_pair[0].id,
+                best_pair[1].id,
+                best_area,
+                len(components_table),
+            )
             components_table -= best_pair[0]
             components_table -= best_pair[1]
             components_table += best_merge
@@ -668,6 +689,7 @@ class GuardPlacementStep(SequenceStep):
 
             # Find the adjacent component to explore.
             adjacent_id: Identifier = (explorable - explored).pop()
+            logger.debug("GuardPlacementStep.explore() | job.id=%s adjacent_id=%s explored=%s", self.job.id, adjacent_id, len(explored))
             adjacent: ConvexComponent = self.gallery.convex_components[adjacent_id]
 
             # Mark the component as explored.
@@ -787,6 +809,12 @@ class GuardPlacementStep(SequenceStep):
 
         # Run until all points are covered.
         while remaining_points:
+            logger.debug(
+                "GuardPlacementStep.run() | job.id=%s points_remaining=%s components_remaining=%s",
+                self.job.id,
+                len(remaining_points),
+                len(remaining_components),
+            )
 
             # Safecheck against bugs.
             if not remaining_components:
@@ -812,6 +840,14 @@ class GuardPlacementStep(SequenceStep):
                 raise GuardCoverageFailureError("Failed to find a guard that covers any remaining points.")
             if best_guard in self.gallery.guards:
                 raise GuardCoverageFailureError("Best guard is already in the gallery.")
+
+            logger.debug(
+                "GuardPlacementStep.run() | job.id=%s guard=%s points_covered=%s components_remaining=%s",
+                self.job.id,
+                best_guard,
+                best_count,
+                len(remaining_components),
+            )
 
             # Add the best guard and its visibility to the gallery.
             self.gallery.guards += best_guard

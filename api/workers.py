@@ -33,6 +33,7 @@ from attributes import ReceiptHandle
 from enums import Action
 from enums import Status
 from interfaces import Serializable
+from logger import configure_logging
 from logger import get_logger
 from messages import Message
 from messages import Queue
@@ -41,6 +42,8 @@ from tasks import StartTask
 from tasks import Task
 from tasks import TaskResponse
 
+# Ensure root logger level is set from LOG_LEVEL at cold start so CloudWatch shows app logs.
+configure_logging()
 logger = get_logger(__name__)
 
 

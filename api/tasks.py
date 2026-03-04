@@ -218,7 +218,7 @@ class StartTask(Task):
             self.job.status = Status.FAILED
             self.job.stderr[f"error:{self.job.step_name.slug}:message"] = str(error)
             self.job.stderr[f"error:{self.job.step_name.slug}:type"] = error.__class__.__name__
-            logger.error("StartTask.execute() | step failed job_id=%s step_name=%s error=%s", self.job.id, self.job.step_name, error)
+            logger.exception("StartTask.execute() | step failed job_id=%s step_name=%s error=%s", self.job.id, self.job.step_name, error)
 
         # Save the job, broadcast the result, and report the job to the parent.
         self.repository.save(self.job)
