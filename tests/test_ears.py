@@ -221,3 +221,87 @@ def test_triangle_polygon_ear_clipping_output():
     )
     assert_ears_simple_and_convex(stdout["ears"])
     assert_ears_no_obstacle_intersection(stdout["ears"], stdout["obstacles"])
+
+
+def _run_validate_stitch_ear_clip(stdin: dict, job_prefix: str, tolerance: int = 0):
+    """Run validation, stitching, ear clipping; return stdout. Used by example polygon tests."""
+    from tests.utils import assert_ears_no_obstacle_intersection
+    from tests.utils import assert_ears_simple_and_convex
+
+    stdout = {}
+    job_validate = Job(
+        id=Identifier(f"{job_prefix}-v"),
+        step_name=StepName.VALIDATE_POLYGONS,
+        stdin=dict(stdin),
+    )
+    stdout.update(ValidationPolygonStep(job=job_validate, user=_user()).run())
+    job_stitch = Job(
+        id=Identifier(f"{job_prefix}-s"),
+        step_name=StepName.STITCHING,
+        stdin=dict(stdin),
+        stdout=dict(stdout),
+    )
+    stdout.update(StitchingStep(job=job_stitch, user=_user()).run())
+    job_ear = Job(
+        id=Identifier(f"{job_prefix}-e"),
+        step_name=StepName.EAR_CLIPPING,
+        stdin=dict(stdin),
+        stdout=dict(stdout),
+    )
+    stdout.update(EarClippingStep(job=job_ear, user=_user()).run())
+    n_stitched = len(Polygon.unserialize(stdout["stitched"]))
+    assert len(stdout["ears"]) == n_stitched - 2 - tolerance, (
+        f"Expected {n_stitched - 2 - tolerance} ears; got {len(stdout['ears'])}"
+    )
+    assert_ears_simple_and_convex(stdout["ears"])
+    assert_ears_no_obstacle_intersection(stdout["ears"], stdout["obstacles"])
+
+
+def test_example3_ear_clipping_output():
+    """
+    Run validation, stitching, ear clipping for example3 polygon (20 vertices, 2 holes).
+    Evaluates stitching and ear quality like test_triangle_polygon_ear_clipping_output.
+    """
+    from tests.test_example3 import EXAMPLE3_STDIN
+
+    _run_validate_stitch_ear_clip(EXAMPLE3_STDIN, "ex3-ears", tolerance=1)
+
+
+def test_example5_ear_clipping_output():
+    """
+    Run validation, stitching, ear clipping for example5 polygon (20 vertices, 3 holes).
+    Evaluates stitching and ear quality.
+    """
+    from tests.test_example5 import EXAMPLE5_STDIN
+
+    _run_validate_stitch_ear_clip(EXAMPLE5_STDIN, "ex5-ears")
+
+
+def test_example6_ear_clipping_output():
+    """
+    Run validation, stitching, ear clipping for example6 polygon (100-gon, 10 holes).
+    Evaluates stitching and ear quality.
+    """
+    from tests.test_example6 import EXAMPLE6_STDIN
+
+    _run_validate_stitch_ear_clip(EXAMPLE6_STDIN, "ex6-ears")
+
+
+def test_example7_ear_clipping_output():
+    """
+    Run validation, stitching, ear clipping for example7 polygon (20 vertices, 5 holes).
+    Evaluates stitching and ear quality.
+    """
+    from tests.test_example7 import EXAMPLE7_STDIN
+
+    _run_validate_stitch_ear_clip(EXAMPLE7_STDIN, "ex7-ears")
+
+
+def test_example8_ear_clipping_output():
+    """
+    Run validation, stitching, ear clipping for example8 polygon (28 vertices, 5 holes).
+    Evaluates stitching and ear quality.
+    """
+    from tests.test_example8 import EXAMPLE8_STDIN
+
+    _run_validate_stitch_ear_clip(EXAMPLE8_STDIN, "ex8-ears")

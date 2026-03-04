@@ -17,7 +17,8 @@ export interface SummaryProps {
     artGallery: ArtGallery;
 }
 
-function countPoints(gallery: ArtGallery): number {
+/** Total input vertices (boundary + obstacles). Used when stitched is not yet available. */
+function countInputPoints(gallery: ArtGallery): number {
     let n = gallery.boundary.points.length;
     for (const obs of gallery.obstacles) {
         n += obs.points.length;
@@ -25,18 +26,24 @@ function countPoints(gallery: ArtGallery): number {
     return n;
 }
 
-/** Humanize seconds for display (e.g. 1000 -> "1K", 50000 -> "50K", 1.5 -> "1.5"). */
+/** Points count: stitched polygon vertices when available (published gallery), else boundary + obstacles. */
+function countPoints(gallery: ArtGallery): number {
+    if (gallery.stitched != null && gallery.stitched.points.length > 0) {
+        return gallery.stitched.points.length;
+    }
+    return countInputPoints(gallery);
+}
+
+/** Humanize seconds for display (e.g. 1000 -> "1K", 50000 -> "50K"). Seconds are rounded down to integers. */
 function humanizeDurationSeconds(seconds: number): string {
-    if (seconds >= 1e6) {
-        const m = seconds / 1e6;
-        return (m % 1 === 0 ? String(m) : m.toFixed(1)) + "M";
+    const s = Math.floor(seconds);
+    if (s >= 1e6) {
+        return Math.floor(s / 1e6) + "M";
     }
-    if (seconds >= 1000) {
-        const k = seconds / 1000;
-        return (k % 1 === 0 ? String(k) : k.toFixed(1)) + "K";
+    if (s >= 1000) {
+        return Math.floor(s / 1000) + "K";
     }
-    if (seconds % 1 === 0) return String(Math.round(seconds));
-    return seconds.toFixed(1);
+    return String(s);
 }
 
 export const Summary: React.FC<SummaryProps> = ({ artGallery }) => {

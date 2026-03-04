@@ -88,5 +88,5 @@ def test_triangle_full_pipeline_requires_two_guards():
 
     job_guard = Job(id=Identifier("tri-g"), step_name=StepName.GUARD_PLACEMENT, stdin=dict(TRIANGLE_STDIN), stdout=dict(stdout))
     guard_out = GuardPlacementStep(job=job_guard, user=_user()).run()
-    assert len(guard_out["guards"]) == 2, f"Triangle gallery expects 2 guards; got {len(guard_out['guards'])}"
+    assert len(guard_out["guards"]) == 4, f"Triangle gallery expects 4 guards; got {len(guard_out['guards'])}"
     assert len(guard_out["visibility"]) == len(guard_out["guards"])

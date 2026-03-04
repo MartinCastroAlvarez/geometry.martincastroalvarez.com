@@ -67,18 +67,14 @@ const Cell = ({ gallery, height = DEFAULT_CELL_HEIGHT }: CellProps) => {
                         <Title left truncate>{title}</Title>
                     </Container>
                     <Container size={isMobile ? 12 : 6} right>
-                        <Container size={6} right>
-                            <div className="flex items-center justify-end gap-1.5">
+                        <Title sm right>
+                            <span className="inline-flex items-center justify-end gap-1.5">
                                 <CircleDotDashed size={16} className="shrink-0 text-slate-600 dark:text-slate-400" aria-hidden />
-                                <Title sm right>{stitchedPointsCount}</Title>
-                            </div>
-                        </Container>
-                        <Container size={6} right>
-                            <div className="flex items-center justify-end gap-1.5">
+                                {stitchedPointsCount}
                                 <UserStar size={20} className="shrink-0 text-slate-600 dark:text-slate-400" aria-hidden />
-                                <Title sm right>{guardsCount}</Title>
-                            </div>
-                        </Container>
+                                {guardsCount}
+                            </span>
+                        </Title>
                     </Container>
                 </Container>
             </div>

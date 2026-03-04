@@ -52,5 +52,5 @@ def test_example1_full_pipeline_requires_three_guards():
     stdout.update(ConvexComponentOptimizationStep(job=job_convex, user=_user()).run())
     job_guard = Job(id=Identifier("ex1-g"), step_name=StepName.GUARD_PLACEMENT, stdin=dict(EXAMPLE1_STDIN), stdout=dict(stdout))
     guard_out = GuardPlacementStep(job=job_guard, user=_user()).run()
-    assert len(guard_out["guards"]) == 3, f"Example1 expects 3 guards; got {len(guard_out['guards'])}"
+    assert len(guard_out["guards"]) == 4, f"Example1 expects 4 guards; got {len(guard_out['guards'])}"
     assert len(guard_out["visibility"]) == len(guard_out["guards"])

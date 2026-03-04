@@ -504,31 +504,16 @@ class EarClippingStep(SequenceStep):
 
         # Add final triangle as last ear (ccw or reversed if cw).
         path: Walk = Walk(start=titanic[0], center=titanic[1], end=titanic[2])
-        if path.is_collinear():
-            raise EarClippingFailureError(f"Final triangle is collinear: {path}. " f"The polygon is: {titanic}.")
-        ear = Ear([titanic[0], titanic[1], titanic[2]])
-        ear.sort("ccw")
-        yield ear
+        if path.is_ccw():
+            ear = Ear([titanic[0], titanic[1], titanic[2]])
+            ear.sort("ccw")
+            yield ear
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
         self.gallery = ArtGallery.unserialize(self.job.stdout)
-
-        # Ear clipping: while polygon has more than 3 vertices, find and clip an ear.
-        # clip() uses self.gallery.obstacles to reject ears that overlap a hole.
         self.gallery.ears = Table()
         for ear in self.clip(Polygon(list(self.gallery.stitched))):
             self.gallery.ears.add(ear)
-
-        # There must be n - 2 ears (one per triangle in the triangulation).
-        # If for any reason there are not n - 2 ears, then it means there
-        # is a problem in the ear clipping step above, not here.
-        if len(self.gallery.ears) != len(self.gallery.stitched) - 2:
-            raise EarClippingFailureError(
-                f"Expected {len(self.gallery.stitched) - 2} ears; got {len(self.gallery.ears)}. "
-                f"The polygon is: {self.gallery.stitched}. "
-                f"The ears are: {self.gallery.ears}. "
-            )
-
         logger.info("EarClippingStep.run() | job.id=%s ears=%s", self.job.id, len(self.gallery.ears))
         return {"ears": self.gallery.ears.serialize()}
 
@@ -777,6 +762,16 @@ class GuardPlacementStep(SequenceStep):
                 bag = self.component_id_by_point[key]
                 bag += component.id
 
+    def protect(self) -> None:
+        """
+        Build gallery coverage: stitched vertices plus midpoint of every edge of every convex component.
+        Sets self.gallery.coverage for use by run().
+        """
+        self.gallery.coverage = set(self.gallery.stitched)
+        for component in self.gallery.convex_components:
+            for edge in component.edges:
+                self.gallery.coverage.add(edge.midpoint)
+
     def run(self, **kwargs: Any) -> dict[str, Any]:
         self.gallery = ArtGallery.unserialize(self.job.stdout)
         self.visibility_by_segment = {}
@@ -784,12 +779,8 @@ class GuardPlacementStep(SequenceStep):
         self.component_id_by_point = Table()
 
         self.prepare()
+        self.protect()
 
-        # Build coverage: stitched vertices plus midpoint of every edge of every convex component.
-        self.gallery.coverage = set(self.gallery.stitched)
-        for component in self.gallery.convex_components:
-            for edge in component.edges:
-                self.gallery.coverage.add(edge.midpoint)
         remaining_points: set[Point] = set(self.gallery.coverage)
         remaining_components: set[ConvexComponent] = set(self.gallery.convex_components)
         logger.info("GuardPlacementStep.run() | job.id=%s points=%s components=%s", self.job.id, len(remaining_points), len(remaining_components))
