@@ -158,6 +158,8 @@ class GeometryStack extends Stack {
         DATA_BUCKET_NAME: apiBucket.bucketName,
         QUEUE_NAME: geometryQueue.queueName,
         LOG_LEVEL: 'DEBUG',
+        // Use 1 candidate per component so the worker finishes quickly; full search is expensive for large polygons.
+        MAX_GUARD_PLACEMENT_CANDIDATES: '1',
       },
       timeout: Duration.seconds(900),
       memorySize: 512,

@@ -61,6 +61,10 @@ DEFAULT_ORIGIN: str = os.getenv("DEFAULT_ORIGIN") or "https://geometry.martincas
 # before we pick the smallest one by size and stop. Default 5 is empirical.
 STITCH_BUCKET_SIZE: int = int(os.getenv("STITCH_BUCKET_SIZE", "5"))
 
+# Guard placement: max number of vertices per convex component to try as guard
+# candidates. Limits work per component for optimization; env override for tuning.
+MAX_GUARD_PLACEMENT_CANDIDATES: int = int(os.getenv("MAX_GUARD_PLACEMENT_CANDIDATES", "1000"))
+
 # Anonymous and test user constants (used by User model)
 ANONYMOUS_EMAIL: str = "nobody@unknown.local"
 ANONYMOUS_NAME: str = "Anonymous"

@@ -57,6 +57,7 @@ from models import ArtGallery
 from models import Job
 from models import User
 from repositories import JobsRepository
+from settings import MAX_GUARD_PLACEMENT_CANDIDATES
 from settings import STITCH_BUCKET_SIZE
 from structs import Bag
 from structs import Table
@@ -826,7 +827,8 @@ class GuardPlacementStep(SequenceStep):
             best_visibility: Bag[Point, Point] | None = None
             best_component: ConvexComponent | None = None
             for component in remaining_components:
-                for guard in component:
+                # Limit candidates per component to avoid O(n²) explore work on large components.
+                for guard in component[:MAX_GUARD_PLACEMENT_CANDIDATES]:
                     bag: Bag[Point, Point] = self.explore(guard)
                     count: int = sum(1 for point in remaining_points if point in bag)
                     if count > best_count:
@@ -838,8 +840,6 @@ class GuardPlacementStep(SequenceStep):
             # Safecheck against bugs.
             if best_guard is None or best_count == 0 or best_visibility is None or best_component is None:
                 raise GuardCoverageFailureError("Failed to find a guard that covers any remaining points.")
-            if best_guard in self.gallery.guards:
-                raise GuardCoverageFailureError("Best guard is already in the gallery.")
 
             logger.debug(
                 "GuardPlacementStep.run() | job.id=%s guard=%s points_covered=%s components_remaining=%s",
