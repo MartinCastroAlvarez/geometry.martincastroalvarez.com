@@ -1,7 +1,7 @@
 /**
- * Summary: 4-column stats grid (Points, Obstacles, Guards, Components/Duration) from an ArtGallery.
+ * Summary: 4-column stats grid (Vertices, Holes, Guards, Components/Duration) from an ArtGallery.
  * When artGallery.duration is set (e.g. published galleries), the fourth column shows humanized
- * duration instead of the number of components; points, obstacles, and guards are always shown.
+ * duration instead of the number of components; vertices, holes, and guards are always shown.
  * Responsive: size 3 on desktop/tablet, 6 on mobile (2x2). Uses localized strings.
  *
  * Example:
@@ -63,10 +63,10 @@ export const Summary: React.FC<SummaryProps> = ({ artGallery }) => {
     return (
         <Container name="geometry-summary" spaced>
             <Container size={colSize} left center>
-                <Stats value={points}>{t("summary.points")}</Stats>
+                <Stats value={points}>{t("summary.vertices")}</Stats>
             </Container>
             <Container size={colSize} left center>
-                <Stats value={obstacles}>{t("summary.obstacles")}</Stats>
+                <Stats value={obstacles}>{t("summary.holes")}</Stats>
             </Container>
             <Container size={colSize} left center>
                 <Stats value={guards}>{t("summary.guards")}</Stats>

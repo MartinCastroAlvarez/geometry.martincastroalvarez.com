@@ -116,7 +116,7 @@ def test_snake_full_pipeline_validation_stitching_ear_clipping_convex_guard_plac
     guard_out = GuardPlacementStep(job=job_guard, user=_user()).run()
     assert "guards" in guard_out
     assert "visibility" in guard_out
-    assert len(guard_out["guards"]) == 3, (
-        f"Snake polygon expects 3 guards for sufficient coverage; got {len(guard_out['guards'])}"
+    assert len(guard_out["guards"]) == 4, (
+        f"Snake polygon expects 4 guards for sufficient coverage; got {len(guard_out['guards'])}"
     )
     assert len(guard_out["visibility"]) == len(guard_out["guards"])

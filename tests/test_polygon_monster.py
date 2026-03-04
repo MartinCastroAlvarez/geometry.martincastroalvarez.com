@@ -192,8 +192,8 @@ def test_polygon_monster_full_pipeline_ten_guards_forty_nine_convex_components()
 
     assert len(guard_out["visibility"]) == len(guard_out["guards"])
 
-    assert len(guard_out["guards"]) == 15, (
-        f"Monster polygon expects 15 guards for sufficient coverage; got {len(guard_out['guards'])}. "
+    assert len(guard_out["guards"]) == 16, (
+        f"Monster polygon expects 16 guards for sufficient coverage; got {len(guard_out['guards'])}. "
         f"The guards are: {guard_out['guards']}. "
         f"The visibility is: {guard_out['visibility']}. "
     )

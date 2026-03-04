@@ -163,6 +163,8 @@ class Polygon(Bounded, Element2D, Serializable):
             return self.box.intersects(obj, inclusive=inclusive)
 
         if isinstance(obj, Segment):
+            if self.contains(obj.midpoint, inclusive=inclusive):
+                return True
             if inclusive and any(
                 (
                     any(
@@ -175,13 +177,15 @@ class Polygon(Bounded, Element2D, Serializable):
                 )
             ):
                 return True
-            if any(edge.intersects(obj, inclusive=inclusive) for edge in self.edges if not edge.connects(obj)):
+            if any(
+                edge.intersects(obj, inclusive=inclusive)
+                for edge in self.edges if not edge.connects(obj)
+            ):
                 return True
             return any(
                 (
                     self.contains(obj[0], inclusive=inclusive),
                     self.contains(obj[1], inclusive=inclusive),
-                    self.contains(obj.midpoint, inclusive=inclusive),
                 )
             )
 

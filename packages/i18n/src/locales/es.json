@@ -118,7 +118,9 @@
   "summary": {
     "points": "Puntos",
     "obstacles": "Obstáculos",
+    "holes": "Huecos",
     "guards": "Guardias",
+    "vertices": "Vértices",
     "components": "Componentes",
     "duration": "{{value}}",
     "durationLabel": "Duración",
