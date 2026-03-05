@@ -83,8 +83,8 @@ class TestStartTask:
         with patch.object(Step, "of", side_effect=StepNotHandledError("Step cannot be handled: art_gallery")):
             task = StartTask()
             req = {"job_id": Identifier("j1"), "user_email": Email("u@e.com")}
-            with pytest.raises(StepNotHandledError):
-                task.handler(req)
+            response = task.handler(req)
+            raise Exception(response)
 
     @patch.object(StartTask, "broadcast")
     @patch("tasks.queue")

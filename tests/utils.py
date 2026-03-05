@@ -163,3 +163,62 @@ def assert_convex_components_visibility_within_component(
                         f"Convex component {comp_id}: vertex {vi} ({vertex}) cannot see point {target} (segment crosses obstacle): {msg}. "
                         f"comp_id={comp_id!r}, serialized={comp_ser}"
                     )
+
+
+def assert_no_redundant_guards(guard_out: dict) -> None:
+    """
+    After guard placement: assert no guard only sees points already covered by other guards.
+    guard_out must have "guards" and "visibility" (dict key -> list of serialized points per guard).
+    Raises AssertionError if any guard's visibility is a subset of the combined visibility of the rest.
+    """
+    guards_ser = guard_out["guards"]
+    visibility_ser = guard_out["visibility"]
+    if len(guards_ser) <= 1:
+        return
+    for guard_id in guards_ser:
+        visible = visibility_ser.get(guard_id)
+        if visible is None:
+            continue
+        guard_points = set(tuple(p) for p in visible)
+        other_points: set = set()
+        for oid in guards_ser:
+            if oid != guard_id:
+                for p in visibility_ser.get(oid, []):
+                    other_points.add(tuple(p))
+        if guard_points and guard_points.issubset(other_points):
+            raise AssertionError(
+                f"Guard {guard_id} only sees points already covered by other guards (redundant guard)."
+            )
+
+
+def _coord_to_int(c: str | int | float) -> int:
+    """Convert a coordinate string or number to int for display."""
+    return int(float(c))
+
+
+def print_guard_coverage_report(guard_out: dict, title: str) -> None:
+    """
+    Print a report: each guard and the unique points only this guard covers (not covered by others).
+    guard_out must have "guards" and "visibility". Point coordinates are displayed as integers.
+    """
+    import sys
+    guards_ser = guard_out["guards"]
+    visibility_ser = guard_out["visibility"]
+    lines = [f"\n--- {title} ---"]
+    for guard_id, guard_ser in guards_ser.items():
+        my_points = set(tuple(p) for p in visibility_ser.get(guard_id, []))
+        other_points: set = set()
+        for oid in guards_ser:
+            if oid != guard_id:
+                for p in visibility_ser.get(oid, []):
+                    other_points.add(tuple(p))
+        unique = my_points - other_points
+        guard_display = [_coord_to_int(c) for c in guard_ser] if isinstance(guard_ser, (list, tuple)) else guard_ser
+        lines.append(f"Guard {guard_id} at {guard_display}: sees {len(my_points)} points, {len(unique)} unique (not covered by others)")
+        unique_sorted = sorted(unique, key=lambda x: (float(x[0]), float(x[1])))
+        pts_str = ", ".join(str([_coord_to_int(c) for c in pt]) for pt in unique_sorted)
+        lines.append(f"  unique points: {pts_str}")
+    lines.append("--- end report ---\n")
+    out = "\n".join(lines)
+    print(out, flush=True)
+    sys.stdout.flush()

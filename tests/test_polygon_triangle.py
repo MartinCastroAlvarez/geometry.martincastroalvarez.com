@@ -13,6 +13,8 @@ from tests.utils import assert_convex_components_simple_convex_no_obstacle_inter
 from tests.utils import assert_convex_components_visibility_within_component
 from tests.utils import assert_ears_no_obstacle_intersection
 from tests.utils import assert_ears_simple_and_convex
+from tests.utils import assert_no_redundant_guards
+from tests.utils import print_guard_coverage_report
 from models import User
 from steps import ConvexComponentOptimizationStep
 from steps import EarClippingStep
@@ -90,3 +92,5 @@ def test_triangle_full_pipeline_requires_two_guards():
     guard_out = GuardPlacementStep(job=job_guard, user=_user()).run()
     assert len(guard_out["guards"]) == 4, f"Triangle gallery expects 4 guards; got {len(guard_out['guards'])}"
     assert len(guard_out["visibility"]) == len(guard_out["guards"])
+    assert_no_redundant_guards(guard_out)
+    print_guard_coverage_report(guard_out, "Triangle guard coverage report")

@@ -12,6 +12,8 @@ from tests.utils import assert_convex_components_simple_convex_no_obstacle_inter
 from tests.utils import assert_convex_components_visibility_within_component
 from tests.utils import assert_ears_no_obstacle_intersection
 from tests.utils import assert_ears_simple_and_convex
+from tests.utils import assert_no_redundant_guards
+from tests.utils import print_guard_coverage_report
 from steps import ConvexComponentOptimizationStep
 from steps import EarClippingStep
 from steps import GuardPlacementStep
@@ -120,3 +122,5 @@ def test_snake_full_pipeline_validation_stitching_ear_clipping_convex_guard_plac
         f"Snake polygon expects 4 guards for sufficient coverage; got {len(guard_out['guards'])}"
     )
     assert len(guard_out["visibility"]) == len(guard_out["guards"])
+    assert_no_redundant_guards(guard_out)
+    print_guard_coverage_report(guard_out, "Snake guard coverage report")

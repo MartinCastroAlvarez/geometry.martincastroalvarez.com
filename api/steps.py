@@ -57,7 +57,6 @@ from models import ArtGallery
 from models import Job
 from models import User
 from repositories import JobsRepository
-from settings import MAX_GUARD_PLACEMENT_CANDIDATES
 from settings import STITCH_BUCKET_SIZE
 from structs import Bag
 from structs import Table
@@ -831,7 +830,7 @@ class GuardPlacementStep(SequenceStep):
                 point
                 for point in largest_component
                 # if point in remaining_points
-            ][:MAX_GUARD_PLACEMENT_CANDIDATES]
+            ]
 
             # Sort the candidates by visibility, and pick the best one.
             best_guard: Point | None = None

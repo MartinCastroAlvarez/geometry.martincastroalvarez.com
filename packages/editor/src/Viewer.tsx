@@ -134,12 +134,18 @@ const ViewerInner = ({
     }, []);
 
     const [mode, setMode] = useState<ViewerMode>(ViewerMode.Default);
+    /** In visibility mode: null = show all guards' visibility; number = show only that guard's visibility. */
+    const [activeGuardIndex, setActiveGuardIndex] = useState<number | null>(null);
     const [vertexTooltip, setVertexTooltip] = useState<{
         content: ReactNode;
         x: number;
         y: number;
     } | null>(null);
     const { isMobile } = useDevice();
+
+    useEffect(() => {
+        if (mode !== ViewerMode.Visibility) setActiveGuardIndex(null);
+    }, [mode]);
 
     const { vertices, edges, edgeMuted, guardVertices, coverageVertices } = useMemo(() => {
         if (artGallery == null) return EMPTY_STATE;
@@ -185,7 +191,11 @@ const ViewerInner = ({
         }
         if (mode === ViewerMode.Visibility && artGallery.visibility.length > 0) {
             const base = artGalleryToEditorState(artGallery);
-            const { vertices: visVs, edges: visEs } = visibilityToEditorState(artGallery.visibility);
+            const visibility =
+                activeGuardIndex != null && activeGuardIndex < artGallery.visibility.length
+                    ? [artGallery.visibility[activeGuardIndex]]
+                    : artGallery.visibility;
+            const { vertices: visVs, edges: visEs } = visibilityToEditorState(visibility);
             const nBase = base.vertices.length;
             const vertices = [...base.vertices, ...visVs];
             const edges: [number, number][] = [
@@ -207,7 +217,7 @@ const ViewerInner = ({
             guardVertices,
             coverageVertices,
         };
-    }, [artGallery, mode]);
+    }, [artGallery, mode, activeGuardIndex]);
 
     const allEdges = useMemo(
         () =>
@@ -285,6 +295,10 @@ const ViewerInner = ({
             const h = containerRef.current.clientHeight;
             if (w > 0 && h > 0) setContainerSize((prev) => (prev.width ? prev : { width: w, height: h }));
         }
+    }, []);
+
+    const handleGuardClick = useCallback((guardIndex: number) => {
+        setActiveGuardIndex((prev) => (prev === guardIndex ? null : guardIndex));
     }, []);
 
     return (
@@ -366,9 +380,15 @@ const ViewerInner = ({
                                             draggable={false}
                                             scale={scale * layerScale}
                                             size="lg"
+                                            isActive={mode === ViewerMode.Visibility && activeGuardIndex === i}
                                             tooltip={`(${vertex.x}, ${vertex.y})`}
                                             onTooltipShow={(content, x, y) => setVertexTooltip({ content, x, y })}
                                             onTooltipHide={() => setVertexTooltip(null)}
+                                            onClick={
+                                                mode === ViewerMode.Visibility
+                                                    ? () => handleGuardClick(i)
+                                                    : undefined
+                                            }
                                         />
                                     ))}
                                 {mode === ViewerMode.Coverage &&

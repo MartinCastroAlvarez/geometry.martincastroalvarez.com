@@ -48,6 +48,11 @@ class ConvexComponent(Polygon):
         if len(self) >= 3 and not self.is_simple():
             raise ConvexComponentNotSimpleError("Convex component must be simple")
 
+    @property
+    def midpoints(self) -> set[Point]:
+        """Set of edge midpoints."""
+        return {edge.midpoint for edge in self.edges}
+
     def __and__(self, other: Polygon) -> ConvexComponent:
         """Shared edge; returns ConvexComponent (2-point edge allowed)."""
         result: Polygon = super().__and__(other)

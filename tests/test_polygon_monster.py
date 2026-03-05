@@ -16,6 +16,8 @@ from tests.utils import assert_convex_components_simple_convex_no_obstacle_inter
 from tests.utils import assert_convex_components_visibility_within_component
 from tests.utils import assert_ears_no_obstacle_intersection
 from tests.utils import assert_ears_simple_and_convex
+from tests.utils import assert_no_redundant_guards
+from tests.utils import print_guard_coverage_report
 from steps import ConvexComponentOptimizationStep
 from steps import EarClippingStep
 from steps import GuardPlacementStep
@@ -197,3 +199,5 @@ def test_polygon_monster_full_pipeline_ten_guards_forty_nine_convex_components()
         f"The guards are: {guard_out['guards']}. "
         f"The visibility is: {guard_out['visibility']}. "
     )
+    assert_no_redundant_guards(guard_out)
+    print_guard_coverage_report(guard_out, "Monster guard coverage report")

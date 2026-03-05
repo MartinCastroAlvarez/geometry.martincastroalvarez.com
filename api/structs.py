@@ -714,7 +714,7 @@ class Table(dict[int, Any], Generic[T], Serializable[dict[str, Any]]):
         if isinstance(item_or_key, int):
             return dict.__contains__(self, item_or_key)
         key = hash(item_or_key)
-        return key in self and self[key] == item_or_key
+        return key in self
 
     def __getitem__(self, key_or_item: int | T) -> T:
         """
@@ -881,7 +881,7 @@ class Bag(Generic[K, T], Serializable[list[Any]]):
     1
     """
 
-    def __init__(self, key: K) -> None:
+    def __init__(self, key: K, items: set[T] | None = None) -> None:
         """
         Create an empty bag with the given key.
 
@@ -900,7 +900,7 @@ class Bag(Generic[K, T], Serializable[list[Any]]):
         True
         """
         self.key: K = key
-        self.items: set[T] = set()
+        self.items: set[T] = items or set()
 
     def __hash__(self) -> int:
         """
