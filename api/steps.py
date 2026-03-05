@@ -40,6 +40,7 @@ from exceptions import BridgeFailureError
 from exceptions import ConvexComponentNotSimpleError
 from exceptions import EarClippingFailureError
 from exceptions import GuardCoverageFailureError
+from exceptions import OnlyMidpointsRemainingError
 from exceptions import GuardNotInComponentIdByPointError
 from exceptions import PolygonNotSimpleError
 from exceptions import PolygonsDoNotShareEdgeError
@@ -648,6 +649,7 @@ class GuardPlacementStep(SequenceStep):
     visibility_by_segment: dict[Segment, bool]
     remaining_points: set[Point]
     remaining_components: set[ConvexComponent]
+    component_id_by_midpoint: dict[Point, Identifier]
 
     def measure(self, convex_component: ConvexComponent) -> int:
         """Return the number of points (vertices and edge midpoints) of the component that are not in self.remaining_points."""
@@ -771,10 +773,11 @@ class GuardPlacementStep(SequenceStep):
         self.component_id_by_point = Table()
         for component in self.gallery.convex_components:
             for point in component:
-                key: int = hash(point)
-                if key not in self.component_id_by_point:
+                if point not in self.component_id_by_point:
                     self.component_id_by_point.add(Bag(point))
-                self.component_id_by_point[key] += component.id
+                self.component_id_by_point[point] += component.id
+            for midpoint in component.midpoints:
+                self.component_id_by_midpoint[midpoint] = component.id
 
     def compete(self, candidates: list[Point]) -> (Point, Bag[Point, Point]):
         """
@@ -819,26 +822,19 @@ class GuardPlacementStep(SequenceStep):
 
         return best_guard, best_visibility
 
-    def propose(self) -> list[Point]:
+    def propose(self, max_candidates: int = 5) -> list[Point]:
         """
         Return the candidates to compete.
-        Heuristic: Pick the component with the largest area, and see its adjacent components.
         It reduces the number of explore() calls later in self.compete().
 
         Returns:
             list[Point]: The candidates to compete.
         """
         if not self.remaining_components:
-            raise GuardCoverageFailureError("Failed to cover all points; no remaining convex components.")
-
+            raise OnlyMidpointsRemainingError("Only midpoints remain.")
         sorted_components: list[ConvexComponent] = sorted(self.remaining_components, key=lambda c: self.measure(c))
         largest_component: ConvexComponent = sorted_components[0]
-
-        return [
-            point
-            for point in largest_component
-        ]
-
+        return list(largest_component)[:max_candidates]
 
     def protect(self) -> None:
         """
@@ -853,6 +849,7 @@ class GuardPlacementStep(SequenceStep):
     def run(self, **kwargs: Any) -> dict[str, Any]:
         self.gallery = ArtGallery.unserialize(self.job.stdout)
         self.visibility_by_segment = {}
+        self.component_id_by_midpoint = {}
         self.component_id_by_point = Table()
 
         self.prepare()
@@ -873,9 +870,21 @@ class GuardPlacementStep(SequenceStep):
                 len(self.remaining_components),
             )
 
+            # Find the best candidates to compete.
+            # Sometimes only midpoints remain, even though they are not valid candidates.
+            # We need to propose candidates that are in the same components as the remaining points.
+            try:
+                candidates: list[Point] = self.propose()
+            except OnlyMidpointsRemainingError:
+                candidates: set[Point] = [
+                    self.gallery.convex_components[self.component_id_by_midpoint[midpoint]][0]
+                    for midpoint in self.remaining_points
+                ]
+                candidates: list[Point] = list(candidates)[:5]
+
             # Add the best guard and its visibility to the gallery.
             # Remove the component and the points from the remaining sets.
-            best_guard, best_visibility = self.compete(self.propose())
+            best_guard, best_visibility = self.compete(candidates)
             self.gallery.guards += best_guard
             self.gallery.visibility += best_visibility
             self.remaining_points -= set(best_visibility)

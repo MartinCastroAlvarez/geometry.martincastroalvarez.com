@@ -670,3 +670,10 @@ class ConvexComponentNotSimpleError(ValidationError):
 
     def __init__(self, message: str = "Convex component must be simple"):
         super().__init__(message)
+
+
+class OnlyMidpointsRemainingError(ValidationError):
+    """Only midpoints are remaining."""
+
+    def __init__(self, message: str = "Only midpoints are remaining"):
+        super().__init__(message)
