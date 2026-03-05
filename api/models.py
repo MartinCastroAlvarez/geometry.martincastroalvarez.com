@@ -359,6 +359,7 @@ class ArtGallery(Model):
     adjacency: Table[Bag[ConvexComponent, Identifier]] = field(default_factory=Table)
     guards: Table[Point] = field(default_factory=Table)
     visibility: Table[Bag[Point, Point]] = field(default_factory=Table)
+    exclusivity: Table[Bag[Point, Point]] = field(default_factory=Table)
     stitched: Polygon = field(default_factory=lambda: Polygon([]))
     stitches: list[Segment] = field(default_factory=list)
     coverage: set[Point] = field(default_factory=set)
@@ -391,6 +392,7 @@ class ArtGallery(Model):
         convex_components_raw = data.get("convex_components") or []
         guards_raw = data.get("guards") or []
         visibility_raw = data.get("visibility") or []
+        exclusivity_raw = data.get("exclusivity") or []
         stitched_raw = data.get("stitched") or data.get("stiteched") or []
         stitched = Polygon.unserialize(stitched_raw) if stitched_raw else Polygon([])
         stitches_raw = data.get("stitches") or []
@@ -431,6 +433,14 @@ class ArtGallery(Model):
                 vis_bag += Point.unserialize(p)
             return vis_bag
 
+        def _exclusivity_bag(guard: Point, pts_raw: Any) -> Bag[Point, Point] | None:
+            if not isinstance(pts_raw, (list, tuple)):
+                return None
+            exc_bag: Bag[Point, Point] = Bag(guard)
+            for p in pts_raw:
+                exc_bag += Point.unserialize(p)
+            return exc_bag
+
         if isinstance(guards_raw, dict):
             guards = Table.unserialize([Point.unserialize(serialized) for serialized in guards_raw.values()])
             visibility_bags = [
@@ -442,6 +452,15 @@ class ArtGallery(Model):
                 if b is not None
             ]
             visibility_table: Table[Bag[Point, Point]] = Table.unserialize(visibility_bags)
+            exclusivity_bags = [
+                b
+                for k, guard_ser in guards_raw.items()
+                for guard in [Point.unserialize(guard_ser)]
+                for pts_raw in [(exclusivity_raw.get(k) or []) if isinstance(exclusivity_raw, dict) else []]
+                for b in [_exclusivity_bag(guard, pts_raw)]
+                if b is not None
+            ]
+            exclusivity_table: Table[Bag[Point, Point]] = Table.unserialize(exclusivity_bags)
         else:
             guards = Table.unserialize([Point.unserialize(guard) for guard in guards_raw])
             visibility_bags = (
@@ -450,6 +469,12 @@ class ArtGallery(Model):
                 else []
             )
             visibility_table = Table.unserialize(visibility_bags)
+            exclusivity_bags = (
+                [b for guard, path in zip(list(guards.values()), exclusivity_raw) for b in [_exclusivity_bag(guard, path)] if b is not None]
+                if isinstance(exclusivity_raw, list)
+                else []
+            )
+            exclusivity_table = Table.unserialize(exclusivity_bags)
 
         id_raw = (data.get("id") or "").strip()
         owner_raw = (data.get("owner_job_id") or "").strip()
@@ -469,6 +494,7 @@ class ArtGallery(Model):
             adjacency=adjacency_table,
             guards=guards,
             visibility=visibility_table,
+            exclusivity=exclusivity_table,
             stitched=stitched,
             stitches=stitches,
             coverage=coverage,
@@ -489,6 +515,7 @@ class ArtGallery(Model):
             "adjacency": self.adjacency.serialize(),
             "guards": self.guards.serialize(),
             "visibility": {str(hash(bag.key)): [p.serialize() for p in bag.items] for bag in self.visibility},
+            "exclusivity": {str(hash(bag.key)): [p.serialize() for p in bag.items] for bag in self.exclusivity},
             "stitched": self.stitched.serialize(),
             "stitches": [s.serialize() for s in self.stitches],
             "coverage": [p.serialize() for p in self.coverage],

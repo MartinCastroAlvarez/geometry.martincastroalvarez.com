@@ -107,7 +107,8 @@
     "tooltipViewerConvexComponent": "Componentes convexos",
     "tooltipViewerStitching": "Unión de polígono y obstáculos",
     "tooltipViewerCoverage": "Diamantes",
-    "tooltipViewerVisibility": "Guardias"
+    "tooltipViewerVisibility": "Guardias",
+    "tooltipViewerExclusivity": "Exclusividad"
   },
   "common": {
     "defaultConfirmMessage": "¿Estás seguro?",

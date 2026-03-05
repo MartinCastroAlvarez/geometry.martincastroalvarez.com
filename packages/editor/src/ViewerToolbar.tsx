@@ -2,7 +2,7 @@
  * Viewer toolbar: mode buttons in order — polygon, stitch, ear clipping, convex, guard visibility.
  * One mode is active at a time; active button gets the active prop.
  */
-import { TriangleDashed, Hexagon, SquareDashed, Waypoints, Gem, Eye } from "lucide-react";
+import { TriangleDashed, Hexagon, SquareDashed, Waypoints, Gem, Eye, ShieldUser } from "lucide-react";
 import { Container, Toolbar, Button } from "@geometry/ui";
 import { useLocale } from "@geometry/i18n";
 import { ViewerMode } from "./ViewerMode";
@@ -14,6 +14,7 @@ const MODE_ICONS: Record<ViewerMode, React.ReactNode> = {
     [ViewerMode.Stitching]: <Waypoints size={14} className="shrink-0" aria-hidden />,
     [ViewerMode.Coverage]: <Gem size={14} className="shrink-0" aria-hidden />,
     [ViewerMode.Visibility]: <Eye size={14} className="shrink-0" aria-hidden />,
+    [ViewerMode.Exclusivity]: <ShieldUser size={14} className="shrink-0" aria-hidden />,
 };
 
 export interface ViewerToolbarProps {
@@ -75,6 +76,14 @@ export const ViewerToolbar = ({ mode, onModeChange, alignRight = false }: Viewer
                     onClick={() => onModeChange(ViewerMode.Visibility)}
                     aria-label={t("toolbar.tooltipViewerVisibility")}
                     tooltip={t("toolbar.tooltipViewerVisibility")}
+                />
+                <Button
+                    sm
+                    active={mode === ViewerMode.Exclusivity}
+                    icon={MODE_ICONS[ViewerMode.Exclusivity]}
+                    onClick={() => onModeChange(ViewerMode.Exclusivity)}
+                    aria-label={t("toolbar.tooltipViewerExclusivity")}
+                    tooltip={t("toolbar.tooltipViewerExclusivity")}
                 />
             </Toolbar>
         </Container>

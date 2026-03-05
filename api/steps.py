@@ -40,8 +40,9 @@ from exceptions import BridgeFailureError
 from exceptions import ConvexComponentNotSimpleError
 from exceptions import EarClippingFailureError
 from exceptions import GuardCoverageFailureError
-from exceptions import OnlyMidpointsRemainingError
+from exceptions import GuardHasNoExclusivityError
 from exceptions import GuardNotInComponentIdByPointError
+from exceptions import OnlyMidpointsRemainingError
 from exceptions import PolygonNotSimpleError
 from exceptions import PolygonsDoNotShareEdgeError
 from exceptions import StepNotHandledError
@@ -707,8 +708,8 @@ class GuardPlacementStep(SequenceStep):
             # Check if that adjacent component is visible (vertices or edge midpoints).
             visible = False
             for point in adjacent:
-                if point not in self.remaining_points:
-                    continue
+                # if point not in self.remaining_points:
+                #     continue
                 if self.sees(guard, point):
                     visibility += point
                     visible = True
@@ -777,7 +778,7 @@ class GuardPlacementStep(SequenceStep):
                     self.component_id_by_point.add(Bag(point))
                 self.component_id_by_point[point] += component.id
             for midpoint in component.midpoints:
-                self.component_id_by_midpoint[midpoint] = component.id
+                self.component_ids_by_midpoint[midpoint].add(component.id)
 
     def compete(self, candidates: list[Point]) -> (Point, Bag[Point, Point]):
         """
@@ -822,6 +823,29 @@ class GuardPlacementStep(SequenceStep):
 
         return best_guard, best_visibility
 
+    def analyze(self) -> None:
+        """
+        Build exclusivity table: for each guard, points visible only by that guard (not covered by any other guard).
+        Sets self.gallery.exclusivity. Raises GuardHasNoExclusivityError if any guard has no exclusive points.
+        """
+        visibility: list[Bag[Point, Point]] = list(self.gallery.visibility.values())
+        self.gallery.exclusivity = Table()
+        for guard in self.gallery.guards:
+            visibility_bag: Bag[Point, Point] = self.gallery.visibility[guard]
+            other_points: set[Point] = set()
+            for other in visibility:
+                if other.key != guard:
+                    other_points |= set(other.items)
+            exclusive: set[Point] = set(visibility_bag.items) - other_points
+            if not exclusive:
+                raise GuardHasNoExclusivityError(
+                    f"Guard at {guard} has no exclusivity points (all visible points are covered by other guards)."
+                )
+            exc_bag: Bag[Point, Point] = Bag(guard)
+            for point in exclusive:
+                exc_bag += point
+            self.gallery.exclusivity += exc_bag
+
     def propose(self, max_candidates: int = 5) -> list[Point]:
         """
         Return the candidates to compete.
@@ -849,7 +873,7 @@ class GuardPlacementStep(SequenceStep):
     def run(self, **kwargs: Any) -> dict[str, Any]:
         self.gallery = ArtGallery.unserialize(self.job.stdout)
         self.visibility_by_segment = {}
-        self.component_id_by_midpoint = {}
+        self.component_ids_by_midpoint = defaultdict(set)
         self.component_id_by_point = Table()
 
         self.prepare()
@@ -877,10 +901,11 @@ class GuardPlacementStep(SequenceStep):
                 candidates: list[Point] = self.propose()
             except OnlyMidpointsRemainingError:
                 candidates: set[Point] = [
-                    self.gallery.convex_components[self.component_id_by_midpoint[midpoint]][0]
+                    self.gallery.convex_components[component_id][0]
                     for midpoint in self.remaining_points
+                    for component_id in self.component_ids_by_midpoint[midpoint]
                 ]
-                candidates: list[Point] = list(candidates)[:5]
+                candidates: list[Point] = list(candidates)
 
             # Add the best guard and its visibility to the gallery.
             # Remove the component and the points from the remaining sets.
@@ -894,19 +919,23 @@ class GuardPlacementStep(SequenceStep):
             # The guard was placed inside the `best_component`, so it is guaranteed to be covered by the best_visibility.
             # However, we don't explicitely remove it here, just to make sure the following code works.
             for component in list(self.remaining_components):
-                if all(
-                    (
-                        not any(point in self.remaining_points for point in component),
-                        not any(segment.midpoint in self.remaining_points for segment in component.edges),
-                    )
-                ):
-                    self.remaining_components -= {component}
-
+                if any(point in self.remaining_points for point in component):
+                    continue
+                if any(midpoint in self.remaining_points for midpoint in component.midpoints):
+                    continue
+                self.remaining_components -= {component}
             logger.info("GuardPlacementStep.run() | job.id=%s points_remaining=%s", self.job.id, len(self.remaining_points))
 
+        # Safecheck against bugs.
         logger.info("GuardPlacementStep.run() | job.id=%s guards=%s", self.job.id, len(self.gallery.guards))
+        assert not self.remaining_components, "Remaining components should be empty."
+        assert not self.remaining_points, "Remaining points should be empty."
+
+        self.analyze()
+
         return {
             "guards": self.gallery.guards.serialize(),
             "visibility": self.gallery.visibility.serialize(),
+            "exclusivity": self.gallery.exclusivity.serialize(),
             "coverage": [p.serialize() for p in self.gallery.coverage],
         }

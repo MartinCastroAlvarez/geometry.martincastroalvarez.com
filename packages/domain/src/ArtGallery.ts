@@ -32,6 +32,8 @@ export interface ArtGalleryDict {
     convex_components?: PolygonDict[] | Record<string, PolygonDict | number[][] | unknown>;
     /** Optional visibility (API dict key->points; or array of paths; or VisibilityDict[]). */
     visibility?: Record<string, PointDict[] | number[][]> | PointDict[][] | VisibilityDict[];
+    /** Optional exclusivity (API dict key->points; edges exclusive to each guard). */
+    exclusivity?: Record<string, PointDict[] | number[][]> | PointDict[][] | VisibilityDict[];
     /** Optional duration in milliseconds (from job when published). */
     duration?: number;
     /** Optional coverage points (stitched vertices + convex edge midpoints from guard placement). */
@@ -68,6 +70,33 @@ function parseVisibilityFromDict(dict: ArtGalleryDict): Visibility[] {
     return [];
 }
 
+function parseExclusivityFromDict(dict: ArtGalleryDict): Visibility[] {
+    const rawGuards = dict.guards;
+    const rawExcl = dict.exclusivity ?? [];
+    if (Array.isArray(rawGuards) && Array.isArray(rawExcl)) {
+        const paths = rawExcl as (PointDict[] | number[])[];
+        return rawGuards.map((g, i) => {
+            const path = paths[i];
+            const points = Array.isArray(path) ? path.map((p: unknown) => Point.fromDict(Array.isArray(p) ? { x: Number(p[0]), y: Number(p[1]) } : p as PointDict)) : [];
+            return new Visibility(Point.fromDict(g), points);
+        });
+    }
+    if (rawGuards != null && typeof rawGuards === "object" && !Array.isArray(rawGuards) && rawExcl != null && typeof rawExcl === "object" && !Array.isArray(rawExcl)) {
+        const keys = Object.keys(rawGuards);
+        return keys
+            .map((k) => {
+                const g = (rawGuards as Record<string, unknown>)[k];
+                const path = (rawExcl as Record<string, unknown>)[k];
+                if (!g || !Array.isArray(path)) return null;
+                const guard = Point.fromDict(Array.isArray(g) ? { x: Number(g[0]), y: Number(g[1]) } : g as PointDict);
+                const points = path.map((p) => Point.fromDict(Array.isArray(p) ? { x: Number(p[0]), y: Number(p[1]) } : p as PointDict));
+                return new Visibility(guard, points);
+            })
+            .filter((v): v is Visibility => v != null);
+    }
+    return [];
+}
+
 export class ArtGallery {
     constructor(
         public readonly boundary: Polygon,
@@ -83,6 +112,8 @@ export class ArtGallery {
         public readonly convex_components: ConvexComponent[] = [],
     /** Optional visibility (one per guard; guard and visible region points). */
     public readonly visibility: Visibility[] = [],
+        /** Optional exclusivity (one per guard; points visible only by that guard). */
+        public readonly exclusivity: Visibility[] = [],
         /** Optional total run duration in milliseconds (from job when published). */
         public readonly duration?: number,
         /** Optional coverage points (stitched + convex edge midpoints). */
@@ -118,6 +149,7 @@ export class ArtGallery {
             .filter((d) => d.points && d.points.length >= 3)
             .map((d) => ConvexComponent.fromDict(d));
         const visibility: Visibility[] = parseVisibilityFromDict(dict);
+        const exclusivity: Visibility[] = parseExclusivityFromDict(dict);
         const rawStitches = dict.stitches ?? [];
         const stitches: [Point, Point][] = rawStitches.map((seg: unknown) => {
             const s = Array.isArray(seg) && seg.length >= 2 ? seg : [];
@@ -156,6 +188,7 @@ export class ArtGallery {
             ears,
             convex_components,
             visibility,
+            exclusivity,
             duration,
             coverage
         );
@@ -182,6 +215,9 @@ export class ArtGallery {
         if (this.visibility.length > 0) {
             out.visibility = this.visibility.map((v) => v.toDict());
         }
+        if (this.exclusivity.length > 0) {
+            out.exclusivity = this.exclusivity.map((v) => v.toDict());
+        }
         if (this.duration != null && this.duration >= 0) {
             out.duration = this.duration;
         }
@@ -201,6 +237,7 @@ export class ArtGallery {
             this.ears,
             this.convex_components,
             this.visibility,
+            this.exclusivity,
             this.duration,
             this.coverage
         );
@@ -217,6 +254,7 @@ export class ArtGallery {
             this.ears,
             this.convex_components,
             this.visibility,
+            this.exclusivity,
             this.duration,
             this.coverage
         );
@@ -232,6 +270,7 @@ export class ArtGallery {
             this.ears,
             this.convex_components,
             this.visibility,
+            this.exclusivity,
             this.duration,
             this.coverage
         );
@@ -247,8 +286,10 @@ export class ArtGallery {
             this.ears,
             this.convex_components,
             this.visibility,
+            this.exclusivity,
             this.duration,
             this.coverage
         );
     }
 }
+

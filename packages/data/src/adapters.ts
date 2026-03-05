@@ -210,26 +210,35 @@ function isIdList(path: unknown): boolean {
     return Array.isArray(path) && path.length > 0 && path.every((v) => typeof v === "number" || (typeof v === "string" && !Number.isNaN(Number(v))));
 }
 
-/** Parse guards and visibility from stdout; returns guards list and Visibility[] (dicts share keys).
- * API may send visibility as guard_id -> array of [x,y] points (visible region) or array of vertex/guard IDs (numeric); ID list is treated as empty path. */
-function parseGuardsAndVisibility(data: Record<string, unknown>): { guards: Point[]; visibility: Visibility[] } {
+/** Parse guards, visibility and exclusivity from stdout; returns guards list, Visibility[] and exclusivity Visibility[] (dicts share keys).
+ * API may send visibility/exclusivity as guard_id -> array of [x,y] points (visible/exclusive region) or array of vertex/guard IDs (numeric); ID list is treated as empty path. */
+function parseGuardsAndVisibilityAndExclusivity(data: Record<string, unknown>): {
+    guards: Point[];
+    visibility: Visibility[];
+    exclusivity: Visibility[];
+} {
     const rawGuards = data.guards;
     const rawVis = data.visibility;
+    const rawExcl = data.exclusivity;
     if (rawGuards != null && typeof rawGuards === "object" && !Array.isArray(rawGuards) && rawVis != null && typeof rawVis === "object" && !Array.isArray(rawVis)) {
         const keys = Object.keys(rawGuards);
         const guards: Point[] = [];
         const visibility: Visibility[] = [];
+        const exclusivity: Visibility[] = [];
         for (const k of keys) {
             const g = parsePoint((rawGuards as Record<string, unknown>)[k]);
             const path = (rawVis as Record<string, unknown>)[k];
+            const exclPath = rawExcl != null && typeof rawExcl === "object" && !Array.isArray(rawExcl) ? (rawExcl as Record<string, unknown>)[k] : undefined;
             if (!g) continue;
             guards.push(new Point(g.x, g.y));
             if (Array.isArray(path)) {
                 const points = isIdList(path) ? [] : parsePath(path);
                 visibility.push(new Visibility(new Point(g.x, g.y), points));
             }
+            const exclPoints = Array.isArray(exclPath) && !isIdList(exclPath) ? parsePath(exclPath) : [];
+            exclusivity.push(new Visibility(new Point(g.x, g.y), exclPoints));
         }
-        return { guards, visibility };
+        return { guards, visibility, exclusivity };
     }
     const guards = parseGuards(data);
     const visItems = Array.isArray(rawVis) ? rawVis : rawVis && typeof rawVis === "object" ? Object.values(rawVis) : [];
@@ -237,7 +246,13 @@ function parseGuardsAndVisibility(data: Record<string, unknown>): { guards: Poin
         const points = Array.isArray(path) && isIdList(path) ? [] : parsePath(path);
         return new Visibility(guards[i] ?? new Point(0, 0), points);
     }).filter((_, i) => guards[i] != null);
-    return { guards, visibility };
+    const exclItems = rawExcl != null && typeof rawExcl === "object" && Array.isArray(rawExcl) ? rawExcl : rawExcl != null && typeof rawExcl === "object" && !Array.isArray(rawExcl) ? Object.values(rawExcl as Record<string, unknown>) : [];
+    const exclusivity = guards.map((guard, i) => {
+        const path = exclItems[i];
+        const points = Array.isArray(path) && !isIdList(path) ? parsePath(path) : [];
+        return new Visibility(guard, points);
+    });
+    return { guards, visibility, exclusivity };
 }
 
 /**
@@ -277,7 +292,7 @@ export function artGalleryFromPolygonData(
               })
               .filter((x): x is [Point, Point] => x != null)
         : [];
-    const { guards, visibility } = parseGuardsAndVisibility(data);
+    const { guards, visibility, exclusivity } = parseGuardsAndVisibilityAndExclusivity(data);
     const ears = parseEars(data);
     const convex_components = parseConvexComponents(data);
     const duration =
@@ -298,6 +313,7 @@ export function artGalleryFromPolygonData(
         ears,
         convex_components,
         visibility,
+        exclusivity,
         duration,
         coverage
     );
@@ -337,6 +353,7 @@ export const toDomainArtGallery = (api: ApiArtGallery): Gallery => {
         ...(api.ears != null && Object.keys(api.ears).length > 0 && { ears: api.ears as ArtGalleryDict["ears"] }),
         ...(api.convex_components != null && Object.keys(api.convex_components).length > 0 && { convex_components: api.convex_components as ArtGalleryDict["convex_components"] }),
         ...(api.visibility != null && Object.keys(api.visibility).length > 0 && { visibility: api.visibility as ArtGalleryDict["visibility"] }),
+        ...(api.exclusivity != null && Object.keys(api.exclusivity).length > 0 && { exclusivity: api.exclusivity as ArtGalleryDict["exclusivity"] }),
         ...(api.stitches != null && Array.isArray(api.stitches) && api.stitches.length > 0 && { stitches: api.stitches as ArtGalleryDict["stitches"] }),
         ...(api.duration != null && api.duration >= 0 ? { duration: api.duration } : {}),
         ...(api.coverage != null && Array.isArray(api.coverage) && api.coverage.length > 0
@@ -451,6 +468,7 @@ export const fromApiArtGallery = (raw: unknown): ApiArtGallery => {
         convex_components: (d.convex_components as Record<string, unknown>) ?? {},
         guards: guards as ApiArtGallery["guards"],
         visibility: (d.visibility as ApiArtGallery["visibility"]) ?? {},
+        exclusivity: (d.exclusivity as ApiArtGallery["exclusivity"]) ?? undefined,
         stitched,
         stitches: (d.stitches as ApiArtGallery["stitches"]) ?? undefined,
         duration: d.duration != null && typeof d.duration === "number" ? d.duration : undefined,

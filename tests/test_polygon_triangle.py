@@ -92,5 +92,12 @@ def test_triangle_full_pipeline_requires_two_guards():
     guard_out = GuardPlacementStep(job=job_guard, user=_user()).run()
     assert len(guard_out["guards"]) == 4, f"Triangle gallery expects 4 guards; got {len(guard_out['guards'])}"
     assert len(guard_out["visibility"]) == len(guard_out["guards"])
+    assert "exclusivity" in guard_out, "Guard placement must return exclusivity"
+    assert len(guard_out["exclusivity"]) == len(guard_out["guards"]), (
+        f"exclusivity must have one entry per guard; got {len(guard_out['exclusivity'])} for {len(guard_out['guards'])} guards"
+    )
+    for guard_id, points in guard_out["exclusivity"].items():
+        assert isinstance(points, list), f"exclusivity[{guard_id!r}] must be a list of points"
+        assert len(points) >= 1, f"each guard must have at least one exclusivity point; guard {guard_id!r} has {len(points)}"
     assert_no_redundant_guards(guard_out)
     print_guard_coverage_report(guard_out, "Triangle guard coverage report")

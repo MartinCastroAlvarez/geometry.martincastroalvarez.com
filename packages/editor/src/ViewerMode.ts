@@ -16,6 +16,8 @@ export enum ViewerMode {
     Stitching = "stitching",
     /** Coverage points (stitched + convex edge midpoints) as diamonds. */
     Coverage = "coverage",
-    /** Visibility / guards view (reserved). */
+    /** Visibility / guards view. */
     Visibility = "visibility",
+    /** Exclusivity: edges exclusive to each guard; boundary/obstacles muted. */
+    Exclusivity = "exclusivity",
 }

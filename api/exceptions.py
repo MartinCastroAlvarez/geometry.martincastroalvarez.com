@@ -482,6 +482,13 @@ class GalleryHasNoVisibilityError(ValidationError):
         super().__init__(message)
 
 
+class GuardHasNoExclusivityError(ValidationError):
+    """A guard has no exclusivity points (all its visible points are covered by other guards)."""
+
+    def __init__(self, message: str = "A guard has no exclusivity points"):
+        super().__init__(message)
+
+
 class UserNotAuthenticatedError(UnauthorizedError):
     """User must be authenticated."""
 

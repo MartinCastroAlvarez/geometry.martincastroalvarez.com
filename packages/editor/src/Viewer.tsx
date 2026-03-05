@@ -144,7 +144,7 @@ const ViewerInner = ({
     const { isMobile } = useDevice();
 
     useEffect(() => {
-        if (mode !== ViewerMode.Visibility) setActiveGuardIndex(null);
+        if (mode !== ViewerMode.Visibility && mode !== ViewerMode.Exclusivity) setActiveGuardIndex(null);
     }, [mode]);
 
     const { vertices, edges, edgeMuted, guardVertices, coverageVertices } = useMemo(() => {
@@ -205,6 +205,25 @@ const ViewerInner = ({
             const edgeMuted = [
                 ...base.edges.map(() => false),
                 ...visEs.map(() => true),
+            ];
+            return { vertices, edges, edgeMuted, guardVertices, coverageVertices };
+        }
+        if (mode === ViewerMode.Exclusivity && artGallery.exclusivity?.length > 0) {
+            const base = artGalleryToEditorState(artGallery);
+            const exclusivity =
+                activeGuardIndex != null && activeGuardIndex < artGallery.exclusivity.length
+                    ? [artGallery.exclusivity[activeGuardIndex]]
+                    : artGallery.exclusivity;
+            const { vertices: excVs, edges: excEs } = visibilityToEditorState(exclusivity);
+            const nBase = base.vertices.length;
+            const vertices = [...base.vertices, ...excVs];
+            const edges: [number, number][] = [
+                ...base.edges,
+                ...excEs.map(([a, b]) => [a + nBase, b + nBase] as [number, number]),
+            ];
+            const edgeMuted = [
+                ...base.edges.map(() => true),
+                ...excEs.map(() => false),
             ];
             return { vertices, edges, edgeMuted, guardVertices, coverageVertices };
         }
@@ -380,12 +399,12 @@ const ViewerInner = ({
                                             draggable={false}
                                             scale={scale * layerScale}
                                             size="lg"
-                                            isActive={mode === ViewerMode.Visibility && activeGuardIndex === i}
+                                            isActive={(mode === ViewerMode.Visibility || mode === ViewerMode.Exclusivity) && activeGuardIndex === i}
                                             tooltip={`(${vertex.x}, ${vertex.y})`}
                                             onTooltipShow={(content, x, y) => setVertexTooltip({ content, x, y })}
                                             onTooltipHide={() => setVertexTooltip(null)}
                                             onClick={
-                                                mode === ViewerMode.Visibility
+                                                mode === ViewerMode.Visibility || mode === ViewerMode.Exclusivity
                                                     ? () => handleGuardClick(i)
                                                     : undefined
                                             }

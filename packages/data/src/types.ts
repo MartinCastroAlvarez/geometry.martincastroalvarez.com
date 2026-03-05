@@ -57,6 +57,8 @@ export interface ApiArtGallery {
     guards?: Record<string, ApiPoint | [number, number]>;
     /** Guard id -> visible region as array of points (API sends [x,y][]). */
     visibility?: Record<string, ApiPoint[] | Array<[number, number]>>;
+    /** Guard id -> exclusive region (points visible only by that guard) as array of points. */
+    exclusivity?: Record<string, ApiPoint[] | Array<[number, number]>>;
     /** Optional stitched polygon (list of points or { points } from API). */
     stitched?: ApiPolygon | Array<{ x: number; y: number } | [number, number]>;
     /** Optional list of bridge edges from stitching step; each segment is [[x,y],[x,y]]. */

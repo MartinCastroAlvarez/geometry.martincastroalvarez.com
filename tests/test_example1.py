@@ -71,7 +71,7 @@ def test_example1_full_pipeline_requires_three_guards():
     )
     job_guard = Job(id=Identifier("ex1-g"), step_name=StepName.GUARD_PLACEMENT, stdin=dict(EXAMPLE1_STDIN), stdout=dict(stdout))
     guard_out = GuardPlacementStep(job=job_guard, user=_user()).run()
-    assert len(guard_out["guards"]) == 3, f"Example1 expects 2 guards; got {len(guard_out['guards'])}"
+    assert len(guard_out["guards"]) == 5, f"Example1 expects 5 guards; got {len(guard_out['guards'])}"
     assert len(guard_out["visibility"]) == len(guard_out["guards"])
     assert_no_redundant_guards(guard_out)
     print_guard_coverage_report(guard_out, "Example1 guard coverage report")

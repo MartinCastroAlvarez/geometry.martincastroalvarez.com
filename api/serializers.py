@@ -66,6 +66,7 @@ class ArtGalleryDict(ModelDict):
     adjacency: dict[str, Any]
     guards: dict[str, Any]
     visibility: dict[str, Any]
+    exclusivity: dict[str, Any]
     stitched: list[Any]
     stitches: list[Any]
     duration: int

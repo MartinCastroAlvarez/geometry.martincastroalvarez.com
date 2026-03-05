@@ -126,6 +126,7 @@ class ArtGalleryPublishMutationResponse(MutationResponse):
     convex_components: dict[str, Any]
     guards: dict[str, Any]
     visibility: dict[str, Any]
+    exclusivity: dict[str, Any]
 
 
 class JobMutationResponse(MutationResponse):
