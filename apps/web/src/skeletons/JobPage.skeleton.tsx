@@ -1,6 +1,6 @@
 /**
- * Skeleton for single Job page. Matches JobPage layout: viewer; row (badges | toolbar); title row;
- * milestones row; three inspector columns.
+ * Skeleton for single Job page. Matches JobPage layout: milestones/summary row; viewer; row (badges | toolbar); title row;
+ * three inspector columns.
  */
 import { Skeleton, Page, Container, TitleSkeleton, BadgeSkeleton, InspectorSkeleton, ButtonSkeleton, Toolbar, MilestonesSkeleton, useDevice } from "@geometry/ui";
 import { ViewerSkeleton } from "@geometry/editor";
@@ -17,6 +17,11 @@ export const JobPageSkeleton = () => {
         <Skeleton>
             <Page>
                 <Container padded spaced>
+                    <Container size={12} left center>
+                        <MilestonesSkeleton />
+                    </Container>
+                </Container>
+                <Container padded spaced>
                     <ViewerSkeleton height={VIEWER_HEIGHT} />
                 </Container>
                 <Container padded spaced>
@@ -32,11 +37,6 @@ export const JobPageSkeleton = () => {
                 <Container padded spaced>
                     <Container size={12} left={!isMobile} center={isMobile}>
                         <TitleSkeleton xl width="14rem" />
-                    </Container>
-                </Container>
-                <Container padded spaced>
-                    <Container size={12} left center>
-                        <MilestonesSkeleton />
                     </Container>
                 </Container>
                 <Container padded spaced>

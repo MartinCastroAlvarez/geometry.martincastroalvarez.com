@@ -165,6 +165,50 @@ def assert_convex_components_visibility_within_component(
                     )
 
 
+def assert_visibility_segments_inside_boundary(
+    guard_out: dict,
+    boundary_serialized: list,
+    obstacles_serialized: list,
+) -> None:
+    """
+    After guard placement: assert every visibility segment (guard → visible point) lies
+    inside the boundary and does not cross obstacles. Also asserts the midpoint of each
+    segment is inside the boundary (and not inside any obstacle).
+
+    guard_out must have "guards" (dict guard_id -> serialized point) and "visibility"
+    (dict guard_id -> list of serialized points). boundary_serialized and
+    obstacles_serialized are in Polygon.unserialize format.
+
+    Raises AssertionError with segment/guard/point details on failure.
+    """
+    boundary = Polygon.unserialize(boundary_serialized)
+    obstacles = [Polygon.unserialize(obs) for obs in obstacles_serialized]
+    guards_ser = guard_out["guards"]
+    visibility_ser = guard_out["visibility"]
+
+    for guard_id, guard_pt_ser in guards_ser.items():
+        guard_pt = Point.unserialize(guard_pt_ser)
+        visible_list = visibility_ser.get(guard_id, [])
+        for point_ser in visible_list:
+            visible_pt = Point.unserialize(point_ser)
+            segment = guard_pt.to(visible_pt)
+
+            if not boundary.contains(segment, inclusive=True):
+                raise AssertionError(
+                    f"Visibility segment from guard {guard_pt} to {visible_pt} goes outside boundary. "
+                    f"Segment: {segment[0]}–{segment[1]}; boundary contains segment: {boundary.contains(segment, inclusive=True)}."
+                )
+            if not boundary.contains(segment.midpoint, inclusive=True):
+                raise AssertionError(
+                    f"Visibility segment midpoint {segment.midpoint} (guard {guard_pt} → {visible_pt}) is outside boundary."
+                )
+            ok, msg = _segment_clear_of_obstacles(segment, obstacles)
+            if not ok:
+                raise AssertionError(
+                    f"Visibility segment from guard {guard_pt} to {visible_pt} crosses obstacle: {msg}."
+                )
+
+
 def assert_no_redundant_guards(guard_out: dict) -> None:
     """
     After guard placement: assert no guard only sees points already covered by other guards.

@@ -169,6 +169,23 @@ export const useDeleteJob = () => {
     return { ...mutation, isLoading: mutation.isPending };
 };
 
+export const useReprocessJob = () => {
+    const queryClient = useQueryClient();
+    const token = useAuthentication();
+    const mutation = useMutation({
+        mutationFn: async (jobId: string) => {
+            console.log("[data] useReprocessJob request", { jobId, token: token ?? null });
+            const data = await new GeometryApiClient(GEOMETRY_API_URL, token).reprocessJob(jobId);
+            console.log("[data] useReprocessJob response", data);
+            return data;
+        },
+        onSuccess: (_, jobId) => {
+            queryClient.invalidateQueries({ queryKey: JOB_QUERY_KEY(jobId) });
+        },
+    });
+    return { ...mutation, isLoading: mutation.isPending };
+};
+
 export const useCreateJob = () => {
     const queryClient = useQueryClient();
     const token = useAuthentication();

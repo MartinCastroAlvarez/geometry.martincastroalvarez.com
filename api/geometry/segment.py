@@ -151,44 +151,63 @@ class Segment(list, Spatial, Bounded, Serializable[SerializedSegment]):
     def intersects(self, obj: Any, inclusive: bool = True) -> bool:
         if not isinstance(obj, Segment):
             raise NotImplementedError(f"Segment.intersects only supports Segment, got {type(obj).__name__}")
-        other = obj
-        if any(
-            (
-                self.box.x[1] < other.box.x[0],
-                other.box.x[1] < self.box.x[0],
-                self.box.y[1] < other.box.y[0],
-                other.box.y[1] < self.box.y[0],
-            )
+
+        a: Point = self[0]
+        b: Point = self[1]
+        c: Point = obj[0]
+        d: Point = obj[1]
+
+        # Bounding-box rejection
+        if (
+            max(a.x, b.x) < min(c.x, d.x)
+            or max(c.x, d.x) < min(a.x, b.x)
+            or max(a.y, b.y) < min(c.y, d.y)
+            or max(c.y, d.y) < min(a.y, b.y)
         ):
             return False
-        path1 = Walk(start=self[0], center=self[1], end=other[0])
-        path2 = Walk(start=self[0], center=self[1], end=other[1])
-        path3 = Walk(start=other[0], center=other[1], end=self[0])
-        path4 = Walk(start=other[0], center=other[1], end=self[1])
-        if all(
-            (
-                all(
-                    (
-                        not path1.is_collinear(),
-                        not path2.is_collinear(),
-                        not path3.is_collinear(),
-                        not path4.is_collinear(),
-                    )
-                ),
-                path1.orientation != path2.orientation,
-                path3.orientation != path4.orientation,
-            )
-        ):
+
+        w1 = Walk(start=a, center=b, end=c)
+        w2 = Walk(start=a, center=b, end=d)
+        w3 = Walk(start=c, center=d, end=a)
+        w4 = Walk(start=c, center=d, end=b)
+
+        col1 = w1.is_collinear()
+        col2 = w2.is_collinear()
+        col3 = w3.is_collinear()
+        col4 = w4.is_collinear()
+
+        # All-collinear case
+        if col1 and col2 and col3 and col4:
+            if not inclusive:
+                return False
+
+            # inclusive=True => any shared point
+            if a.x != b.x or c.x != d.x:
+                a0, a1 = sorted((a.x, b.x))
+                b0, b1 = sorted((c.x, d.x))
+            else:
+                a0, a1 = sorted((a.y, b.y))
+                b0, b1 = sorted((c.y, d.y))
+
+            return not (a1 < b0 or b1 < a0)
+
+        # Proper crossing
+        if w1.orientation != w2.orientation and w3.orientation != w4.orientation:
             return True
-        if any(
-            (
-                path1.is_collinear() and self.contains(other[0], inclusive=inclusive),
-                path2.is_collinear() and self.contains(other[1], inclusive=inclusive),
-                path3.is_collinear() and other.contains(self[0], inclusive=inclusive),
-                path4.is_collinear() and other.contains(self[1], inclusive=inclusive),
-            )
-        ):
+
+        if not inclusive:
+            return False
+
+        # Inclusive non-collinear touching
+        if col1 and self.contains(c, inclusive=True):
             return True
+        if col2 and self.contains(d, inclusive=True):
+            return True
+        if col3 and obj.contains(a, inclusive=True):
+            return True
+        if col4 and obj.contains(b, inclusive=True):
+            return True
+
         return False
 
     def connects(self, other: Segment) -> bool:

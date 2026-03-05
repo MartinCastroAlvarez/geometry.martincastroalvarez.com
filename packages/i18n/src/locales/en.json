@@ -32,7 +32,9 @@
       "publishConfirm": "This will publish the art gallery to the public gallery. Continue?",
       "edit": "Edit",
       "delete": "Delete",
-      "deleteConfirm": "Are you sure you want to delete this job? This cannot be undone."
+      "deleteConfirm": "Are you sure you want to delete this job? This cannot be undone.",
+      "reprocess": "Reprocess",
+      "reprocessConfirm": "Reprocess this job from the beginning? The job will be queued again."
     }
   },
   "errors": {
@@ -40,7 +42,8 @@
     "serviceUnavailable": "Service temporarily unavailable",
     "publishFailed": "Failed to publish the gallery. Please try again.",
     "publishNoStitches": "The polygon failed to connect the obstacles with the outer polygon.",
-    "deleteFailed": "Failed to delete the job. Please try again."
+    "deleteFailed": "Failed to delete the job. Please try again.",
+    "reprocessFailed": "Failed to reprocess the job. Please try again."
   },
   "nav": {
     "login": "Login",
@@ -114,7 +117,11 @@
     "defaultConfirmMessage": "Are you sure?",
     "confirmTitle": "Just to be sure",
     "confirm": "Confirm",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "copy": "Copy"
+  },
+  "inspector": {
+    "truncated": "Truncated for display. Use \"Copy\" to get full JSON."
   },
   "summary": {
     "points": "Points",

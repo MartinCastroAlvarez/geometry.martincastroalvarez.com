@@ -70,21 +70,24 @@ class TestStartTask:
         assert result["status"] == Status.FAILED
         mock_queue.put.assert_not_called()
 
+    @patch("tasks.queue")
     @patch("tasks.JobsRepository")
-    def test_execute_unknown_step_raises_step_not_handled(self, mock_repo_cls):
+    def test_execute_unknown_step_raises_step_not_handled(self, mock_repo_cls, mock_queue):
         mock_repo = MagicMock()
         mock_repo_cls.return_value = mock_repo
-        job = MagicMock()
-        job.is_failed.return_value = False
-        job.is_finished.return_value = False  # not already processed, so execute runs step
-        job.step_name = StepName.ART_GALLERY
-        job.id = Identifier("j1")
+        job = Job(
+            id=Identifier("j1"),
+            step_name=StepName.ART_GALLERY,
+            status=Status.PENDING,
+        )
         mock_repo.get.return_value = job
         with patch.object(Step, "of", side_effect=StepNotHandledError("Step cannot be handled: art_gallery")):
             task = StartTask()
             req = {"job_id": Identifier("j1"), "user_email": Email("u@e.com")}
             response = task.handler(req)
-            raise Exception(response)
+            assert response["status"] == Status.FAILED
+            assert job.status == Status.FAILED
+            assert "error:art-gallery:message" in job.stderr
 
     @patch.object(StartTask, "broadcast")
     @patch("tasks.queue")
@@ -201,16 +204,16 @@ class TestReportTask:
     def test_execute_children_all_success_sets_status_success_and_notifies(self, mock_repo_cls, mock_queue):
         mock_repo = MagicMock()
         mock_repo_cls.return_value = mock_repo
-        parent = MagicMock()
-        parent.is_failed.return_value = False
-        parent.is_pending.return_value = False
-        parent.id = Identifier("p1")
-        parent.parent_id = Identifier("grandparent")
-        parent.children_ids = [Identifier("c1")]
-        parent.stdout = {}
-        parent.stderr = {}
-        parent.meta = {}
-        parent.step_name = StepName.ART_GALLERY
+        parent = Job(
+            id=Identifier("p1"),
+            parent_id=Identifier("grandparent"),
+            children_ids=[Identifier("c1")],
+            status=Status.PENDING,
+            step_name=StepName.ART_GALLERY,
+            stdout={},
+            stderr={},
+            meta={},
+        )
         child = MagicMock()
         child.is_failed.return_value = False
         child.is_pending.return_value = False
@@ -252,7 +255,9 @@ class TestReportTask:
         req = {"job_id": Identifier("p1"), "user_email": Email("u@e.com")}
         task.handler(req)
         assert parent.status == Status.FAILED
-        assert parent.stderr == {"err": "failed"}
+        assert parent.stderr.get("err") == "failed"
+        assert "error:art-gallery:message" in parent.stderr
+        assert "error:art-gallery:type" in parent.stderr
 
     @patch("tasks.ReportTask.broadcast")
     @patch("tasks.queue")

@@ -428,17 +428,25 @@ const ViewerInner = ({
                         </Stage>
                     </div>
                     {vertexTooltip && (
-                        <Tooltip title={vertexTooltip.content}>
+                        <Tooltip
+                            title={vertexTooltip.content}
+                            open
+                            disableHoverListener
+                            disableFocusListener
+                            disableTouchListener
+                            placement="top"
+                        >
                             <div
                                 role="presentation"
                                 aria-hidden
                                 style={{
                                     position: "fixed",
-                                    left: vertexTooltip.x,
-                                    top: vertexTooltip.y,
-                                    width: 2,
-                                    height: 2,
+                                    left: vertexTooltip.x - 12,
+                                    top: vertexTooltip.y - 12,
+                                    width: 24,
+                                    height: 24,
                                     zIndex: 10,
+                                    pointerEvents: "none",
                                 }}
                             />
                         </Tooltip>

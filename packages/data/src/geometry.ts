@@ -126,7 +126,7 @@ export class GeometryApiClient {
 
     async publish(jobId: string): Promise<GeometryApiArtGallery> {
         if (this.jwtToken == null || this.jwtToken === "") requireToken("publish");
-        const response = await requestOrThrow(`${this.baseUrl}/v1/jobs/${jobId}`, this.jwtToken, {
+        const response = await requestOrThrow(`${this.baseUrl}/v1/jobs/${jobId}/publish`, this.jwtToken, {
             method: "POST",
         });
         const result = (await response.json()) as DetailsResponse<GeometryApiArtGallery> | GeometryApiArtGallery;
@@ -154,6 +154,21 @@ export class GeometryApiClient {
         await requestOrThrow(`${this.baseUrl}/v1/jobs/${jobId}`, this.jwtToken, {
             method: "DELETE",
         });
+    }
+
+    /**
+     * Reprocess an existing job (POST /v1/jobs/{jobId}). Job must be success or failed.
+     */
+    async reprocessJob(jobId: string): Promise<GeometryApiJob> {
+        if (this.jwtToken == null || this.jwtToken === "") requireToken("reprocessJob");
+        const response = await requestOrThrow(`${this.baseUrl}/v1/jobs/${jobId}`, this.jwtToken, {
+            method: "POST",
+        });
+        const result = (await response.json()) as DetailsResponse<GeometryApiJob> | GeometryApiJob;
+        if (result != null && typeof result === "object" && "data" in result && result.data != null) {
+            return result.data;
+        }
+        return result as GeometryApiJob;
     }
 
     async createJob(

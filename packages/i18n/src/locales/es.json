@@ -32,7 +32,9 @@
       "publishConfirm": "Esto publicará la galería de arte en la galería pública. ¿Continuar?",
       "edit": "Editar",
       "delete": "Eliminar",
-      "deleteConfirm": "¿Estás seguro de que quieres eliminar este trabajo? Esta acción no se puede deshacer."
+      "deleteConfirm": "¿Estás seguro de que quieres eliminar este trabajo? Esta acción no se puede deshacer.",
+      "reprocess": "Reprocesar",
+      "reprocessConfirm": "¿Reprocesar este trabajo desde el principio? El trabajo se volverá a encolar."
     }
   },
   "errors": {
@@ -40,7 +42,8 @@
     "serviceUnavailable": "Servicio no disponible temporalmente",
     "publishFailed": "No se pudo publicar la galería. Inténtalo de nuevo.",
     "publishNoStitches": "El polígono no pudo conectar los obstáculos con el polígono exterior.",
-    "deleteFailed": "No se pudo eliminar el trabajo. Inténtalo de nuevo."
+    "deleteFailed": "No se pudo eliminar el trabajo. Inténtalo de nuevo.",
+    "reprocessFailed": "No se pudo reprocesar el trabajo. Inténtalo de nuevo."
   },
   "nav": {
     "login": "Acceder",
@@ -114,7 +117,11 @@
     "defaultConfirmMessage": "¿Estás seguro?",
     "confirmTitle": "Solo para estar seguros",
     "confirm": "Confirmar",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "copy": "Copiar"
+  },
+  "inspector": {
+    "truncated": "Truncado en pantalla. Usá \"Copiar\" para obtener el JSON completo."
   },
   "summary": {
     "points": "Puntos",

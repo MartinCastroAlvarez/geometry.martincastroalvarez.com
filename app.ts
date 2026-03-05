@@ -1,3 +1,7 @@
+/**
+ * CDK app for the Geometry Art Gallery application.
+ * Defines storage (S3), compute (Lambda), API (API Gateway), queue (SQS), and delivery (CloudFront).
+ */
 import {
   App,
   CfnOutput,
@@ -28,6 +32,7 @@ class GeometryStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props)
 
+    // S3 bucket that holds the static web app (HTML, JS, CSS). Served via CloudFront only.
     const webBucket = new s3.Bucket(this, 'WebBucket', {
       bucketName: 'com.martincastroalvarez.geometry',
       publicReadAccess: false,
@@ -35,6 +40,7 @@ class GeometryStack extends Stack {
       removalPolicy: RemovalPolicy.RETAIN,
     })
 
+    // S3 bucket for API data (polygon inputs, job outputs). Lambdas read and write here; CORS for browser uploads.
     const apiBucket = new s3.Bucket(this, 'ApiBucket', {
       bucketName: 'com.martincastroalvarez.api.geometry',
       publicReadAccess: false,
@@ -49,6 +55,7 @@ class GeometryStack extends Stack {
       ],
     })
 
+    // SQS queue for async polygon optimization jobs. API enqueues; worker Lambda consumes.
     const geometryQueue = new sqs.Queue(this, 'GeometryQueue', {
       queueName: 'geometry-queue',
       visibilityTimeout: Duration.seconds(960),
@@ -56,11 +63,13 @@ class GeometryStack extends Stack {
       retentionPeriod: Duration.days(14),
     })
 
+    // Origin Access Identity so CloudFront can read from the web bucket without making it public.
     const oai = new cloudfront.OriginAccessIdentity(this, 'GeometryOAI', {
       comment: 'OAI for Geometry web application',
     })
     webBucket.grantRead(oai)
 
+    // IAM role for the API Lambda: secrets read, API bucket read/write, and permission to send messages to the queue.
     const lambdaRole = new iam.Role(this, 'LambdaExecutionRole', {
       assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
       managedPolicies: [
@@ -88,6 +97,7 @@ class GeometryStack extends Stack {
       resources: [geometryQueue.queueArn],
     }))
 
+    // IAM role for the worker Lambda: secrets, API bucket, and full SQS access to consume and delete messages.
     const workerLambdaRole = new iam.Role(this, 'WorkerLambdaExecutionRole', {
       assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
       managedPolicies: [
@@ -110,6 +120,7 @@ class GeometryStack extends Stack {
       resources: [geometryQueue.queueArn],
     }))
 
+    // API Lambda: handles REST requests (galleries, polygon validation, job CRUD). Enqueues jobs for the worker.
     const apiHandler = new lambda.Function(this, 'GeometryApiHandler', {
       functionName: 'geometry-api-handler',
       runtime: lambda.Runtime.PYTHON_3_12,
@@ -137,6 +148,7 @@ class GeometryStack extends Stack {
       logRetention: logs.RetentionDays.ONE_DAY,
     })
 
+    // Worker Lambda: triggered by SQS; runs polygon optimization and writes results to the API bucket.
     const workerHandler = new lambda.Function(this, 'GeometryWorkerHandler', {
       functionName: 'geometry-worker-handler',
       runtime: lambda.Runtime.PYTHON_3_12,
@@ -158,22 +170,20 @@ class GeometryStack extends Stack {
         DATA_BUCKET_NAME: apiBucket.bucketName,
         QUEUE_NAME: geometryQueue.queueName,
         LOG_LEVEL: 'DEBUG',
-        // Use 1 candidate per component so the worker finishes quickly; full search is expensive for large polygons.
-        MAX_GUARD_PLACEMENT_CANDIDATES: '1',
       },
       timeout: Duration.seconds(900),
       memorySize: 512,
       logRetention: logs.RetentionDays.ONE_DAY,
     })
 
-    // Batch size 1: polygon optimization tasks can take longer and would keep other tasks in the same batch waiting
-    // Low maxConcurrency is intentional to avoid costs; increase as the system scales.
+    // Connect the queue to the worker. Batch size 1 so long-running polygon tasks do not block others; maxConcurrency kept low for cost.
     workerHandler.addEventSource(new lambda_event_sources.SqsEventSource(geometryQueue, {
       batchSize: 1,
       maxBatchingWindow: Duration.seconds(30),
       maxConcurrency: 20,
     }))
 
+    // REST API backed by the API Lambda; access logs and prod stage.
     const api = new apigateway.RestApi(this, 'GeometryApi', {
       restApiName: 'Geometry API',
       deployOptions: {
@@ -190,12 +200,14 @@ class GeometryStack extends Stack {
       }
     })
 
+    // TLS certificate for the API custom domain (geometry.api.martincastroalvarez.com).
     const geometryApiCertificate = acm.Certificate.fromCertificateArn(
       this,
       'GeometryApiCertificate',
       'arn:aws:acm:us-west-2:217471729873:certificate/272482bb-5287-4365-a125-1bece4096502'
     )
 
+    // Custom domain and base path mapping so the API is reachable at the chosen hostname.
     const apiDomainName = new apigateway.DomainName(this, 'GeometryApiCustomDomain', {
       domainName: 'geometry.api.martincastroalvarez.com',
       certificate: geometryApiCertificate,
@@ -208,6 +220,7 @@ class GeometryStack extends Stack {
       restApi: api,
     })
 
+    // Throttling and usage plan; allows API Gateway to invoke the Lambda.
     const usagePlan = new apigateway.UsagePlan(this, 'GeometryUsagePlan', {
       name: 'GeometryUsagePlan',
       description: 'Usage plan for Geometry API',
@@ -218,6 +231,7 @@ class GeometryStack extends Stack {
     })
     usagePlan.addApiStage({ stage: api.deploymentStage })
 
+    // Allow API Gateway to invoke the API Lambda.
     new lambda.CfnPermission(this, 'GeometryApiGatewayLambdaPermission', {
       action: 'lambda:InvokeFunction',
       functionName: apiHandler.functionName,
@@ -225,11 +239,13 @@ class GeometryStack extends Stack {
       sourceArn: `arn:aws:execute-api:${this.region}:${this.account}:${api.restApiId}/*/*/*`
     })
 
+    // All API routes are proxied to the same API Lambda; routing is handled inside the Lambda.
     const lambdaIntegration = new apigateway.LambdaIntegration(apiHandler, {
       allowTestInvoke: true,
       proxy: true
     })
 
+    // API structure: /v1/galleries, /v1/polygon, /v1/jobs (and nested /jobs/{id}, POST = reprocess; /jobs/{id}/publish = publish).
     const v1Resource = api.root.addResource('v1')
     const galleriesResource = v1Resource.addResource('galleries')
     galleriesResource.addMethod('GET', lambdaIntegration)
@@ -252,7 +268,11 @@ class GeometryStack extends Stack {
     jobIdResource.addMethod('PATCH', lambdaIntegration)
     jobIdResource.addMethod('DELETE', lambdaIntegration)
     jobIdResource.addMethod('OPTIONS', lambdaIntegration)
+    const jobPublishResource = jobIdResource.addResource('publish')
+    jobPublishResource.addMethod('POST', lambdaIntegration)
+    jobPublishResource.addMethod('OPTIONS', lambdaIntegration)
 
+    // CloudFront distribution for the web app: S3 origin, HTTPS, SPA fallback for 404/403.
     const distribution = new cloudfront.Distribution(this, 'GeometryDistribution', {
       defaultBehavior: {
         origin: new origins.S3Origin(webBucket, { originAccessIdentity: oai }),
@@ -273,6 +293,7 @@ class GeometryStack extends Stack {
       )
     })
 
+    // Deploy the built web app from apps/web/dist to the web bucket and invalidate CloudFront.
     new s3deploy.BucketDeployment(this, 'GeometryDeployWebsite', {
       sources: [s3deploy.Source.asset(join(__dirname, 'apps', 'web', 'dist'))],
       destinationBucket: webBucket,
@@ -282,6 +303,7 @@ class GeometryStack extends Stack {
       retainOnDelete: false,
     })
 
+    // Stack outputs for reference or cross-stack use.
     new CfnOutput(this, 'WebBucketName', { value: webBucket.bucketName, exportName: 'GeometryWebBucketName' })
     new CfnOutput(this, 'ApiBucketName', { value: apiBucket.bucketName, exportName: 'GeometryApiBucketName' })
     new CfnOutput(this, 'GeometryQueueName', { value: geometryQueue.queueName, exportName: 'GeometryQueueName' })
@@ -295,6 +317,7 @@ class GeometryStack extends Stack {
   }
 }
 
+// CDK app entry: single stack in us-west-2 for the Geometry service.
 const app = new App()
 new GeometryStack(app, 'GeometryStack', {
   env: {

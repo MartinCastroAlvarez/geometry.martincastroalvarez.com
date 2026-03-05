@@ -12,11 +12,11 @@ import { formatDistanceToNow } from "date-fns";
 import { enUS, es } from "date-fns/locale";
 import { Page, Container, Title, Text, Badge, Inspector, Input, Toolbar, Button, Problem, Confirm, Milestones, Milestone, MilestonesSkeleton, useDevice, useDebounce } from "@geometry/ui";
 import { Viewer, Summary } from "@geometry/editor";
-import { useJob, useJobChildren, useUpdateJob, usePublish, useDeleteJob, useSession, type ApiErrorResponse } from "@geometry/data";
+import { useJob, useJobChildren, useUpdateJob, usePublish, useDeleteJob, useReprocessJob, useSession, type ApiErrorResponse } from "@geometry/data";
 import { Status } from "@geometry/domain";
 import { useAnalytics, GoogleAnalyticsActions, GoogleAnalyticsCategories } from "@geometry/analytics";
 import { Language, useLocale } from "@geometry/i18n";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, RefreshCw, Trash2 } from "lucide-react";
 import { JobPageSkeleton } from "../skeletons";
 import { getDisplayStatus } from "../utils/jobStatus";
 
@@ -35,14 +35,17 @@ export const JobPage = () => {
     const updateJobMutation = useUpdateJob();
     const publishMutation = usePublish();
     const deleteJobMutation = useDeleteJob();
+    const reprocessJobMutation = useReprocessJob();
     const { track } = useAnalytics();
     const [localTitle, setLocalTitle] = useState("");
     const hasInitializedTitle = useRef(false);
     const jobStatusRef = useRef<string | undefined>(undefined);
     const [showPublishConfirm, setShowPublishConfirm] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showReprocessConfirm, setShowReprocessConfirm] = useState(false);
     const [publishError, setPublishError] = useState<string | undefined>(undefined);
     const [deleteError, setDeleteError] = useState<string | undefined>(undefined);
+    const [reprocessError, setReprocessError] = useState<string | undefined>(undefined);
 
     const loading = sessionLoading || jobLoading;
 
@@ -161,6 +164,22 @@ export const JobPage = () => {
         });
     }, [id, deleteJobMutation, navigate, t]);
 
+    const handleReprocessClick = useCallback(() => {
+        setReprocessError(undefined);
+        setShowReprocessConfirm(true);
+    }, []);
+    const handleReprocessConfirmCancel = useCallback(() => setShowReprocessConfirm(false), []);
+    const handleReprocessConfirm = useCallback(() => {
+        setShowReprocessConfirm(false);
+        if (!id) return;
+        reprocessJobMutation.mutate(id, {
+            onSuccess: () => {
+                // useReprocessJob invalidates JOB_QUERY_KEY(id), so useJob will refetch
+            },
+            onError: () => setReprocessError(t("errors.reprocessFailed")),
+        });
+    }, [id, reprocessJobMutation, t]);
+
     if (!id) {
         return (
             <Page>
@@ -175,7 +194,7 @@ export const JobPage = () => {
         return <JobPageSkeleton />;
     }
 
-    if (publishMutation.isPending || deleteJobMutation.isPending) {
+    if (publishMutation.isPending || deleteJobMutation.isPending || reprocessJobMutation.isPending) {
         return <JobPageSkeleton />;
     }
 
@@ -206,6 +225,35 @@ export const JobPage = () => {
                 onConfirm={handleDeleteConfirm}
                 onCancel={handleDeleteConfirmCancel}
             />
+            <Confirm
+                isOpen={showReprocessConfirm}
+                message={t("jobs.job.reprocessConfirm")}
+                onConfirm={handleReprocessConfirm}
+                onCancel={handleReprocessConfirmCancel}
+            />
+            {displayStatus === Status.SUCCESS && job!.artGallery != null ? (
+                <Container padded spaced>
+                    <Container size={12} left center>
+                        <Summary artGallery={job!.artGallery} />
+                    </Container>
+                </Container>
+            ) : childIds.length > 0 ? (
+                <Container padded spaced>
+                    <Container size={12} left center>
+                        {childrenLoading ? (
+                            <MilestonesSkeleton />
+                        ) : (
+                            <Milestones>
+                                {childJobs.map((child) => (
+                                    <Milestone key={child.id} completed={child.status === Status.SUCCESS}>
+                                        {t(`jobs.steps.${child.step_name.replace(/-/g, "_")}`) || child.step_name}
+                                    </Milestone>
+                                ))}
+                            </Milestones>
+                        )}
+                    </Container>
+                </Container>
+            ) : null}
             <Container padded spaced>
                 <Viewer artGallery={job!.artGallery} size={VIEWER_HEIGHT} interactive />
             </Container>
@@ -241,9 +289,9 @@ export const JobPage = () => {
                     </Container>
                 </Container>
                 <Container size={isMobile ? 12 : 6} center={isMobile} right={!isMobile}>
-                    {(publishError || deleteError) && (
+                    {(publishError || deleteError || reprocessError) && (
                         <Problem align={isMobile ? "center" : ("right" as const)} className="mb-2">
-                            {publishError ?? deleteError}
+                            {publishError ?? deleteError ?? reprocessError}
                         </Problem>
                     )}
                     <Toolbar right={!isMobile} center={isMobile}>
@@ -256,6 +304,14 @@ export const JobPage = () => {
                             >
                                 {t("jobs.job.publish")}
                             </Button>
+                        )}
+                        {(displayStatus === Status.SUCCESS || displayStatus === Status.FAILED) && (
+                            <Button
+                                onClick={handleReprocessClick}
+                                icon={<RefreshCw size={16} aria-hidden />}
+                                sm
+                                aria-label={t("jobs.job.reprocess")}
+                            />
                         )}
                         {job!.artGallery != null && (
                             <Button
@@ -274,29 +330,6 @@ export const JobPage = () => {
                     </Toolbar>
                 </Container>
             </Container>
-            {displayStatus === Status.SUCCESS && job!.artGallery != null ? (
-                <Container padded spaced>
-                    <Container size={12} left center>
-                        <Summary artGallery={job!.artGallery} />
-                    </Container>
-                </Container>
-            ) : childIds.length > 0 ? (
-                <Container padded spaced>
-                    <Container size={12} left center>
-                        {childrenLoading ? (
-                            <MilestonesSkeleton />
-                        ) : (
-                            <Milestones>
-                                {childJobs.map((child) => (
-                                    <Milestone key={child.id} completed={child.status === Status.SUCCESS}>
-                                        {t(`jobs.steps.${child.step_name.replace(/-/g, "_")}`) || child.step_name}
-                                    </Milestone>
-                                ))}
-                            </Milestones>
-                        )}
-                    </Container>
-                </Container>
-            ) : null}
             <Container padded spaced>
                 <Container size={12} spaced>
                     <Container size={isMobile ? 12 : 4} left>

@@ -280,6 +280,45 @@ class Job(Model):
         """
         return self.status == Status.SUCCESS
 
+    def start(self, *, clear_outputs: bool = False) -> None:
+        """
+        Set status to PENDING and set started_at in meta for self.step_name. Does not save.
+        If clear_outputs is True (e.g. when reprocessing), also clear children_ids, stdout, and stderr.
+        """
+        self.status = Status.PENDING
+        if clear_outputs:
+            self.children_ids = []
+            self.stdout.clear()
+            self.stderr.clear()
+        slug: str = self.step_name.slug
+        self.meta[f"step:{slug}:started_at"] = Timestamp.now().to_iso()
+
+    def finish(self) -> None:
+        """
+        Set finished_at for self.step_name in meta; if started_at exists, set elapsed and self.duration.
+        Set status to SUCCESS. Does not save.
+        """
+        self.status = Status.SUCCESS
+        slug: str = self.step_name.slug
+        self.meta[f"step:{slug}:finished_at"] = Timestamp.now().to_iso()
+        started_at_key: str = f"step:{slug}:started_at"
+        if started_at_key in self.meta:
+            started_at = Timestamp.from_iso(self.meta[started_at_key])
+            finished_at = Timestamp.from_iso(self.meta[f"step:{slug}:finished_at"])
+            elapsed: Duration = Duration.from_timestamps(finished_at, started_at)
+            self.meta[f"step:{slug}:elapsed_time"] = elapsed / 1000.0
+            self.duration = elapsed
+
+    def fail(self, error: Exception) -> None:
+        """
+        Call finish() to set duration and meta, then override status to FAILED and set stderr. Does not save.
+        """
+        self.finish()
+        self.status = Status.FAILED
+        slug: str = self.step_name.slug
+        self.stderr[f"error:{slug}:message"] = str(error)
+        self.stderr[f"error:{slug}:type"] = error.__class__.__name__
+
     @classmethod
     def unserialize(cls, data: Any) -> Job:
         """

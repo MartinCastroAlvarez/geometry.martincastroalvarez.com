@@ -157,7 +157,7 @@ def test_cross_full_pipeline_validation_stitching_ear_clipping_convex_guard_plac
     assert "visibility" in guard_out
     assert len(guard_out["visibility"]) == len(guard_out["guards"])
 
-    # Every segment from a guard to a point in its visibility must not intersect or go through any obstacle.
+    # Every segment from a guard to a point in its visibility must not cross any obstacle (touching or collinear is allowed).
     obstacle_polygons = [Polygon.unserialize(obs) for obs in stdout["obstacles"]]
     for guard_id, guard_serialized in guard_out["guards"].items():
         guard = Point.unserialize(guard_serialized)
@@ -172,8 +172,6 @@ def test_cross_full_pipeline_validation_stitching_ear_clipping_convex_guard_plac
                     f"midpoint {segment.midpoint} is inside obstacle."
                 )
                 for edge in obstacle.edges:
-                    if edge.connects(segment):
-                        continue
                     assert not segment.intersects(edge, inclusive=False), (
                         f"Segment from guard {guard} to visible point {visible_pt} intersects obstacle edge "
                         f"{edge[0]}–{edge[1]}."

@@ -185,8 +185,9 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[Serialized
         Context
         -------
         Point: fast box test, then ray(point) if not on boundary. Segment:
-        endpoints and midpoint inside, no proper edge crossing. Polygon: all
-        vertices of other inside. inclusive controls boundary inclusion.
+        endpoints inside/boundary, and no interior crossing with any edge
+        (intersects(..., inclusive=False) for interior crossing). Polygon: all vertices of other inside. inclusive
+        controls boundary inclusion.
 
         Example
         -------
@@ -209,39 +210,26 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[Serialized
 
         if isinstance(obj, Segment):
 
-            # Exit early: segment is not in the bounding box.
             if not self.box.contains(obj, inclusive=inclusive):
                 return False
 
-            # Check if segment is on any edge.
+            # If inclusive and obj is exactly an edge, accept.
             if inclusive and any(obj == edge for edge in self.edges):
                 return True
 
-            # Check if endpoints or midpoint are inside the polygon.
+            # Endpoints must be inside or on boundary.
             if not self.contains(obj[0], inclusive=inclusive):
                 return False
             if not self.contains(obj[1], inclusive=inclusive):
                 return False
-            if not self.contains(obj.midpoint, inclusive=inclusive):
-                return False
 
-            # Check if segment intersects any other edge.
+            # If the segment crosses any boundary edge in the interior, it's not contained.
             for edge in self.edges:
                 if edge.connects(obj):
                     continue
-                if not edge.intersects(obj, inclusive=True):
-                    continue
-                if obj.contains(edge[0], inclusive=True) or obj.contains(edge[1], inclusive=True):
-                    continue
-                return False
+                if obj.intersects(edge, inclusive=False):
+                    return False
 
-            # Check if endpoints are on the boundary.
-            if inclusive and (
-                any(e.contains(obj[0], inclusive=True) for e in self.edges) and any(e.contains(obj[1], inclusive=True) for e in self.edges)
-            ):
-                return True
-
-            # The segment is inside the polygon if no checks failed.
             return True
 
         if isinstance(obj, Polygon):
@@ -534,8 +522,8 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[Serialized
         n: int = len(self)
         if n < 3:
             return False
-        # if any(self.degree(point) != 2 for point in self):
-        #     return False
+        if any(self.degree(point) != 2 for point in self):
+            return False
         edges: Sequence[Segment] = self.edges
         for i in range(n):
             for j in range(n):

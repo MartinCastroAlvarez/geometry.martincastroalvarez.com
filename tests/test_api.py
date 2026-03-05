@@ -321,6 +321,34 @@ class TestHandler:
         body = json.loads(result["body"])
         assert "data" in body and body["data"]["id"] == "j1"
 
+    @patch("mutations.queue")
+    @patch("mutations.JobsRepository")
+    @patch("api.api.Secret")
+    def test_handler_post_jobs_id_reprocesses_job(self, mock_secret, mock_repo_cls, mock_queue):
+        """POST /v1/jobs/{id} (without /publish) triggers ReprocessingJobMutation."""
+        mock_secret.get.side_effect = lambda key: "test-secret" if key == "JWT_SECRET" else "test-token"
+        mock_repo = mock_repo_cls.return_value
+        job = Job(
+            id=Identifier("j1"),
+            status=Status.SUCCESS,
+            step_name=StepName.ART_GALLERY,
+            meta={},
+            stdout={},
+        )
+        mock_repo.get.return_value = job
+        event = {
+            "path": "/v1/jobs/j1",
+            "httpMethod": "POST",
+            "headers": {"X-Auth": "test-token"},
+            "queryStringParameters": None,
+            "pathParameters": {"id": "j1"},
+            "body": "{}",
+        }
+        result = handler(event, None)
+        assert result["statusCode"] == 200
+        mock_repo.save.assert_called_once()
+        mock_queue.put.assert_called_once()
+
     @patch("indexes.bucket")
     @patch("api.api.jwt")
     @patch("api.api.Secret")
@@ -398,3 +426,10 @@ class TestPublicAndPrivateRoutes:
     def test_private_routes_has_jobs(self):
         assert Path("v1/jobs") in PRIVATE_ROUTES
         assert Path("v1/jobs/") in PRIVATE_ROUTES
+
+    def test_private_routes_post_jobs_id_is_reprocess(self):
+        """POST on v1/jobs/ is ReprocessingJobMutation (publish is /v1/jobs/{id}/publish)."""
+        from api.api import ReprocessingJobMutation
+        from enums import Method
+        assert Path("v1/jobs/") in PRIVATE_ROUTES
+        assert PRIVATE_ROUTES[Path("v1/jobs/")][Method.POST] is ReprocessingJobMutation

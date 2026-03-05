@@ -14,6 +14,7 @@ from tests.utils import assert_convex_components_visibility_within_component
 from tests.utils import assert_ears_no_obstacle_intersection
 from tests.utils import assert_ears_simple_and_convex
 from tests.utils import assert_no_redundant_guards
+from tests.utils import assert_visibility_segments_inside_boundary
 from tests.utils import print_guard_coverage_report
 from models import User
 from steps import ConvexComponentOptimizationStep
@@ -148,9 +149,13 @@ def test_spikes_full_pipeline_validation_stitching_ear_clipping_convex_guard_pla
     guard_out = GuardPlacementStep(job=job_guard, user=_user()).run()
     assert "guards" in guard_out
     assert "visibility" in guard_out
-    assert len(guard_out["guards"]) == 5, (
-        f"Spikes polygon expects 5 guards for sufficient coverage; got {len(guard_out['guards'])}"
+    # With strict boundary visibility (no segment outside), spikes need 9 guards.
+    assert len(guard_out["guards"]) == 9, (
+        f"Spikes polygon expects 9 guards when all visibility segments stay inside boundary; got {len(guard_out['guards'])}"
     )
     assert len(guard_out["visibility"]) == len(guard_out["guards"])
     assert_no_redundant_guards(guard_out)
+    assert_visibility_segments_inside_boundary(
+        guard_out, SPIKES_STDIN["boundary"], SPIKES_STDIN["obstacles"]
+    )
     print_guard_coverage_report(guard_out, "Spikes guard coverage report")

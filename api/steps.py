@@ -40,7 +40,6 @@ from exceptions import BridgeFailureError
 from exceptions import ConvexComponentNotSimpleError
 from exceptions import EarClippingFailureError
 from exceptions import GuardCoverageFailureError
-from exceptions import GuardHasNoExclusivityError
 from exceptions import GuardNotInComponentIdByPointError
 from exceptions import OnlyMidpointsRemainingError
 from exceptions import PolygonNotSimpleError
@@ -508,7 +507,6 @@ class EarClippingStep(SequenceStep):
         # is a problem in the ear clipping step above, not here.
         # Some iteration failed to detect an ear propertly.
         if len(titanic) != 3:
-            return  # FIXME
             raise EarClippingFailureError(
                 f"Expected 3 vertices or less; got {len(titanic)}."
                 f"The (remaining) polygon is: {titanic}."
@@ -650,7 +648,7 @@ class GuardPlacementStep(SequenceStep):
     visibility_by_segment: dict[Segment, bool]
     remaining_points: set[Point]
     remaining_components: set[ConvexComponent]
-    component_id_by_midpoint: dict[Point, Identifier]
+    component_id_by_midpoint: dict[Point, set[Identifier]]
 
     def measure(self, convex_component: ConvexComponent) -> int:
         """Return the number of points (vertices and edge midpoints) of the component that are not in self.remaining_points."""
@@ -704,18 +702,12 @@ class GuardPlacementStep(SequenceStep):
 
             # Mark the component as explored.
             explored.add(adjacent_id)
-
-            # Check if that adjacent component is visible (vertices or edge midpoints).
             visible = False
             for point in adjacent:
-                # if point not in self.remaining_points:
-                #     continue
                 if self.sees(guard, point):
                     visibility += point
                     visible = True
             for midpoint in adjacent.midpoints:
-                if midpoint not in self.remaining_points:
-                    continue
                 if self.sees(guard, midpoint):
                     visibility += midpoint
                     visible = True
@@ -729,15 +721,24 @@ class GuardPlacementStep(SequenceStep):
     def sees(self, guard: Point, target: Point) -> bool:
         """
         True if target is visible from guard in the art gallery. Uses self.gallery. Caches by segment in visibility_by_segment.
-        If both points belong to the same convex component, they are visible.
+        Explicitly checks same convex component first: if both points belong to the same convex component, they are visible
+        (components are obstacle-free and inside boundary).
         """
 
         # If the guard and target are the same, they are visible.
         if guard == target:
             return True
 
-        # Check if the segment has already been evaluated (explore() pre-fills same-component segments).
+        # Compute the segment once.
         segment: Segment = guard.to(target)
+
+        # Early accept: same convex component => visible (avoids boundary/obstacle checks for within-component pairs).
+        if guard in self.component_id_by_point and target in self.component_id_by_point:
+            if set(self.component_id_by_point[guard].items) & set(self.component_id_by_point[target].items):
+                self.visibility_by_segment[segment] = True
+                return True
+
+        # Check if the segment has already been evaluated (explore() pre-fills same-component segments).
         if segment in self.visibility_by_segment:
             return self.visibility_by_segment[segment]
 
@@ -758,6 +759,23 @@ class GuardPlacementStep(SequenceStep):
             for edge in obstacle.edges:
                 if edge.connects(segment):
                     continue
+                # When the guard or target lies on this obstacle edge (e.g. target is edge midpoint), do not block.
+                if edge.contains(segment[0], inclusive=True):
+                    continue
+                if edge.contains(segment[1], inclusive=True):
+                    continue
+                # When the line of sight is parallel to the obstacle edge, do not treat the edge as blocking:
+                # the vertex may see the other end of the obstacle (e.g. V---empty---[A]----[B] -> V sees B).
+                if (
+                    Walk(start=segment[0], center=segment[1], end=edge[0]).is_collinear()
+                    and Walk(start=segment[0], center=segment[1], end=edge[1]).is_collinear()
+                ):
+                    continue
+                # When the segment passes through an obstacle vertex (tangent at vertex), do not block.
+                if segment.contains(edge[0], inclusive=True):
+                    continue
+                if segment.contains(edge[1], inclusive=True):
+                    continue
                 if segment.intersects(edge, inclusive=False):
                     self.visibility_by_segment[segment] = False
                     return False
@@ -768,17 +786,19 @@ class GuardPlacementStep(SequenceStep):
 
     def prepare(self) -> None:
         """
-        Hydrate self.component_id_by_point: for each convex component and each point in it,
-        map the point to that component's id. Points on shared edges appear in multiple components.
+        Hydrate self.component_id_by_point and self.component_id_by_midpoint: for each convex
+        component, map each point and each edge midpoint to that component's id. Points and
+        midpoints on shared edges appear in multiple components.
         """
         self.component_id_by_point = Table()
+        self.component_id_by_midpoint = defaultdict(set)
         for component in self.gallery.convex_components:
             for point in component:
                 if point not in self.component_id_by_point:
                     self.component_id_by_point.add(Bag(point))
                 self.component_id_by_point[point] += component.id
             for midpoint in component.midpoints:
-                self.component_ids_by_midpoint[midpoint].add(component.id)
+                self.component_id_by_midpoint[midpoint].add(component.id)
 
     def compete(self, candidates: list[Point]) -> (Point, Bag[Point, Point]):
         """
@@ -825,26 +845,39 @@ class GuardPlacementStep(SequenceStep):
 
     def analyze(self) -> None:
         """
-        Build exclusivity table: for each guard, points visible only by that guard (not covered by any other guard).
-        Sets self.gallery.exclusivity. Raises GuardHasNoExclusivityError if any guard has no exclusive points.
+        Build exclusivity table and prune redundant guards.
+        For each guard, compute points visible only by that guard; guards with no exclusive points are dropped.
+        Sets self.gallery.exclusivity and overwrites self.gallery.guards and self.gallery.visibility with the pruned sets.
         """
-        visibility: list[Bag[Point, Point]] = list(self.gallery.visibility.values())
+        original_visibility: list[Bag[Point, Point]] = list(self.gallery.visibility.values())
+        kept_visibility: list[Bag[Point, Point]] = []
+
         self.gallery.exclusivity = Table()
-        for guard in self.gallery.guards:
-            visibility_bag: Bag[Point, Point] = self.gallery.visibility[guard]
+
+        for bag in original_visibility:
+            guard: Point = bag.key
             other_points: set[Point] = set()
-            for other in visibility:
+
+            for other in original_visibility:
                 if other.key != guard:
                     other_points |= set(other.items)
-            exclusive: set[Point] = set(visibility_bag.items) - other_points
+
+            exclusive: set[Point] = set(bag.items) - other_points
             if not exclusive:
-                raise GuardHasNoExclusivityError(
-                    f"Guard at {guard} has no exclusivity points (all visible points are covered by other guards)."
-                )
+                continue
+
             exc_bag: Bag[Point, Point] = Bag(guard)
             for point in exclusive:
                 exc_bag += point
             self.gallery.exclusivity += exc_bag
+            kept_visibility.append(bag)
+
+        self.gallery.guards = Table()
+        self.gallery.visibility = Table()
+
+        for bag in kept_visibility:
+            self.gallery.guards += bag.key
+            self.gallery.visibility += bag
 
     def propose(self, max_candidates: int = 5) -> list[Point]:
         """
@@ -873,8 +906,6 @@ class GuardPlacementStep(SequenceStep):
     def run(self, **kwargs: Any) -> dict[str, Any]:
         self.gallery = ArtGallery.unserialize(self.job.stdout)
         self.visibility_by_segment = {}
-        self.component_ids_by_midpoint = defaultdict(set)
-        self.component_id_by_point = Table()
 
         self.prepare()
         self.protect()
@@ -903,7 +934,7 @@ class GuardPlacementStep(SequenceStep):
                 candidates: set[Point] = [
                     self.gallery.convex_components[component_id][0]
                     for midpoint in self.remaining_points
-                    for component_id in self.component_ids_by_midpoint[midpoint]
+                    for component_id in self.component_id_by_midpoint[midpoint]
                 ]
                 candidates: list[Point] = list(candidates)
 

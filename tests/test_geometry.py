@@ -699,6 +699,20 @@ class TestSegment:
         s2 = Segment([Point([1, 0]), Point([3, 0])])
         assert s1.intersects(s2) is True
 
+    def test_intersects_collinear_disjoint_inclusive_false(self):
+        """Collinear disjoint segments must not intersect (inclusive or exclusive)."""
+        s1 = Segment([Point([0, 0]), Point([1, 0])])
+        s2 = Segment([Point([2, 0]), Point([3, 0])])
+        assert s1.intersects(s2, inclusive=True) is False
+        assert s1.intersects(s2, inclusive=False) is False
+
+    def test_intersects_collinear_touching_endpoint_inclusive(self):
+        """Collinear segments touching at one endpoint: inclusive True, exclusive False (no interior)."""
+        s1 = Segment([Point([0, 0]), Point([1, 0])])
+        s2 = Segment([Point([1, 0]), Point([2, 0])])
+        assert s1.intersects(s2, inclusive=True) is True
+        assert s1.intersects(s2, inclusive=False) is False
+
     def test_intersects_non_segment_raises(self):
         s = Segment([Point([0, 0]), Point([1, 0])])
         with pytest.raises(NotImplementedError, match="only supports Segment"):

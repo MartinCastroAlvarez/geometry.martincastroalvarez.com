@@ -1,9 +1,12 @@
 """Tests for models package."""
 
 from attributes import Identifier
+from enums import Status
+from enums import StepName
 from geometry import ConvexComponent
 from geometry import Point
 from models import ArtGallery
+from models import Job
 from models import User
 from settings import ANONYMOUS_EMAIL
 from settings import ANONYMOUS_NAME
@@ -91,3 +94,61 @@ class TestArtGalleryAdjacency:
         assert isinstance(out["coverage"], list)
         assert len(gallery.coverage) == 0
         assert out["coverage"] == []
+
+
+class TestJobLifecycle:
+    """Test Job.start(), .finish(), .fail()."""
+
+    def test_start_sets_pending_and_started_at(self):
+        job = Job(
+            id=Identifier("j1"),
+            status=Status.PENDING,
+            step_name=StepName.STITCHING,
+        )
+        job.start()
+        assert job.status == Status.PENDING
+        assert "step:stitching:started_at" in job.meta
+        assert "T" in job.meta["step:stitching:started_at"]
+
+    def test_start_clear_outputs_clears_children_stdout_stderr(self):
+        job = Job(
+            id=Identifier("j1"),
+            status=Status.SUCCESS,
+            step_name=StepName.ART_GALLERY,
+            children_ids=[Identifier("c1")],
+            stdout={"key": "value"},
+            stderr={"error": "msg"},
+        )
+        job.start(clear_outputs=True)
+        assert job.status == Status.PENDING
+        assert job.children_ids == []
+        assert job.stdout == {}
+        assert job.stderr == {}
+        assert "step:art-gallery:started_at" in job.meta
+
+    def test_finish_sets_success_and_finished_at(self):
+        job = Job(
+            id=Identifier("j1"),
+            status=Status.PENDING,
+            step_name=StepName.ART_GALLERY,
+            meta={"step:art-gallery:started_at": "2026-03-02T01:00:00.000000Z"},
+        )
+        job.finish()
+        assert job.status == Status.SUCCESS
+        assert "step:art-gallery:finished_at" in job.meta
+        assert "step:art-gallery:elapsed_time" in job.meta
+        assert job.duration >= 0
+
+    def test_fail_sets_failed_and_stderr(self):
+        job = Job(
+            id=Identifier("j1"),
+            status=Status.PENDING,
+            step_name=StepName.EAR_CLIPPING,
+            meta={"step:ear-clipping:started_at": "2026-03-02T01:00:00.000000Z"},
+        )
+        err = ValueError("test error")
+        job.fail(err)
+        assert job.status == Status.FAILED
+        assert job.stderr.get("error:ear-clipping:message") == "test error"
+        assert job.stderr.get("error:ear-clipping:type") == "ValueError"
+        assert "step:ear-clipping:finished_at" in job.meta

@@ -11,13 +11,20 @@ from exceptions import GalleryHasNoConvexComponentsError
 from exceptions import GalleryHasNoEarsError
 from exceptions import GalleryHasNoGuardsError
 from exceptions import GalleryHasNoVisibilityError
+from exceptions import JobNotFoundError
+from exceptions import JobNotReprocessableError
+from exceptions import RecordNotFoundError
 from exceptions import UnauthorizedError
 from exceptions import ValidationError
+from enums import Status
+from enums import StepName
+from models import Job
 from models import User
 from mutations import ArtGalleryPublishMutation
 from mutations import JobMutation
 from mutations import JobDeleteMutation
 from mutations import JobUpdateMutation
+from mutations import ReprocessingJobMutation
 from mutations import Mutation
 from mutations import MutationResponse
 from mutations import gallery_id_from_job_and_user
@@ -413,3 +420,56 @@ class TestJobDeleteMutation:
         assert result == {}
         mock_gallery_repo.delete.assert_called_once()
         mock_job_repo.delete.assert_called_once_with(job.id)
+
+
+class TestReprocessingJobMutation:
+    """Test ReprocessingJobMutation validate and execute."""
+
+    def test_validate_success(self):
+        user = User.test()
+        handler = ReprocessingJobMutation(user=user)
+        req = handler.validate({"id": "job-123"})
+        assert str(req["job_id"]) == "job-123"
+
+    @patch("mutations.queue")
+    @patch("mutations.JobsRepository")
+    def test_execute_reprocesses_success_job(self, mock_repo_cls, mock_queue):
+        user = User.test()
+        mock_repo = MagicMock()
+        mock_repo_cls.return_value = mock_repo
+        job = Job(
+            id=Identifier("j1"),
+            status=Status.SUCCESS,
+            step_name=StepName.ART_GALLERY,
+        )
+        mock_repo.get.return_value = job
+        handler = ReprocessingJobMutation(user=user)
+        result = handler.execute({"job_id": Identifier("j1")})
+        assert "id" in result
+        assert result["id"] == "j1"
+        assert job.status == Status.PENDING
+        mock_repo.save.assert_called_once()
+        mock_queue.put.assert_called_once()
+
+    @patch("mutations.JobsRepository")
+    def test_execute_job_not_found_raises(self, mock_repo_cls):
+        user = User.test()
+        mock_repo = MagicMock()
+        mock_repo_cls.return_value = mock_repo
+        mock_repo.get.side_effect = RecordNotFoundError("not found")
+        handler = ReprocessingJobMutation(user=user)
+        with pytest.raises(JobNotFoundError, match="Job not found"):
+            handler.execute({"job_id": Identifier("j1")})
+
+    @patch("mutations.JobsRepository")
+    def test_execute_job_pending_raises(self, mock_repo_cls):
+        user = User.test()
+        mock_repo = MagicMock()
+        mock_repo_cls.return_value = mock_repo
+        job = MagicMock()
+        job.is_finished.return_value = False
+        job.is_failed.return_value = False
+        mock_repo.get.return_value = job
+        handler = ReprocessingJobMutation(user=user)
+        with pytest.raises(JobNotReprocessableError, match="only be reprocessed when status is success or failed"):
+            handler.execute({"job_id": Identifier("j1")})

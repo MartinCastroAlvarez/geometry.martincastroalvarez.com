@@ -398,6 +398,29 @@ class JobAlreadyExistsError(ConflictError):
         super().__init__(message)
 
 
+class JobNotFoundError(NotFoundError):
+    """Job not found (reprocess or get)."""
+
+    def __init__(self, message: str = "Job not found"):
+        super().__init__(message)
+
+
+class JobNotReprocessableError(ValidationError):
+    """Job can only be reprocessed when status is success or failed."""
+
+    def __init__(self, message: str = "Job can only be reprocessed when status is success or failed"):
+        super().__init__(message)
+
+
+class JobChildrenError(GeometryException):
+    """One or more child jobs failed."""
+
+    code: http.HTTPStatus = http.HTTPStatus.BAD_REQUEST
+
+    def __init__(self, message: str = "One or more child jobs failed"):
+        super().__init__(message)
+
+
 class JobStdoutMissingGeometryError(ValidationError):
     """Job stdout has no boundary or obstacles; cannot publish gallery."""
 

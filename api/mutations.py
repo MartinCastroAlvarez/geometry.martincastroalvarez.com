@@ -45,6 +45,8 @@ from exceptions import GalleryHasNoVisibilityError
 from exceptions import GalleryHasStitchesWithoutObstaclesError
 from exceptions import JobAlreadyExistsError
 from exceptions import JobNotFinishedToPublishError
+from exceptions import JobNotFoundError
+from exceptions import JobNotReprocessableError
 from exceptions import JobNotSuccessToUpdateError
 from exceptions import MetaKeysMustBeStringsError
 from exceptions import MetaMustBeDictError
@@ -52,6 +54,7 @@ from exceptions import MetaRequiredError
 from exceptions import MetaValuesMustBeStringsError
 from exceptions import ObstaclesMustBeListError
 from exceptions import PolygonValidationError
+from exceptions import RecordNotFoundError
 from exceptions import TitleMustBeStringError
 from geometry import Polygon
 from indexes import ArtGalleryPublicIndex
@@ -101,6 +104,12 @@ class JobUpdateMutationRequest(MutationRequest):
 
 class JobDeleteMutationRequest(MutationRequest):
     """Delete job: job_id from path. Deletes associated gallery (if any), then children, then the job and its index."""
+
+    job_id: Identifier
+
+
+class ReprocessingJobMutationRequest(MutationRequest):
+    """Reprocess job: job_id from path; job must exist and be success or failed."""
 
     job_id: Identifier
 
@@ -233,6 +242,45 @@ class JobMutation(PrivateControllerMixin, Mutation):
             real_id=job.id,
         )
         logger.info("JobMutation.mutate() | created job_id=%s user=%s", job.id, self.user.email)
+        return job.serialize()
+
+
+class ReprocessingJobMutation(PrivateControllerMixin, Mutation):
+    """
+    Reprocess an existing job: load by id, require status success or failed,
+    call job.start() (clear children/stdout/stderr, set pending), enqueue START.
+    Idempotent: yes (re-reprocess overwrites; same job runs again).
+
+    For example, to reprocess a job:
+    >>> handler = ReprocessingJobMutation(user=request.user)
+    >>> result = handler.handler({"id": "j1"})
+    >>> "id" in result
+    True
+    >>> result["id"] == "j1"
+    True
+    >>> result["status"] == "pending"
+    True
+    >>> result["children_ids"] == []
+    True
+    """
+
+    def validate(self, body: dict[str, Any]) -> ReprocessingJobMutationRequest:
+        super().validate(body)
+        return ReprocessingJobMutationRequest(job_id=Identifier(body.get("id")))
+
+    def execute(self, validated_input: ReprocessingJobMutationRequest) -> JobMutationResponse:
+        job_id = validated_input["job_id"]
+        repo = JobsRepository(user=self.user)
+        try:
+            job = repo.get(job_id)
+        except RecordNotFoundError:
+            raise JobNotFoundError("Job not found")
+        if not (job.is_finished() or job.is_failed()):
+            raise JobNotReprocessableError("Job can only be reprocessed when status is success or failed")
+        job.start(clear_outputs=True)
+        repo.save(job)
+        queue.put(Message(action=Action.START, job_id=job.id, user_email=self.user.email))
+        logger.info("ReprocessingJobMutation.execute() | reprocess job_id=%s user=%s", job.id, self.user.email)
         return job.serialize()
 
 

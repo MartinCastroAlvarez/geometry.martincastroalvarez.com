@@ -30,16 +30,15 @@ from functools import cached_property
 from typing import Any
 from typing import NotRequired
 
-from attributes import Duration
 from attributes import Email
 from attributes import Identifier
-from attributes import Timestamp
 from controllers import Controller
 from controllers import ControllerRequest
 from controllers import ControllerResponse
 from enums import Action
 from enums import Status
 from exceptions import CoordinatorStepRequiresChildrenError
+from exceptions import JobChildrenError
 from exceptions import MonitorStepRequiresChildrenError
 from exceptions import ParallelStepRequiresParentError
 from exceptions import RecordNotFoundError
@@ -180,49 +179,25 @@ class StartTask(Task):
     """
 
     def execute(self, validated_input: TaskRequest) -> StartTaskResponse:
-        # If the job is already processed (SUCCESS), enqueue REPORT and return without re-running the step.
-        if self.job.is_finished():
-            logger.info("Task skipped: job already processed job_id=%s", self.job.id)
-            self.report()
-            return {"status": Status.SUCCESS, "job_id": self.job.id}
+        self.job.start()
 
-        # Log the start time of the step.
-        started_at_key: str = f"step:{self.job.step_name.slug}:started_at"
-        if started_at_key not in self.job.meta:
-            self.job.meta[started_at_key] = Timestamp.now().to_iso()
+        # If this job has a parent, inherit parent's stdout so the step has shared state (e.g. stitched, ears).
+        if self.job.parent_id is not None:
+            parent_job: Job = self.parent
+            self.job.stdout.update(parent_job.stdout)
 
         meta: dict[str, Any] = validated_input.get("meta") or {}
-        step: Step = Step.of(self.job.step_name)(job=self.job, user=self.user)
-
-        # SequenceStep after the first: merge previous siblings' stdout so this step has stitched, ears, etc.
-        if isinstance(step, SequenceStep) and step.parent is not None:
-            sibling_ids: list[Identifier] = list(step.parent.children_ids)
-            try:
-                idx: int = sibling_ids.index(self.job.id)
-            except ValueError:
-                idx = -1
-            if idx > 0:
-                for prev_id in sibling_ids[:idx]:
-                    prev_job: Job = self.repository.get(prev_id)
-                    self.job.stdout.update(prev_job.stdout)
-                step.job = self.job
-
         try:
-            # Run the step, and merge the output into job.stdout.
+            step: Step = Step.of(self.job.step_name)(job=self.job, user=self.user)
             stdout: dict[str, Any] = step.run(**meta)
             self.job = step.job
             self.job.stdout.update(stdout)
         except Exception as error:
-
-            # Log the failure time of the step, and merge the error into job.stderr.
-            self.job.status = Status.FAILED
-            self.job.stderr[f"error:{self.job.step_name.slug}:message"] = str(error)
-            self.job.stderr[f"error:{self.job.step_name.slug}:type"] = error.__class__.__name__
+            self.job.fail(error)
             logger.exception("StartTask.execute() | step failed job_id=%s step_name=%s error=%s", self.job.id, self.job.step_name, error)
 
-        # Save the job, broadcast the result, and report the job to the parent.
         self.repository.save(self.job)
-        self.broadcast(step)
+        self.broadcast()
         self.report()
         return {"status": self.job.status, "job_id": self.job.id}
 
@@ -238,12 +213,13 @@ class StartTask(Task):
         message: Message = Message(action=Action.REPORT, job_id=self.job.id, user_email=self.user.email)
         queue.put(message)
 
-    def broadcast(self, step: Step) -> None:
+    def broadcast(self) -> None:
         """
         Enqueue START messages for the next work items based on step type.
         Called after repository.save() in execute(); does not enqueue REPORT (caller calls self.report() after).
 
         If self.job is failed, returns immediately without enqueuing anything.
+        Otherwise builds the step via Step.of(self.job.step_name) to decide what to enqueue.
 
         Step-type behavior (a step may satisfy more than one; each branch runs independently):
         - CoordinatorStep: enqueue START for the first child (self.job.children_ids[0]). Raises if job has no children.
@@ -254,6 +230,7 @@ class StartTask(Task):
         """
         if self.job.is_failed():
             return
+        step: Step = Step.of(self.job.step_name)(job=self.job, user=self.user)
 
         # CoordinatorStep: START the first child.
         if isinstance(step, CoordinatorStep):
@@ -323,23 +300,12 @@ class ReportTask(Task):
         if any(child.is_failed() for child in self.children):
             for child in self.children:
                 self.job.stderr.update(child.stderr)
-            self.job.status = Status.FAILED
+            self.job.fail(JobChildrenError("One or more child jobs failed"))
             logger.info("ReportTask.execute() | job failed job_id=%s status=FAILED", self.job.id)
         elif any(child.is_pending() for child in self.children):
             pass
         else:
-            self.job.status = Status.SUCCESS
-            slug: str = self.job.step_name.slug
-            finished_at_key: str = f"step:{slug}:finished_at"
-            if finished_at_key not in self.job.meta:
-                self.job.meta[finished_at_key] = Timestamp.now().to_iso()
-            started_at_key: str = f"step:{slug}:started_at"
-            if started_at_key in self.job.meta:
-                started_at = Timestamp.from_iso(self.job.meta[started_at_key])
-                finished_at = Timestamp.from_iso(self.job.meta[finished_at_key])
-                elapsed: Duration = Duration.from_timestamps(finished_at, started_at)
-                self.job.meta[f"step:{slug}:elapsed_time"] = elapsed / 1000.0
-                self.job.duration = elapsed
+            self.job.finish()
             logger.info("ReportTask.execute() | job completed job_id=%s status=SUCCESS", self.job.id)
 
         self.repository.save(self.job)
