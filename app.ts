@@ -183,9 +183,14 @@ class GeometryStack extends Stack {
       maxConcurrency: 20,
     }))
 
-    // REST API backed by the API Lambda; access logs and prod stage.
+    // REST API backed by the API Lambda; access logs, prod stage, CORS so preflight succeeds.
     const api = new apigateway.RestApi(this, 'GeometryApi', {
       restApiName: 'Geometry API',
+      defaultCorsPreflightOptions: {
+        allowOrigins: apigateway.Cors.ALL_ORIGINS,
+        allowMethods: apigateway.Cors.ALL_METHODS,
+        allowHeaders: apigateway.Cors.DEFAULT_HEADERS.concat(['X-Auth']),
+      },
       deployOptions: {
         loggingLevel: apigateway.MethodLoggingLevel.INFO,
         dataTraceEnabled: true,
@@ -245,32 +250,28 @@ class GeometryStack extends Stack {
       proxy: true
     })
 
-    // API structure: /v1/galleries, /v1/polygon, /v1/jobs (and nested /jobs/{id}, POST = reprocess; /jobs/{id}/publish = publish).
+    // API structure: /v1/galleries, /v1/polygon, /v1/jobs, /v1/publish/{id}.
     const v1Resource = api.root.addResource('v1')
+    const publishResource = v1Resource.addResource('publish')
+    const publishIdResource = publishResource.addResource('{id}')
+    publishIdResource.addMethod('POST', lambdaIntegration)
+
     const galleriesResource = v1Resource.addResource('galleries')
     galleriesResource.addMethod('GET', lambdaIntegration)
-    galleriesResource.addMethod('OPTIONS', lambdaIntegration)
     const galleryIdResource = galleriesResource.addResource('{id}')
     galleryIdResource.addMethod('GET', lambdaIntegration)
-    galleryIdResource.addMethod('OPTIONS', lambdaIntegration)
 
     const polygonResource = v1Resource.addResource('polygon')
     polygonResource.addMethod('POST', lambdaIntegration)
-    polygonResource.addMethod('OPTIONS', lambdaIntegration)
 
     const jobsResource = v1Resource.addResource('jobs')
     jobsResource.addMethod('GET', lambdaIntegration)
     jobsResource.addMethod('POST', lambdaIntegration)
-    jobsResource.addMethod('OPTIONS', lambdaIntegration)
     const jobIdResource = jobsResource.addResource('{id}')
     jobIdResource.addMethod('GET', lambdaIntegration)
     jobIdResource.addMethod('POST', lambdaIntegration)
     jobIdResource.addMethod('PATCH', lambdaIntegration)
     jobIdResource.addMethod('DELETE', lambdaIntegration)
-    jobIdResource.addMethod('OPTIONS', lambdaIntegration)
-    const jobPublishResource = jobIdResource.addResource('publish')
-    jobPublishResource.addMethod('POST', lambdaIntegration)
-    jobPublishResource.addMethod('OPTIONS', lambdaIntegration)
 
     // CloudFront distribution for the web app: S3 origin, HTTPS, SPA fallback for 404/403.
     const distribution = new cloudfront.Distribution(this, 'GeometryDistribution', {

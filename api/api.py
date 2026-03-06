@@ -169,12 +169,12 @@ class ApiResponse(Serializable[dict[str, Any]]):
 PUBLIC_ROUTES: dict[Path, dict[Method, Type[Controller]]] = {
     Path("v1/galleries/"): {Method.GET: ArtGalleryDetailsQuery},
     Path("v1/galleries"): {Method.GET: ArtGalleryListQuery},
-    Path("v1/polygon"): {Method.POST: PolygonValidator},
 }
 
-# Private has jobs plus duplicated gallery/polygon routes; order matters (longer prefix first).
-# POST /v1/jobs/{id} = ReprocessingJobMutation; POST /v1/jobs/{id}/publish = ArtGalleryPublishMutation (see handler).
+# Private routes; order matters (more specific prefix first).
+# POST /v1/publish/{id}, GET|POST|PATCH|DELETE /v1/jobs/{id}, etc.
 PRIVATE_ROUTES: dict[Path, dict[Method, Type[Controller]]] = {
+    Path("v1/publish/"): {Method.POST: ArtGalleryPublishMutation},
     Path("v1/jobs/"): {
         Method.GET: JobDetailsQuery,
         Method.POST: ReprocessingJobMutation,
@@ -263,7 +263,14 @@ def interceptor(
         )
         start: float = time.perf_counter()
         headers = event.get("headers") or {}
-        origin: Origin = Origin(headers.get("Origin") or headers.get("origin"))
+        # Header keys may be any casing (e.g. "origin" from API Gateway); CORS needs exact origin echoed.
+        origin_val = headers.get("Origin") or headers.get("origin")
+        if not origin_val:
+            for k, v in headers.items():
+                if k and (k.lower() if isinstance(k, str) else str(k).lower()) == "origin" and v:
+                    origin_val = v if isinstance(v, str) else str(v)
+                    break
+        origin: Origin = Origin(origin_val)
 
         try:
             request: ApiRequest = ApiRequest.unserialize(event)
@@ -362,13 +369,6 @@ def handler(request: ApiRequest, context: Any) -> dict[str, Any]:
     if controller_class is None or matched_prefix is None:
         logger.warning("handler.handler() | route or method not supported path=%s method=%s", path, method)
         raise UnauthorizedError("Not supported")
-
-    # POST /v1/jobs/{id}/publish → publish; POST /v1/jobs/{id} → reprocess.
-    if matched_prefix == "v1/jobs/" and method == Method.POST:
-        if str(path).endswith("/publish"):
-            controller_class = ArtGalleryPublishMutation
-        else:
-            controller_class = ReprocessingJobMutation
 
     logger.debug("handler.handler() | route matched path=%s prefix=%s controller=%s", path, matched_prefix, controller_class.__name__)
 

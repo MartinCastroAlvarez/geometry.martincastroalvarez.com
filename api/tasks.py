@@ -195,8 +195,9 @@ class StartTask(Task):
                 prev_job: Job = self.repository.get(sibling_ids[prev_idx])
                 self.job.stdout.update(prev_job.stdout)
 
-        meta: dict[str, Any] = validated_input.get("meta") or {}
+        # Execute the step, and capture any error.
         try:
+            meta: dict[str, Any] = validated_input.get("meta") or {}
             step: Step = Step.of(self.job.step_name)(job=self.job, user=self.user)
             stdout: dict[str, Any] = step.run(**meta)
             self.job = step.job
@@ -205,6 +206,7 @@ class StartTask(Task):
             self.job.fail(error)
             logger.exception("StartTask.execute() | step failed job_id=%s step_name=%s error=%s", self.job.id, self.job.step_name, error)
 
+        # Save the job, start next children, and/or notify parent.
         self.repository.save(self.job)
         self.broadcast()
         self.report()

@@ -126,7 +126,7 @@ export class GeometryApiClient {
 
     async publish(jobId: string): Promise<GeometryApiArtGallery> {
         if (this.jwtToken == null || this.jwtToken === "") requireToken("publish");
-        const response = await requestOrThrow(`${this.baseUrl}/v1/jobs/${jobId}/publish`, this.jwtToken, {
+        const response = await requestOrThrow(`${this.baseUrl}/v1/publish/${jobId}`, this.jwtToken, {
             method: "POST",
         });
         const result = (await response.json()) as DetailsResponse<GeometryApiArtGallery> | GeometryApiArtGallery;

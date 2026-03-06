@@ -799,7 +799,9 @@ class GuardPlacementStep(SequenceStep):
         self.gallery.exclusivity = Table()
         for guard in list(self.gallery.guards):
             visibility: Collection[Point, Point] = self.gallery.visibility[guard]
-            other_points: set[Point] = {point for other in self.gallery.guards.values() if other != guard for point in self.gallery.visibility[other].items}
+            other_points: set[Point] = {
+                point for other in self.gallery.guards.values() if other != guard for point in self.gallery.visibility[other].items
+            }
             exclusive: set[Point] = set(visibility.items) - other_points
             if not exclusive:
                 self.gallery.guards -= guard
