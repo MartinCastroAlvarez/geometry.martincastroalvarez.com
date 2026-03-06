@@ -12,6 +12,7 @@ from geometry import Interval
 from geometry import Point
 from geometry import Polygon
 from geometry import Segment
+from geometry.polygon import _segments_share_endpoint
 from geometry import Walk
 from attributes import Email
 from models import Job
@@ -67,12 +68,12 @@ class TestAdjacencyCollection:
         )
         built = step.build_adjacency_table(table)
         assert len(built) == 2
-        bag_left = built[left]
-        bag_right = built[right]
-        assert len(bag_left) == 1
-        assert len(bag_right) == 1
-        assert right.id in bag_left.items
-        assert left.id in bag_right.items
+        collection_left = built[left]
+        collection_right = built[right]
+        assert len(collection_left) == 1
+        assert len(collection_right) == 1
+        assert right.id in collection_left.items
+        assert left.id in collection_right.items
 
 
 class TestConvexComponent:
@@ -718,17 +719,58 @@ class TestSegment:
         with pytest.raises(NotImplementedError, match="only supports Segment"):
             s.intersects(Point([0, 0]))
 
-    def test_connects(self):
+    def test_segments_share_endpoint(self):
+        """Segments that share an endpoint are detected by _segments_share_endpoint."""
         a = Point([0, 0])
         b = Point([1, 0])
         c = Point([2, 0])
         s1 = Segment([a, b])
         s2 = Segment([b, c])
-        assert s1.connects(s2) is True
+        assert _segments_share_endpoint(s1, s2) is True
         s3 = Segment([a, c])
-        assert s1.connects(s3) is True
+        assert _segments_share_endpoint(s1, s3) is True
         s4 = Segment([Point([3, 0]), Point([4, 0])])
-        assert s1.connects(s4) is False
+        assert _segments_share_endpoint(s1, s4) is False
+
+    def test_crosses_proper_intersection(self):
+        """Segments that meet at a single interior point cross."""
+        s1 = Segment([Point([0, 0]), Point([2, 2])])
+        s2 = Segment([Point([0, 2]), Point([2, 0])])
+        assert s1.crosses(s2) is True
+        assert s2.crosses(s1) is True
+
+    def test_crosses_disjoint(self):
+        s1 = Segment([Point([0, 0]), Point([1, 0])])
+        s2 = Segment([Point([2, 0]), Point([3, 0])])
+        assert s1.crosses(s2) is False
+
+    def test_crosses_shared_endpoint_not_cross(self):
+        """Touching at one endpoint is not a cross."""
+        s1 = Segment([Point([0, 0]), Point([1, 1])])
+        s2 = Segment([Point([1, 1]), Point([2, 0])])
+        assert s1.crosses(s2) is False
+
+    def test_crosses_collinear_overlap_not_cross(self):
+        """Collinear overlapping segments do not cross."""
+        s1 = Segment([Point([0, 0]), Point([2, 0])])
+        s2 = Segment([Point([1, 0]), Point([3, 0])])
+        assert s1.crosses(s2) is False
+
+    def test_crosses_collinear_touching_endpoint_not_cross(self):
+        """Collinear segments touching at endpoint do not cross."""
+        s1 = Segment([Point([0, 0]), Point([1, 0])])
+        s2 = Segment([Point([1, 0]), Point([2, 0])])
+        assert s1.crosses(s2) is False
+
+    def test_crosses_collinear_disjoint_not_cross(self):
+        s1 = Segment([Point([0, 0]), Point([1, 0])])
+        s2 = Segment([Point([2, 0]), Point([3, 0])])
+        assert s1.crosses(s2) is False
+
+    def test_crosses_non_segment_raises(self):
+        s = Segment([Point([0, 0]), Point([1, 0])])
+        with pytest.raises(NotImplementedError, match="only supports Segment"):
+            s.crosses(Point([0, 0]))
 
     def test_serialize_unserialize(self):
         s = Segment([Point([0, 0]), Point([1, 1])])

@@ -54,6 +54,61 @@ SerializedPolygon: TypeAlias = list[SerializedPoint]
 PolygonLike: TypeAlias = Union["Polygon", SerializedPolygon, dict[str, Any]]
 
 
+def _segments_share_endpoint(a: Segment, b: Segment) -> bool:
+    """True iff segments a and b share at least one endpoint."""
+    return (
+        a[0] == b[0]
+        or a[0] == b[1]
+        or a[1] == b[0]
+        or a[1] == b[1]
+    )
+
+
+def _segments_intersect(a: Segment, b: Segment, *, inclusive: bool) -> bool:
+    """
+    True iff segment a and b intersect. Uses crosses() for proper crossing;
+    inclusive adds endpoint touch and collinear overlap.
+    """
+    if (
+        max(a[0].x, a[1].x) < min(b[0].x, b[1].x)
+        or max(b[0].x, b[1].x) < min(a[0].x, a[1].x)
+        or max(a[0].y, a[1].y) < min(b[0].y, b[1].y)
+        or max(b[0].y, b[1].y) < min(a[0].y, a[1].y)
+    ):
+        return False
+    if a.crosses(b):
+        return True
+    walk1: Walk = Walk(start=a[0], center=a[1], end=b[0])
+    walk2: Walk = Walk(start=a[0], center=a[1], end=b[1])
+    walk3: Walk = Walk(start=b[0], center=b[1], end=a[0])
+    walk4: Walk = Walk(start=b[0], center=b[1], end=a[1])
+    collinearity1: bool = walk1.is_collinear()
+    collinearity2: bool = walk2.is_collinear()
+    collinearity3: bool = walk3.is_collinear()
+    collinearity4: bool = walk4.is_collinear()
+    if collinearity1 and collinearity2 and collinearity3 and collinearity4:
+        if not inclusive:
+            return False
+        if a[0].x != a[1].x or b[0].x != b[1].x:
+            a0, a1 = sorted((a[0].x, a[1].x))
+            b0, b1 = sorted((b[0].x, b[1].x))
+        else:
+            a0, a1 = sorted((a[0].y, a[1].y))
+            b0, b1 = sorted((b[0].y, b[1].y))
+        return not (a1 < b0 or b1 < a0)
+    if not inclusive:
+        return False
+    if collinearity1 and a.contains(b[0], inclusive=True):
+        return True
+    if collinearity2 and a.contains(b[1], inclusive=True):
+        return True
+    if collinearity3 and b.contains(a[0], inclusive=True):
+        return True
+    if collinearity4 and b.contains(a[1], inclusive=True):
+        return True
+    return False
+
+
 class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[SerializedPolygon]):
     """
     A polygon as a Sequence of Point (closed chain). Items must be Point.
@@ -234,9 +289,9 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[Serialized
 
             # Only proper crossing (interior intersection) invalidates; skip edges that share an endpoint.
             for edge in self.edges:
-                if edge.connects(obj):
+                if _segments_share_endpoint(edge, obj):
                     continue
-                if obj.intersects(edge, inclusive=False):
+                if edge.crosses(obj):
                     return False
 
             return True
@@ -306,9 +361,11 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[Serialized
             if inclusive and any(edge.contains(obj[0], inclusive=True) or edge.contains(obj[1], inclusive=True) for edge in self.edges):
                 return True
             for edge in self.edges:
-                if edge.connects(obj):
+                if _segments_share_endpoint(edge, obj):
+                    if inclusive:
+                        return True
                     continue
-                if edge.intersects(obj, inclusive=inclusive):
+                if _segments_intersect(edge, obj, inclusive=inclusive):
                     return True
             return (
                 self.contains(obj[0], inclusive=inclusive)
@@ -332,7 +389,7 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[Serialized
                     return True
             for edge in self.edges:
                 for box_edge in obj.edges:
-                    if edge.intersects(box_edge, inclusive=inclusive):
+                    if _segments_intersect(edge, box_edge, inclusive=inclusive):
                         return True
             return False
 
@@ -347,7 +404,7 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[Serialized
                     return True
             for edge in self.edges:
                 for other_edge in obj.edges:
-                    if edge.intersects(other_edge, inclusive=inclusive):
+                    if _segments_intersect(edge, other_edge, inclusive=inclusive):
                         return True
             return False
         raise NotImplementedError(f"Polygon.intersects only supports Point, Segment, Box, Polygon; got {type(obj).__name__}")
@@ -542,8 +599,8 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[Serialized
                     continue  # adjacent edges share a vertex
                 edge_i: Segment = edges[i]
                 edge_j: Segment = edges[j]
-                if edge_i.connects(edge_j):
+                if _segments_share_endpoint(edge_i, edge_j):
                     continue
-                if edge_i.intersects(edge_j, inclusive=True):
+                if _segments_intersect(edge_i, edge_j, inclusive=True):
                     return False
         return True

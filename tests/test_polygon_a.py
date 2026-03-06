@@ -12,6 +12,7 @@ from geometry import Ear
 from geometry import Point
 from geometry import Polygon
 from geometry import Segment
+from geometry.polygon import _segments_share_endpoint
 from models import Job
 from models import User
 from tests.utils import assert_convex_components_simple_convex_no_obstacle_intersection
@@ -162,12 +163,9 @@ def test_polygon_a_full_pipeline_requires_one_guard():
                     f"midpoint {segment.midpoint} is inside obstacle."
                 )
                 for edge in obstacle.edges:
-                    if edge.connects(segment):
+                    if _segments_share_endpoint(edge, segment):
                         continue
-                    if segment.intersects(edge, inclusive=False):
-                        # Touching at segment endpoint (guard or visible point on obstacle edge) is allowed.
-                        if edge.contains(segment[0], inclusive=True) or edge.contains(segment[1], inclusive=True):
-                            continue
+                    if segment.crosses(edge):
                         raise AssertionError(
                             f"Segment from guard {guard} to visible point {visible_pt} intersects obstacle edge "
                             f"{edge[0]}–{edge[1]}."

@@ -1,5 +1,5 @@
 """
-Segment type: exactly two Point (start, end). Spatial, Bounded. serialize/unserialize, midpoint, box, contains, intersects, connects.
+Segment type: exactly two Point (start, end). Spatial, Bounded. serialize/unserialize, midpoint, box, contains, intersects, crosses.
 
 Title
 -----
@@ -11,9 +11,10 @@ Segment is a line segment between two Points. It implements Spatial
 (contains, intersects), Bounded (box), and Serializable. size is
 Euclidean length; midpoint is the center point; box is the axis-aligned
 bounding box. contains(Point or Segment) and intersects(Segment) support
-inclusive boundary. connects(other) is True if the segments share an
-endpoint. Hash is canonical (min point, max point). Used for polygon
-edges and intersection tests in visibility and guard placement.
+inclusive boundary. crosses(other) is True iff the segments cross at an
+interior point (not touching at an endpoint or collinear overlap). Hash
+is canonical (min point, max point). Used for polygon edges and
+intersection tests in visibility and guard placement.
 
 Examples:
 >>> s = Segment([Point.unserialize(["0","0"]), Point.unserialize(["1","1"])])
@@ -152,67 +153,100 @@ class Segment(list, Spatial, Bounded, Serializable[SerializedSegment]):
         if not isinstance(obj, Segment):
             raise NotImplementedError(f"Segment.intersects only supports Segment, got {type(obj).__name__}")
 
-        a: Point = self[0]
-        b: Point = self[1]
-        c: Point = obj[0]
-        d: Point = obj[1]
-
         # Bounding-box rejection
-        if max(a.x, b.x) < min(c.x, d.x) or max(c.x, d.x) < min(a.x, b.x) or max(a.y, b.y) < min(c.y, d.y) or max(c.y, d.y) < min(a.y, b.y):
+        if (
+            max(self[0].x, self[1].x) < min(obj[0].x, obj[1].x)
+            or max(obj[0].x, obj[1].x) < min(self[0].x, self[1].x)
+            or max(self[0].y, self[1].y) < min(obj[0].y, obj[1].y)
+            or max(obj[0].y, obj[1].y) < min(self[0].y, self[1].y)
+        ):
             return False
 
-        w1 = Walk(start=a, center=b, end=c)
-        w2 = Walk(start=a, center=b, end=d)
-        w3 = Walk(start=c, center=d, end=a)
-        w4 = Walk(start=c, center=d, end=b)
+        if self.crosses(obj):
+            return True
 
-        col1 = w1.is_collinear()
-        col2 = w2.is_collinear()
-        col3 = w3.is_collinear()
-        col4 = w4.is_collinear()
+        walk1: Walk = Walk(start=self[0], center=self[1], end=obj[0])
+        walk2: Walk = Walk(start=self[0], center=self[1], end=obj[1])
+        walk3: Walk = Walk(start=obj[0], center=obj[1], end=self[0])
+        walk4: Walk = Walk(start=obj[0], center=obj[1], end=self[1])
+
+        collinearity1: bool = walk1.is_collinear()
+        collinearity2: bool = walk2.is_collinear()
+        collinearity3: bool = walk3.is_collinear()
+        collinearity4: bool = walk4.is_collinear()
 
         # All-collinear case
-        if col1 and col2 and col3 and col4:
+        if collinearity1 and collinearity2 and collinearity3 and collinearity4:
             if not inclusive:
                 return False
 
             # inclusive=True => any shared point
-            if a.x != b.x or c.x != d.x:
-                a0, a1 = sorted((a.x, b.x))
-                b0, b1 = sorted((c.x, d.x))
+            if self[0].x != self[1].x or obj[0].x != obj[1].x:
+                a0, a1 = sorted((self[0].x, self[1].x))
+                b0, b1 = sorted((obj[0].x, obj[1].x))
             else:
-                a0, a1 = sorted((a.y, b.y))
-                b0, b1 = sorted((c.y, d.y))
+                a0, a1 = sorted((self[0].y, self[1].y))
+                b0, b1 = sorted((obj[0].y, obj[1].y))
 
             return not (a1 < b0 or b1 < a0)
-
-        # Proper crossing
-        if w1.orientation != w2.orientation and w3.orientation != w4.orientation:
-            return True
 
         if not inclusive:
             return False
 
         # Inclusive non-collinear touching
-        if col1 and self.contains(c, inclusive=True):
+        if collinearity1 and self.contains(obj[0], inclusive=True):
             return True
-        if col2 and self.contains(d, inclusive=True):
+        if collinearity2 and self.contains(obj[1], inclusive=True):
             return True
-        if col3 and obj.contains(a, inclusive=True):
+        if collinearity3 and obj.contains(self[0], inclusive=True):
             return True
-        if col4 and obj.contains(b, inclusive=True):
+        if collinearity4 and obj.contains(self[1], inclusive=True):
             return True
 
         return False
 
-    def connects(self, other: Segment) -> bool:
-        return any(
-            (
-                self[0] == other[0],
-                self[0] == other[1],
-                self[1] == other[0],
-                self[1] == other[1],
+    def crosses(self, other: Segment) -> bool:
+        """
+        True iff this segment and other cross at a single point that is interior
+        to both segments. Sharing an endpoint or collinear overlap is not a cross.
+        """
+        if not isinstance(other, Segment):
+            raise NotImplementedError(
+                f"Segment.crosses only supports Segment, got {type(other).__name__}"
             )
+
+        if (
+            max(self[0].x, self[1].x) < min(other[0].x, other[1].x)
+            or max(other[0].x, other[1].x) < min(self[0].x, self[1].x)
+            or max(self[0].y, self[1].y) < min(other[0].y, other[1].y)
+            or max(other[0].y, other[1].y) < min(self[0].y, self[1].y)
+        ):
+            return False
+
+        if (
+            self.contains(other[0], inclusive=True)
+            or self.contains(other[1], inclusive=True)
+            or other.contains(self[0], inclusive=True)
+            or other.contains(self[1], inclusive=True)
+        ):
+            return False
+
+        walk1: Walk = Walk(start=self[0], center=self[1], end=other[0])
+        walk2: Walk = Walk(start=self[0], center=self[1], end=other[1])
+        walk3: Walk = Walk(start=other[0], center=other[1], end=self[0])
+        walk4: Walk = Walk(start=other[0], center=other[1], end=self[1])
+
+        collinearity1: bool = walk1.is_collinear()
+        collinearity2: bool = walk2.is_collinear()
+        collinearity3: bool = walk3.is_collinear()
+        collinearity4: bool = walk4.is_collinear()
+
+        if collinearity1 and collinearity2 and collinearity3 and collinearity4:
+            return False
+
+        return (
+            walk1.orientation != walk2.orientation
+            and walk3.orientation != walk4.orientation
         )
 
     def serialize(self) -> SerializedSegment:

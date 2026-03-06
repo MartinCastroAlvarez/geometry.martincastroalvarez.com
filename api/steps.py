@@ -52,6 +52,8 @@ from exceptions import ValidationObstacleNotContainedError
 from geometry import Point
 from geometry import Polygon
 from geometry.convex import ConvexComponent
+from geometry.polygon import _segments_intersect
+from geometry.polygon import _segments_share_endpoint
 from geometry.ear import Ear
 from geometry.segment import Segment
 from geometry.walk import Walk
@@ -267,7 +269,8 @@ class ValidationPolygonStep(SequenceStep):
         two obstacles may intersect or touch. Prevents ambiguous topology for bridging.
         """
         if any(
-            edge.intersects(boundary_edge, inclusive=True) and not edge.connects(boundary_edge)
+            _segments_intersect(edge, boundary_edge, inclusive=True)
+            and not _segments_share_endpoint(edge, boundary_edge)
             for obstacle in self.obstacles
             for edge in obstacle.edges
             for boundary_edge in self.boundary.edges
@@ -367,7 +370,7 @@ class StitchingStep(SequenceStep):
                         continue
 
                     # Exit early if the segment crosses the current obstacle (except at anchor).
-                    if any(not segment.connects(edge) and segment.intersects(edge, inclusive=False) for edge in obstacle.edges):
+                    if any(segment.crosses(edge) for edge in obstacle.edges):
                         continue
 
                     # Exit early if the segment is collinear with any boundary edge.
@@ -375,12 +378,12 @@ class StitchingStep(SequenceStep):
                         Walk(start=edge[0], center=edge[1], end=segment[0]).is_collinear()
                         and Walk(start=edge[0], center=edge[1], end=segment[1]).is_collinear()
                         for edge in self.boundary.edges
-                        if not edge.connects(segment)
+                        if not _segments_share_endpoint(edge, segment)
                     ):
                         continue
 
                     # Exit early if the segment intersects any other segment.
-                    if any(edge.intersects(segment, inclusive=False) for edge in stitched.edges if not edge.connects(segment)):
+                    if any(segment.crosses(edge) for edge in stitched.edges):
                         continue
 
                     # Exit early if the bucket is full.
@@ -743,7 +746,7 @@ class GuardPlacementStep(SequenceStep):
                 return False
 
             for edge in obstacle.edges:
-                if segment.intersects(edge, inclusive=False):
+                if segment.crosses(edge):
                     self.visibility_by_segment[segment] = False
                     return False
 
@@ -756,6 +759,7 @@ class GuardPlacementStep(SequenceStep):
         Hydrate self.component_id_by_point: for each convex component and each point in it,
         map the point to that component's id. Points on shared edges appear in multiple components.
         """
+        self.gallery.coverage = set(self.gallery.stitched)
         self.component_id_by_point = Table()
         for component in self.gallery.convex_components:
             for point in component:
@@ -764,6 +768,7 @@ class GuardPlacementStep(SequenceStep):
                 self.component_id_by_point[point] += component.id
             for midpoint in component.midpoints:
                 self.component_ids_by_midpoint[midpoint].add(component.id)
+                self.gallery.coverage.add(midpoint)
 
     def compete(self, candidates: list[Point]) -> (Point, Collection[Point, Point]):
         """
@@ -775,38 +780,11 @@ class GuardPlacementStep(SequenceStep):
             Point: The best candidate.
             Collection[Point, Point]: The visibility of the best candidate.
         """
-        # Sort the candidates by visibility, and pick the best one.
-        best_guard: Point | None = None
-        best_count: int = -1
-        best_visibility: Collection[Point, Point] | None = None
-        for guard in candidates:
-            visibility: Collection[Point, Point] = self.explore(guard)
-            count: int = sum(1 for point in self.remaining_points if point in visibility)
-            if count > best_count:
-                best_count = count
-                best_guard = guard
-                best_visibility = visibility
-
-        # Safecheck against bugs.
-        if best_guard is None or best_count == 0 or best_visibility is None:
-            raise GuardCoverageFailureError(
-                f"Failed to find a guard that covers any remaining points. "
-                f"Remaining points: {self.remaining_points}. "
-                f"Remaining components: {self.remaining_components}. "
-                f"Best guard: {best_guard}. "
-                f"Best count: {best_count}. "
-                f"Best visibility: {best_visibility}."
-            )
-
-        logger.debug(
-            "GuardPlacementStep.run() | job.id=%s guard=%s points_covered=%s components_remaining=%s",
-            self.job.id,
-            best_guard,
-            best_count,
-            len(self.remaining_components),
-        )
-
-        return best_guard, best_visibility
+        assert len(candidates) > 0, f"GuardPlacementStep.compete() | job.id={self.job.id} candidates={candidates}"
+        visibility_by_guard: dict[Point, Collection[Point, Point]] = {guard: self.explore(guard) for guard in candidates}
+        coverage_by_guard: dict[Point, int] = {guard: sum(1 for point in self.remaining_points if point in visibility_by_guard[guard]) for guard in candidates}
+        sorted_candidates: list[Point] = sorted(candidates, key=lambda guard: coverage_by_guard[guard], reverse=True)
+        return sorted_candidates[0], visibility_by_guard[sorted_candidates[0]]
 
     def analyze(self) -> None:
         """
@@ -818,7 +796,10 @@ class GuardPlacementStep(SequenceStep):
         for guard in list(self.gallery.guards):
             visibility: Collection[Point, Point] = self.gallery.visibility[guard]
             other_points: set[Point] = {
-                point for other in visibility if other.key != guard for point in other.items
+                point
+                for other in self.gallery.guards.values()
+                if other != guard
+                for point in other
             }
             exclusive: set[Point] = set(visibility.items) - other_points
             if not exclusive:
@@ -844,16 +825,6 @@ class GuardPlacementStep(SequenceStep):
         largest_component: ConvexComponent = sorted_components[0]
         return list(largest_component)[:max_candidates]
 
-    def protect(self) -> None:
-        """
-        Build gallery coverage: stitched vertices plus midpoint of every edge of every convex component.
-        Sets self.gallery.coverage for use by run().
-        """
-        self.gallery.coverage = set(self.gallery.stitched)
-        for component in self.gallery.convex_components:
-            for edge in component.edges:
-                self.gallery.coverage.add(edge.midpoint)
-
     def run(self, **kwargs: Any) -> dict[str, Any]:
         self.gallery = ArtGallery.unserialize(self.job.stdout)
         self.visibility_by_segment = {}
@@ -861,13 +832,9 @@ class GuardPlacementStep(SequenceStep):
         self.component_id_by_point = Table()
 
         self.prepare()
-        self.protect()
 
         self.remaining_points = set(self.gallery.coverage)
         self.remaining_components = set(self.gallery.convex_components)
-        logger.info(
-            "GuardPlacementStep.run() | job.id=%s points=%s components=%s", self.job.id, len(self.remaining_points), len(self.remaining_components)
-        )
 
         # Run until all points are covered.
         while self.remaining_points:
@@ -896,12 +863,17 @@ class GuardPlacementStep(SequenceStep):
             best_guard, best_visibility = self.compete(candidates)
             self.gallery.guards += best_guard
             self.gallery.visibility += best_visibility
+            assert len(best_visibility) > 0, f"GuardPlacementStep.run() | job.id={self.job.id} best_visibility={best_visibility}"
+            a = len(self.remaining_points) # FIXME
             self.remaining_points -= set(best_visibility)
+            b = len(self.remaining_points) # FIXME
+            assert b < a, f"GuardPlacementStep.run() | job.id={self.job.id} points_remaining={a} -> {b}" # FIXME
 
             # Remove any component fully covered by best_guard using best_visibility (avoids redundant sees() calls).
             # This should already include the best_component, but we'll be safe and remove it anyway.
             # The guard was placed inside the `best_component`, so it is guaranteed to be covered by the best_visibility.
             # However, we don't explicitely remove it here, just to make sure the following code works.
+            a = len(self.remaining_components)
             for component in list(self.remaining_components):
                 if any(point in self.remaining_points for point in component):
                     continue
@@ -909,6 +881,8 @@ class GuardPlacementStep(SequenceStep):
                     continue
                 self.remaining_components -= {component}
             logger.info("GuardPlacementStep.run() | job.id=%s points_remaining=%s", self.job.id, len(self.remaining_points))
+            b = len(self.remaining_components) # FIXME
+            assert b < a, f"GuardPlacementStep.run() | job.id={self.job.id} components_remaining={a} -> {b}" # FIXME
 
         logger.info("GuardPlacementStep.run() | job.id=%s guards=%s", self.job.id, len(self.gallery.guards))
         assert not self.remaining_components, "Remaining components should be empty."

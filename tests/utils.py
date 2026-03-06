@@ -11,6 +11,7 @@ from geometry import Ear
 from geometry import Point
 from geometry import Polygon
 from geometry import Segment
+from geometry.polygon import _segments_share_endpoint
 
 
 def _segment_clear_of_obstacles(seg: Segment, obstacles: list[Polygon]) -> tuple[bool, str]:
@@ -26,12 +27,9 @@ def _segment_clear_of_obstacles(seg: Segment, obstacles: list[Polygon]) -> tuple
                 f"segment midpoint {seg.midpoint} is inside obstacle {oi} (vertices: {obstacle.serialize()})",
             )
         for ei, edge in enumerate(obstacle.edges):
-            if edge.connects(seg):
+            if _segments_share_endpoint(edge, seg):
                 continue
-            if seg.intersects(edge, inclusive=False):
-                # Touching at segment endpoint (segment endpoint on obstacle edge) is allowed.
-                if edge.contains(seg[0], inclusive=True) or edge.contains(seg[1], inclusive=True):
-                    continue
+            if seg.crosses(edge):
                 return (
                     False,
                     f"segment {seg[0]}–{seg[1]} intersects obstacle {oi} edge {ei} ({edge[0]}–{edge[1]})",

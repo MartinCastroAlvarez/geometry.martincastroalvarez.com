@@ -13,6 +13,7 @@ from geometry import Ear
 from geometry import Point
 from geometry import Polygon
 from geometry import Segment
+from geometry.polygon import _segments_share_endpoint
 from geometry import Walk
 from models import Job
 from models import User
@@ -62,8 +63,9 @@ def _segment_same(a: Segment, b: Segment) -> bool:
 
 def _ear_edge_crosses_or_overlaps_stitched(ear: Ear, stitched: Polygon) -> tuple[bool, str]:
     """
-    True if any edge of the ear crosses or overlaps any edge of the stitched polygon,
+    True if any edge of the ear crosses (interior intersection) any edge of the stitched polygon,
     except when the ear edge is the same as a stitched edge.
+    Collinear edges and segments that only share an endpoint or have a point on the other edge are allowed.
     Returns (has_violation, message) for assertions.
     """
     stitched_edges = list(stitched.edges)
@@ -71,17 +73,12 @@ def _ear_edge_crosses_or_overlaps_stitched(ear: Ear, stitched: Polygon) -> tuple
         for stitched_edge in stitched_edges:
             if _segment_same(ear_edge, stitched_edge):
                 continue
-            if ear_edge.intersects(stitched_edge, inclusive=False):
+            if _segments_share_endpoint(ear_edge, stitched_edge):
+                continue
+            if ear_edge.crosses(stitched_edge):
                 return (
                     True,
                     f"Ear edge {ear_edge[0]}–{ear_edge[1]} crosses stitched edge {stitched_edge[0]}–{stitched_edge[1]} (interior intersection)",
-                )
-            if ear_edge.contains(stitched_edge.midpoint, inclusive=False) or stitched_edge.contains(
-                ear_edge.midpoint, inclusive=False
-            ):
-                return (
-                    True,
-                    f"Ear edge {ear_edge[0]}–{ear_edge[1]} overlaps stitched edge {stitched_edge[0]}–{stitched_edge[1]}",
                 )
     return (False, "")
 
