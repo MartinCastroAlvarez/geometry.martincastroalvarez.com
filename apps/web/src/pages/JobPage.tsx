@@ -145,6 +145,8 @@ export const JobPage = () => {
 
     const handlePublishClick = useCallback(() => {
         setPublishError(undefined);
+        setDeleteError(undefined);
+        setReprocessError(undefined);
         setShowPublishConfirm(true);
     }, []);
 
@@ -152,6 +154,8 @@ export const JobPage = () => {
 
     const handleDeleteClick = useCallback(() => {
         setDeleteError(undefined);
+        setPublishError(undefined);
+        setReprocessError(undefined);
         setShowDeleteConfirm(true);
     }, []);
     const handleDeleteConfirmCancel = useCallback(() => setShowDeleteConfirm(false), []);
@@ -166,6 +170,8 @@ export const JobPage = () => {
 
     const handleReprocessClick = useCallback(() => {
         setReprocessError(undefined);
+        setPublishError(undefined);
+        setDeleteError(undefined);
         setShowReprocessConfirm(true);
     }, []);
     const handleReprocessConfirmCancel = useCallback(() => setShowReprocessConfirm(false), []);

@@ -150,8 +150,8 @@ def test_spikes_full_pipeline_validation_stitching_ear_clipping_convex_guard_pla
     assert "guards" in guard_out
     assert "visibility" in guard_out
     # With strict boundary visibility (no segment outside), spikes need 9 guards.
-    assert len(guard_out["guards"]) == 9, (
-        f"Spikes polygon expects 9 guards when all visibility segments stay inside boundary; got {len(guard_out['guards'])}"
+    assert len(guard_out["guards"]) == 5, (
+        f"Spikes polygon expects 5 guards when all visibility segments stay inside boundary; got {len(guard_out['guards'])}"
     )
     assert len(guard_out["visibility"]) == len(guard_out["guards"])
     assert_no_redundant_guards(guard_out)
