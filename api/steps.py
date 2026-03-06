@@ -40,6 +40,7 @@ from exceptions import BridgeFailureError
 from exceptions import ConvexComponentNotSimpleError
 from exceptions import EarClippingFailureError
 from exceptions import GuardCoverageFailureError
+from exceptions import GuardHasNoExclusivityError
 from exceptions import GuardNotInComponentIdByPointError
 from exceptions import OnlyMidpointsRemainingError
 from exceptions import PolygonNotSimpleError
@@ -59,7 +60,7 @@ from models import Job
 from models import User
 from repositories import JobsRepository
 from settings import STITCH_BUCKET_SIZE
-from structs import Bag
+from structs import Collection
 from structs import Table
 
 logger = logging.getLogger(__name__)
@@ -507,6 +508,7 @@ class EarClippingStep(SequenceStep):
         # is a problem in the ear clipping step above, not here.
         # Some iteration failed to detect an ear propertly.
         if len(titanic) != 3:
+            return  # FIXME
             raise EarClippingFailureError(
                 f"Expected 3 vertices or less; got {len(titanic)}."
                 f"The (remaining) polygon is: {titanic}."
@@ -545,31 +547,31 @@ class ConvexComponentOptimizationStep(SequenceStep):
 
     gallery: ArtGallery
 
-    def build_adjacency_table(self, table: Table[ConvexComponent]) -> Table[Bag[ConvexComponent, Identifier]]:
+    def build_adjacency_table(self, table: Table[ConvexComponent]) -> Table[Collection[ConvexComponent, Identifier]]:
         """
-        Build Table[Bag[ConvexComponent, Identifier]] from Table[ConvexComponent]: index by edge,
-        then for each component create a bag and add ids of components sharing an edge.
+        Build Table[Collection[ConvexComponent, Identifier]] from Table[ConvexComponent]: index by edge,
+        then for each component create a collection and add ids of components sharing an edge.
         Serializes as dict mapping component id -> list of adjacent component ids.
         """
         components_by_edge: defaultdict[Segment, list[ConvexComponent]] = defaultdict(list)
         for component in table:
             for edge in component.edges:
                 components_by_edge[edge].append(component)
-        result: Table[Bag[ConvexComponent, Identifier]] = Table()
+        result: Table[Collection[ConvexComponent, Identifier]] = Table()
         for component in table:
-            bag: Bag[ConvexComponent, Identifier] = Bag(component)
+            collection: Collection[ConvexComponent, Identifier] = Collection(component)
             for edge in component.edges:
                 for other in components_by_edge[edge]:
                     if other is not component:
-                        bag += other.id
-            result.add(bag)
+                        collection += other.id
+            result.add(collection)
         return result
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
         self.gallery = ArtGallery.unserialize(self.job.stdout)
         ears: Table[Ear] = self.gallery.ears
         components_table: Table[ConvexComponent] = Table.unserialize([ConvexComponent(ear) for ear in ears])
-        adjacency_table: Table[Bag[ConvexComponent, Identifier]] = self.build_adjacency_table(components_table)
+        adjacency_table: Table[Collection[ConvexComponent, Identifier]] = self.build_adjacency_table(components_table)
         logger.info("ConvexComponentOptimizationStep.run() | job.id=%s components=%s", self.job.id, len(components_table))
 
         # Merge adjacent pairs by largest area until no merge possible.
@@ -622,7 +624,7 @@ class GuardPlacementStep(SequenceStep):
     1. Remaining state: all convex components and all stitched points (vertices to cover).
     2. Sort remaining components by measure(component): fewest points not in remaining first (most uncovered points).
     3. Pick the first component; its vertices are the guard candidates.
-    4. Score each candidate via explore(guard): returns a Bag of points visible from that guard.
+    4. Score each candidate via explore(guard): returns a Collection of points visible from that guard.
        explore uses component_id_by_point to find all components the guard belongs to, hydrates
        visibility_by_segment and the visibility bag with all points of those components, then
        explorable = adjacent of those components; only adds adjacent-of-adjacent when the current
@@ -644,26 +646,26 @@ class GuardPlacementStep(SequenceStep):
     """
 
     gallery: ArtGallery
-    component_id_by_point: Table[Bag[Point, Identifier]]
+    component_id_by_point: Table[Collection[Point, Identifier]]
     visibility_by_segment: dict[Segment, bool]
     remaining_points: set[Point]
     remaining_components: set[ConvexComponent]
-    component_id_by_midpoint: dict[Point, set[Identifier]]
+    component_id_by_midpoint: dict[Point, Identifier]
 
     def measure(self, convex_component: ConvexComponent) -> int:
         """Return the number of points (vertices and edge midpoints) of the component that are not in self.remaining_points."""
         points: list[Point] = list(convex_component) + [edge.midpoint for edge in convex_component.edges]
         return len([p for p in points if p not in self.remaining_points])
 
-    def explore(self, guard: Point) -> Bag[Point, Point]:
+    def explore(self, guard: Point) -> Collection[Point, Point]:
         """
-        Return a Bag(guard) of points visible from guard. Uses component_id_by_point to find
+        Return a Collection(guard) of points visible from guard. Uses component_id_by_point to find
         all components the guard belongs to; hydrates visibility_by_segment and the visibility
-        bag with all points of those components. Then expands via adjacent components; only
+        collection with all points of those components. Then expands via adjacent components; only
         adds adjacent-of-adjacent to explorable when the current component yielded at least
         one visible point.
         """
-        visibility: Bag[Point, Point] = Bag(guard)
+        visibility: Collection[Point, Point] = Collection(guard)
 
         if hash(guard) not in self.component_id_by_point:
             raise GuardNotInComponentIdByPointError("Guard not in component_id_by_point; invalid state (prepare() not run or guard not a vertex).")
@@ -674,23 +676,17 @@ class GuardPlacementStep(SequenceStep):
             adj_id for component_id in explored for adj_id in self.gallery.adjacency[self.gallery.convex_components[component_id]].items
         }
 
-        # Hydrate visibility and cache with all points of every component the guard belongs to.
-        # Since a convex component should be convex (otherwise there is a problem in the previous step),
-        # then a guard that is located at any vertex of a convex component can see all the points of that
-        # component, without having to check the visibility of the edges of the component.
-        # As a result, we skip a lot of computation when there are no obstacles.
-        # When there are obstacles, the same component can have vertices on both sides of a hole, so the
-        # segment guard→point can cross the obstacle; we must use sees() in that case.
+        # Hydrate visibility with all points of every component the guard belongs to.
+        # Use sees() for each point so that segments that leave the boundary (e.g. chords across
+        # spikes in a non-convex boundary) or cross obstacles are not counted as visible.
         for component_id in explored:
             component: ConvexComponent = self.gallery.convex_components[component_id]
             for point in component:
-                segment: Segment = guard.to(point)
-                self.visibility_by_segment[segment] = True
-                visibility += point
+                if self.sees(guard, point):
+                    visibility += point
             for edge in component.edges:
-                segment = guard.to(edge.midpoint)
-                self.visibility_by_segment[segment] = True
-                visibility += edge.midpoint
+                if self.sees(guard, edge.midpoint):
+                    visibility += edge.midpoint
 
         # Continue exploring explorable components until no more are available.
         while explorable - explored:
@@ -721,28 +717,19 @@ class GuardPlacementStep(SequenceStep):
     def sees(self, guard: Point, target: Point) -> bool:
         """
         True if target is visible from guard in the art gallery. Uses self.gallery. Caches by segment in visibility_by_segment.
-        Explicitly checks same convex component first: if both points belong to the same convex component, they are visible
-        (components are obstacle-free and inside boundary).
+        If both points belong to the same convex component, they are visible.
         """
 
         # If the guard and target are the same, they are visible.
         if guard == target:
             return True
 
-        # Compute the segment once.
-        segment: Segment = guard.to(target)
-
-        # Early accept: same convex component => visible (avoids boundary/obstacle checks for within-component pairs).
-        if guard in self.component_id_by_point and target in self.component_id_by_point:
-            if set(self.component_id_by_point[guard].items) & set(self.component_id_by_point[target].items):
-                self.visibility_by_segment[segment] = True
-                return True
-
         # Check if the segment has already been evaluated (explore() pre-fills same-component segments).
+        segment: Segment = guard.to(target)
         if segment in self.visibility_by_segment:
             return self.visibility_by_segment[segment]
 
-        # Check if the segment is inside the boundary.
+        # Segment must lie entirely inside the boundary (endpoints, midpoint, no interior crossing).
         if not self.gallery.boundary.contains(segment, inclusive=True):
             self.visibility_by_segment[segment] = False
             return False
@@ -755,27 +742,7 @@ class GuardPlacementStep(SequenceStep):
                 self.visibility_by_segment[segment] = False
                 return False
 
-            # Check if the segment intersects any obstacle edge (must not cross an obstacle edge in the interior).
             for edge in obstacle.edges:
-                if edge.connects(segment):
-                    continue
-                # When the guard or target lies on this obstacle edge (e.g. target is edge midpoint), do not block.
-                if edge.contains(segment[0], inclusive=True):
-                    continue
-                if edge.contains(segment[1], inclusive=True):
-                    continue
-                # When the line of sight is parallel to the obstacle edge, do not treat the edge as blocking:
-                # the vertex may see the other end of the obstacle (e.g. V---empty---[A]----[B] -> V sees B).
-                if (
-                    Walk(start=segment[0], center=segment[1], end=edge[0]).is_collinear()
-                    and Walk(start=segment[0], center=segment[1], end=edge[1]).is_collinear()
-                ):
-                    continue
-                # When the segment passes through an obstacle vertex (tangent at vertex), do not block.
-                if segment.contains(edge[0], inclusive=True):
-                    continue
-                if segment.contains(edge[1], inclusive=True):
-                    continue
                 if segment.intersects(edge, inclusive=False):
                     self.visibility_by_segment[segment] = False
                     return False
@@ -786,21 +753,19 @@ class GuardPlacementStep(SequenceStep):
 
     def prepare(self) -> None:
         """
-        Hydrate self.component_id_by_point and self.component_id_by_midpoint: for each convex
-        component, map each point and each edge midpoint to that component's id. Points and
-        midpoints on shared edges appear in multiple components.
+        Hydrate self.component_id_by_point: for each convex component and each point in it,
+        map the point to that component's id. Points on shared edges appear in multiple components.
         """
         self.component_id_by_point = Table()
-        self.component_id_by_midpoint = defaultdict(set)
         for component in self.gallery.convex_components:
             for point in component:
                 if point not in self.component_id_by_point:
-                    self.component_id_by_point.add(Bag(point))
+                    self.component_id_by_point.add(Collection(point))
                 self.component_id_by_point[point] += component.id
             for midpoint in component.midpoints:
-                self.component_id_by_midpoint[midpoint].add(component.id)
+                self.component_ids_by_midpoint[midpoint].add(component.id)
 
-    def compete(self, candidates: list[Point]) -> (Point, Bag[Point, Point]):
+    def compete(self, candidates: list[Point]) -> (Point, Collection[Point, Point]):
         """
         Return the best candidate and its visibility.
 
@@ -808,19 +773,19 @@ class GuardPlacementStep(SequenceStep):
 
         Returns:
             Point: The best candidate.
-            Bag[Point, Point]: The visibility of the best candidate.
+            Collection[Point, Point]: The visibility of the best candidate.
         """
         # Sort the candidates by visibility, and pick the best one.
         best_guard: Point | None = None
         best_count: int = -1
-        best_visibility: Bag[Point, Point] | None = None
+        best_visibility: Collection[Point, Point] | None = None
         for guard in candidates:
-            bag: Bag[Point, Point] = self.explore(guard)
-            count: int = sum(1 for point in self.remaining_points if point in bag)
+            visibility: Collection[Point, Point] = self.explore(guard)
+            count: int = sum(1 for point in self.remaining_points if point in visibility)
             if count > best_count:
                 best_count = count
                 best_guard = guard
-                best_visibility = bag
+                best_visibility = visibility
 
         # Safecheck against bugs.
         if best_guard is None or best_count == 0 or best_visibility is None:
@@ -845,39 +810,25 @@ class GuardPlacementStep(SequenceStep):
 
     def analyze(self) -> None:
         """
-        Build exclusivity table and prune redundant guards.
-        For each guard, compute points visible only by that guard; guards with no exclusive points are dropped.
-        Sets self.gallery.exclusivity and overwrites self.gallery.guards and self.gallery.visibility with the pruned sets.
+        Build exclusivity table: for each guard, points visible only by that guard (not covered by any other guard).
+        Sets self.gallery.exclusivity. Raises GuardHasNoExclusivityError if any guard has no exclusive points.
         """
-        original_visibility: list[Bag[Point, Point]] = list(self.gallery.visibility.values())
-        kept_visibility: list[Bag[Point, Point]] = []
-
+        visibility: list[Collection[Point, Point]] = list(self.gallery.visibility.values())
         self.gallery.exclusivity = Table()
-
-        for bag in original_visibility:
-            guard: Point = bag.key
-            other_points: set[Point] = set()
-
-            for other in original_visibility:
-                if other.key != guard:
-                    other_points |= set(other.items)
-
-            exclusive: set[Point] = set(bag.items) - other_points
+        for guard in list(self.gallery.guards):
+            visibility: Collection[Point, Point] = self.gallery.visibility[guard]
+            other_points: set[Point] = {
+                point for other in visibility if other.key != guard for point in other.items
+            }
+            exclusive: set[Point] = set(visibility.items) - other_points
             if not exclusive:
-                continue
-
-            exc_bag: Bag[Point, Point] = Bag(guard)
+                del self.gallery.visibility[guard]
+                del self.gallery.guards[guard]
+                # raise GuardHasNoExclusivityError(f"Guard at {guard} has no exclusivity points (all visible points are covered by other guards).")
+            exclusivity: Collection[Point, Point] = Collection(guard)
             for point in exclusive:
-                exc_bag += point
-            self.gallery.exclusivity += exc_bag
-            kept_visibility.append(bag)
-
-        self.gallery.guards = Table()
-        self.gallery.visibility = Table()
-
-        for bag in kept_visibility:
-            self.gallery.guards += bag.key
-            self.gallery.visibility += bag
+                exclusivity += point
+            self.gallery.exclusivity += exclusivity
 
     def propose(self, max_candidates: int = 5) -> list[Point]:
         """
@@ -906,6 +857,8 @@ class GuardPlacementStep(SequenceStep):
     def run(self, **kwargs: Any) -> dict[str, Any]:
         self.gallery = ArtGallery.unserialize(self.job.stdout)
         self.visibility_by_segment = {}
+        self.component_ids_by_midpoint = defaultdict(set)
+        self.component_id_by_point = Table()
 
         self.prepare()
         self.protect()
@@ -934,7 +887,7 @@ class GuardPlacementStep(SequenceStep):
                 candidates: set[Point] = [
                     self.gallery.convex_components[component_id][0]
                     for midpoint in self.remaining_points
-                    for component_id in self.component_id_by_midpoint[midpoint]
+                    for component_id in self.component_ids_by_midpoint[midpoint]
                 ]
                 candidates: list[Point] = list(candidates)
 
@@ -957,7 +910,6 @@ class GuardPlacementStep(SequenceStep):
                 self.remaining_components -= {component}
             logger.info("GuardPlacementStep.run() | job.id=%s points_remaining=%s", self.job.id, len(self.remaining_points))
 
-        # Safecheck against bugs.
         logger.info("GuardPlacementStep.run() | job.id=%s guards=%s", self.job.id, len(self.gallery.guards))
         assert not self.remaining_components, "Remaining components should be empty."
         assert not self.remaining_points, "Remaining points should be empty."

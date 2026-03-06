@@ -17,43 +17,43 @@ from attributes import Email
 from models import Job
 from models import User
 from steps import ConvexComponentOptimizationStep
-from structs import Bag
+from structs import Collection
 from structs import Table
 
 
-class TestAdjacencyBag:
-    """Test Table[Bag[ConvexComponent, Identifier]] (adjacency) and build_adjacency_table."""
+class TestAdjacencyCollection:
+    """Test Table[Collection[ConvexComponent, Identifier]] (adjacency) and build_adjacency_table."""
 
-    def test_bag_init_and_add(self):
+    def test_collection_init_and_add(self):
         c = ConvexComponent([Point([0, 0]), Point([1, 0]), Point([0.5, 1])])
-        bag: Bag[ConvexComponent, int] = Bag(c)
-        assert bag.key is c
-        assert len(bag) == 0
-        assert list(bag) == []
+        collection: Collection[ConvexComponent, int] = Collection(c)
+        assert collection.key is c
+        assert len(collection) == 0
+        assert list(collection) == []
 
-    def test_bag_hash_equals_key_hash(self):
+    def test_collection_hash_equals_key_hash(self):
         c = ConvexComponent([Point([0, 0]), Point([1, 0]), Point([0.5, 1])])
-        bag = Bag(c)
-        assert hash(bag) == hash(c)
+        collection = Collection(c)
+        assert hash(collection) == hash(c)
 
-    def test_bag_iadd_adds_hash(self):
+    def test_collection_iadd_adds_hash(self):
         c = ConvexComponent([Point([0, 0]), Point([1, 0]), Point([0.5, 1])])
         d = ConvexComponent([Point([1, 0]), Point([2, 0]), Point([1.5, 1])])
-        bag = Bag(c)
-        bag += hash(d)
-        assert len(bag) == 1
-        assert hash(d) in bag.items
-        bag += hash(d)  # idempotent
-        assert len(bag) == 1
+        collection = Collection(c)
+        collection += hash(d)
+        assert len(collection) == 1
+        assert hash(d) in collection.items
+        collection += hash(d)  # idempotent
+        assert len(collection) == 1
 
-    def test_bag_contains(self):
+    def test_collection_contains(self):
         c = ConvexComponent([Point([0, 0]), Point([1, 0]), Point([0.5, 1])])
-        bag = Bag(c)
-        bag.items.add(42)
-        bag.items.add(17)
-        assert 42 in bag
-        assert 17 in bag
-        assert bag.serialize() == [17, 42]
+        collection = Collection(c)
+        collection.items.add(42)
+        collection.items.add(17)
+        assert 42 in collection
+        assert 17 in collection
+        assert collection.serialize() == [17, 42]
 
     def test_build_adjacency_table(self):
         left = ConvexComponent([Point([0, 0]), Point([1, 0]), Point([0.5, 1])])

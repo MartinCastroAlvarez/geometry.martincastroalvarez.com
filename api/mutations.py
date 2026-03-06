@@ -277,6 +277,15 @@ class ReprocessingJobMutation(PrivateControllerMixin, Mutation):
             raise JobNotFoundError("Job not found")
         if not (job.is_finished() or job.is_failed()):
             raise JobNotReprocessableError("Job can only be reprocessed when status is success or failed")
+        # Delete associated art gallery (if any) so reprocess produces a fresh pipeline; re-publish if needed after completion.
+        gallery_id = gallery_id_from_job_and_user(job_id, self.user.email)
+        gallery_repo = ArtGalleryRepository()
+        if gallery_repo.exists(gallery_id):
+            gallery = gallery_repo.get(gallery_id)
+            gallery_index = ArtGalleryPublicIndex()
+            gallery_index.delete(Identifier(Countdown.from_timestamp(gallery.created_at)))
+            gallery_repo.delete(gallery_id)
+            logger.info("ReprocessingJobMutation.execute() | deleted gallery_id=%s for job_id=%s", gallery_id, job_id)
         job.start(clear_outputs=True)
         repo.save(job)
         queue.put(Message(action=Action.START, job_id=job.id, user_email=self.user.email))

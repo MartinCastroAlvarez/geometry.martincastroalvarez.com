@@ -12,7 +12,7 @@ Countdown, Identifier, Email, Url, Title, Path, Origin, Limit, Offset,
 Slug, Signature, ReceiptHandle. Each enforces format and raises
 ValidationError (or a specific exception) on invalid input. Geometry types
 (Point, Polygon, Segment, etc.) live in the geometry package. Data
-structures (Sequence, Table, Bag) live in structs. Use these types in
+structures (Sequence, Table, Collection) live in structs. Use these types in
 request/response validation and in domain models.
 
 Examples:

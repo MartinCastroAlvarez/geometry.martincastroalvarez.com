@@ -223,7 +223,16 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[Serialized
             if not self.contains(obj[1], inclusive=inclusive):
                 return False
 
-            # If the segment crosses any boundary edge in the interior, it's not contained.
+            # Midpoint must be inside (or on boundary) for the segment to be contained.
+            # This captures the case of an edge that connects one vertex to another one,
+            # but fully on the outside.
+            # Please note that if there is no need to check more points of the segument,
+            # because the orientation test covers that, and this is only dealing with the
+            # edge case mentioned above.
+            if not self.contains(obj.midpoint, inclusive=inclusive):
+                return False
+
+            # Only proper crossing (interior intersection) invalidates; skip edges that share an endpoint.
             for edge in self.edges:
                 if edge.connects(obj):
                     continue
@@ -533,6 +542,8 @@ class Polygon(Sequence[Point], Volume, Spatial, Bounded, Serializable[Serialized
                     continue  # adjacent edges share a vertex
                 edge_i: Segment = edges[i]
                 edge_j: Segment = edges[j]
-                if edge_i.intersects(edge_j, inclusive=True) and not edge_i.connects(edge_j):
+                if edge_i.connects(edge_j):
+                    continue
+                if edge_i.intersects(edge_j, inclusive=True):
                     return False
         return True

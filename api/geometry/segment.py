@@ -158,12 +158,7 @@ class Segment(list, Spatial, Bounded, Serializable[SerializedSegment]):
         d: Point = obj[1]
 
         # Bounding-box rejection
-        if (
-            max(a.x, b.x) < min(c.x, d.x)
-            or max(c.x, d.x) < min(a.x, b.x)
-            or max(a.y, b.y) < min(c.y, d.y)
-            or max(c.y, d.y) < min(a.y, b.y)
-        ):
+        if max(a.x, b.x) < min(c.x, d.x) or max(c.x, d.x) < min(a.x, b.x) or max(a.y, b.y) < min(c.y, d.y) or max(c.y, d.y) < min(a.y, b.y):
             return False
 
         w1 = Walk(start=a, center=b, end=c)

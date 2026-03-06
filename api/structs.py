@@ -1,5 +1,5 @@
 """
-Data structures: Sequence[T], Table[T], Bag[K,T].
+Data structures: Sequence[T], Table[T], Collection[K,T].
 
 Title
 -----
@@ -12,23 +12,23 @@ with modular slicing (wrap-around), shift, add/sub/and/invert, and
 canonical hash; used by Polygon and geometry. Table[T] is a dict-like
 keyed by hash(item), with add/pop and Serializable[dict]; used for
 obstacles, ears, convex_components, guards, visibility in ArtGallery.
-Bag[K,T] is a key plus set of items (set-like: +=, -=, __iter__, __len__, __contains__).
-Use Table[Bag[K,T]] for a table of bags. Both support serialize/unserialize for S3 and API.
+Collection[K,T] is a key plus set of items (set-like: +=, -=, __iter__, __len__, __contains__).
+Use Table[Collection[K,T]] for a table of collections. Both support serialize/unserialize for S3 and API.
 
 Examples:
->>> from structs import Sequence, Table, Bag
+>>> from structs import Sequence, Table, Collection
 >>> seq = Sequence([p0, p1, p2])
 >>> seq[1:4]  # wrap-around slice
 Sequence([p1, p2, p0])
 >>> table = Table().add(ear1).add(ear2)
 >>> table[ear1] is ear1
 True
->>> bag = Bag("key")
->>> bag += 1
->>> bag += 2
->>> len(bag)
+>>> collection = Collection("key")
+>>> collection += 1
+>>> collection += 2
+>>> len(collection)
 2
->>> table.add(bag)
+>>> table.add(collection)
 >>> len(table)
 3
 """
@@ -851,52 +851,52 @@ class Table(dict[int, Any], Generic[T], Serializable[dict[str, Any]]):
         return result
 
 
-class Bag(Generic[K, T], Serializable[list[Any]]):
+class Collection(Generic[K, T], Serializable[list[Any]]):
     """
     A key (e.g. component or guard) and a set of items. Set-like over the items: +=, -=, __iter__, __len__, __contains__.
-    __hash__ is the key's hash so Table[Bag] keys match the key type's table.
+    __hash__ is the key's hash so Table[Collection] keys match the key type's table.
 
     Context
     -------
-    Use Table[Bag[K,T]] for a table of bags keyed by K. Items are stored in a set; no duplicates.
+    Use Table[Collection[K,T]] for a table of collections keyed by K. Items are stored in a set; no duplicates.
     Supports serialize/unserialize for S3 and API (sorted by hash).
 
     Examples
     --------
-    >>> from structs import Bag, Table
-    >>> bag = Bag("key")
-    >>> bag += 1
-    >>> bag += 2
-    >>> len(bag)
+    >>> from structs import Collection, Table
+    >>> collection = Collection("key")
+    >>> collection += 1
+    >>> collection += 2
+    >>> len(collection)
     2
-    >>> 1 in bag
+    >>> 1 in collection
     True
-    >>> bag -= 1
-    >>> len(bag)
+    >>> collection -= 1
+    >>> len(collection)
     1
-    >>> bag.serialize()
+    >>> collection.serialize()
     [2]
-    >>> table = Table().add(bag)
+    >>> table = Table().add(collection)
     >>> len(table)
     1
     """
 
     def __init__(self, key: K, items: set[T] | None = None) -> None:
         """
-        Create an empty bag with the given key.
+        Create an empty collection with the given key.
 
         Context
         -------
-        The key identifies the bag (e.g. component id, guard id); hash(bag) == hash(key)
-        so that Table[Bag] lookup works by key.
+        The key identifies the collection (e.g. component id, guard id); hash(collection) == hash(key)
+        so that Table[Collection] lookup works by key.
 
         Examples
         --------
-        >>> from structs import Bag
-        >>> bag = Bag("guard_1")
-        >>> len(bag)
+        >>> from structs import Collection
+        >>> collection = Collection("guard_1")
+        >>> len(collection)
         0
-        >>> hash(bag) == hash("guard_1")
+        >>> hash(collection) == hash("guard_1")
         True
         """
         self.key: K = key
@@ -904,23 +904,23 @@ class Bag(Generic[K, T], Serializable[list[Any]]):
 
     def __hash__(self) -> int:
         """
-        Hash of the bag's key (so Table[Bag] keys match the key type).
+        Hash of the collection's key (so Table[Collection] keys match the key type).
 
         Context
         -------
-        Two bags with the same key hash equal; used for Table lookup and deduplication.
+        Two collections with the same key hash equal; used for Table lookup and deduplication.
 
         Examples
         --------
-        >>> from structs import Bag
-        >>> hash(Bag("k")) == hash("k")
+        >>> from structs import Collection
+        >>> hash(Collection("k")) == hash("k")
         True
         """
         return hash(self.key)
 
     def __iter__(self) -> Iterator[T]:
         """
-        Iterate over the items in the bag.
+        Iterate over the items in the collection.
 
         Context
         -------
@@ -928,73 +928,73 @@ class Bag(Generic[K, T], Serializable[list[Any]]):
 
         Examples
         --------
-        >>> from structs import Bag
-        >>> bag = Bag("k"); bag += 1; bag += 2
-        >>> set(bag)
+        >>> from structs import Collection
+        >>> collection = Collection("k"); collection += 1; collection += 2
+        >>> set(collection)
         {1, 2}
         """
         return iter(self.items)
 
     def __len__(self) -> int:
         """
-        Number of items in the bag.
+        Number of items in the collection.
 
         Context
         -------
-        Same as len(bag.items); duplicate adds do not increase length.
+        Same as len(collection.items); duplicate adds do not increase length.
 
         Examples
         --------
-        >>> from structs import Bag
-        >>> bag = Bag("k"); bag += 1; bag += 2
-        >>> len(bag)
+        >>> from structs import Collection
+        >>> collection = Collection("k"); collection += 1; collection += 2
+        >>> len(collection)
         2
         """
         return len(self.items)
 
     def __contains__(self, item: object) -> bool:
         """
-        True if item is in the bag.
+        True if item is in the collection.
 
         Context
         -------
-        Set membership; used for "item in bag" checks.
+        Set membership; used for "item in collection" checks.
 
         Examples
         --------
-        >>> from structs import Bag
-        >>> bag = Bag("k"); bag += 1
-        >>> 1 in bag
+        >>> from structs import Collection
+        >>> collection = Collection("k"); collection += 1
+        >>> 1 in collection
         True
-        >>> 2 in bag
+        >>> 2 in collection
         False
         """
         return item in self.items
 
-    def __and__(self, other: Bag[K, T]) -> set[T]:
+    def __and__(self, other: Collection[K, T]) -> set[T]:
         """
-        Return the intersection of this bag's items and the other bag's items.
+        Return the intersection of this collection's items and the other collection's items.
 
         Context
         -------
-        Enables ``bag1 & bag2`` to test whether two bags share any items; the result
-        is a set, so ``bool(bag1 & bag2)`` is True when the intersection is non-empty.
+        Enables ``collection1 & collection2`` to test whether two collections share any items; the result
+        is a set, so ``bool(collection1 & collection2)`` is True when the intersection is non-empty.
 
         Examples
         --------
-        >>> from structs import Bag
-        >>> a = Bag("x"); a += 1; a += 2
-        >>> b = Bag("y"); b += 2; b += 3
+        >>> from structs import Collection
+        >>> a = Collection("x"); a += 1; a += 2
+        >>> b = Collection("y"); b += 2; b += 3
         >>> a & b
         {2}
         >>> bool(a & b)
         True
         """
-        if not isinstance(other, Bag):
+        if not isinstance(other, Collection):
             return NotImplemented
         return self.items & other.items
 
-    def __iadd__(self, other: T) -> Bag[K, T]:
+    def __iadd__(self, other: T) -> Collection[K, T]:
         """
         Add an item. No-op if already present.
 
@@ -1004,17 +1004,17 @@ class Bag(Generic[K, T], Serializable[list[Any]]):
 
         Examples
         --------
-        >>> from structs import Bag
-        >>> bag = Bag("k")
-        >>> bag += 1
-        >>> bag += 1
-        >>> len(bag)
+        >>> from structs import Collection
+        >>> collection = Collection("k")
+        >>> collection += 1
+        >>> collection += 1
+        >>> len(collection)
         1
         """
         self.items.add(other)
         return self
 
-    def __isub__(self, other: T) -> Bag[K, T]:
+    def __isub__(self, other: T) -> Collection[K, T]:
         """
         Remove an item. No-op if not present.
 
@@ -1024,13 +1024,13 @@ class Bag(Generic[K, T], Serializable[list[Any]]):
 
         Examples
         --------
-        >>> from structs import Bag
-        >>> bag = Bag("k"); bag += 1; bag += 2
-        >>> bag -= 1
-        >>> 1 in bag
+        >>> from structs import Collection
+        >>> collection = Collection("k"); collection += 1; collection += 2
+        >>> collection -= 1
+        >>> 1 in collection
         False
-        >>> bag -= 99
-        >>> len(bag)
+        >>> collection -= 99
+        >>> len(collection)
         1
         """
         self.items.discard(other)
@@ -1042,31 +1042,31 @@ class Bag(Generic[K, T], Serializable[list[Any]]):
 
         Context
         -------
-        Items are sorted by hash for deterministic output; used for API/S3. Table[Bag[K,T]].serialize()
+        Items are sorted by hash for deterministic output; used for API/S3. Table[Collection[K,T]].serialize()
         gives dict key id -> list of item ids.
 
         Examples
         --------
-        >>> from structs import Bag
-        >>> bag = Bag("key"); bag += 1; bag += 2
-        >>> bag.serialize()
+        >>> from structs import Collection
+        >>> collection = Collection("key"); collection += 1; collection += 2
+        >>> collection.serialize()
         [1, 2]
         """
         return [item.serialize() if isinstance(item, Serializable) else hash(item) for item in sorted(self.items, key=hash)]
 
     @classmethod
-    def unserialize(cls, data: Any) -> Bag[K, T]:
+    def unserialize(cls, data: Any) -> Collection[K, T]:
         """
         Base implementation: key must be supplied by subclass. Override in subclasses (e.g. from_serialized(key, data)).
 
         Context
         -------
-        Bag.unserialize does not have a key in the wire format; subclasses that need to
-        reconstruct from (key, data) should override and call Bag(key) then += items.
+        Collection.unserialize does not have a key in the wire format; subclasses that need to
+        reconstruct from (key, data) should override and call Collection(key) then += items.
 
         Examples
         --------
-        Subclasses override: e.g. Component.from_serialized(key, data) builds Bag(key)
+        Subclasses override: e.g. Component.from_serialized(key, data) builds Collection(key)
         and extends it with unserialized items from data.
         """
-        raise NotImplementedError("Bag.unserialize requires key; use Bag(key) and += items")
+        raise NotImplementedError("Collection.unserialize requires key; use Collection(key) and += items")

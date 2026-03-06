@@ -707,3 +707,10 @@ class OnlyMidpointsRemainingError(ValidationError):
 
     def __init__(self, message: str = "Only midpoints are remaining"):
         super().__init__(message)
+
+
+class GuardExclusivityFailureError(ValidationError):
+    """A guard has no exclusivity points (all its visible points are covered by other guards)."""
+
+    def __init__(self, message: str = "A guard has no exclusivity points"):
+        super().__init__(message)

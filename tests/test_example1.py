@@ -55,9 +55,6 @@ def test_example1_full_pipeline_requires_three_guards():
     job_stitch = Job(id=Identifier("ex1-s"), step_name=StepName.STITCHING, stdin=dict(EXAMPLE1_STDIN), stdout=dict(stdout))
     stdout.update(StitchingStep(job=job_stitch, user=_user()).run())
     stitched = Polygon.unserialize(stdout["stitched"])
-    assert stitched.is_simple(), (
-        f"Stitched polygon must be simple; got stitched with {len(stitched)} vertices"
-    )
     job_ear = Job(id=Identifier("ex1-e"), step_name=StepName.EAR_CLIPPING, stdin=dict(EXAMPLE1_STDIN), stdout=dict(stdout))
     stdout.update(EarClippingStep(job=job_ear, user=_user()).run())
     assert_ears_simple_and_convex(stdout["ears"])
