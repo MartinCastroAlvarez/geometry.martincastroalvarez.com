@@ -31,6 +31,8 @@
   /* Grid overlay: background and line color (full rgba for use in inline style / linear-gradient) */
   --grid-bg: rgba(2, 6, 23, 0.2);
   --grid-line: rgba(255, 255, 255, 0.2);
+  /* Canvas (Editor/Viewer) background: distinct from page so the drawing area is visible (slate-800 in dark). */
+  --color-canvas-bg: 30 41 59;
   --body-gradient: linear-gradient(165deg, #0f172a 0%, #1e293b 35%, #1a1f2e 70%, #0f172a 100%);
 
   /* Slate scale (50–950) */
@@ -80,6 +82,7 @@
   --color-edge-stitched: 203 213 225;
   --grid-bg: rgba(248, 250, 252, 0.25);
   --grid-line: rgba(0, 0, 0, 0.2);
+  --color-canvas-bg: 226 232 240;
   --body-gradient: linear-gradient(165deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%);
   /* Slate, primary-10/50/400/500, danger-*, success-* unchanged; override above if needed */
 }

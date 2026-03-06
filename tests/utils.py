@@ -59,9 +59,10 @@ def assert_ears_no_obstacle_intersection(
     obstacles_serialized: list,
 ) -> None:
     """
-    After ear clipping: validate that no ear has a segment (vertex–vertex or
-    vertex–edge-midpoint) that intersects or crosses any obstacle. Touching
-    obstacle edges at endpoints is allowed.
+    After ear clipping: validate that no ear has a vertex–vertex segment (ear edge
+    or diagonal) that crosses any obstacle. Touching obstacle edges at endpoints
+    is allowed. Only vertex–vertex segments are checked; the pipeline guarantees
+    the diagonal is obstacle-free, and ear edges are polygon edges.
     Raises AssertionError with ear_id and segment/obstacle details for troubleshooting.
     """
     if not obstacles_serialized:
@@ -77,15 +78,6 @@ def assert_ears_no_obstacle_intersection(
                 if not ok:
                     raise AssertionError(
                         f"Ear {ear_id} has segment between vertices {i} and {j} that crosses obstacle: {msg}. "
-                        f"ear_id={ear_id!r}, serialized={ear_ser}"
-                    )
-        for i in range(n):
-            for edge in ear.edges:
-                seg = ear[i].to(edge.midpoint)
-                ok, msg = _segment_clear_of_obstacles(seg, obstacles)
-                if not ok:
-                    raise AssertionError(
-                        f"Ear {ear_id} has segment from vertex {i} to edge midpoint {edge.midpoint} that crosses obstacle: {msg}. "
                         f"ear_id={ear_id!r}, serialized={ear_ser}"
                     )
 

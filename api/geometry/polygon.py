@@ -56,12 +56,7 @@ PolygonLike: TypeAlias = Union["Polygon", SerializedPolygon, dict[str, Any]]
 
 def _segments_share_endpoint(a: Segment, b: Segment) -> bool:
     """True iff segments a and b share at least one endpoint."""
-    return (
-        a[0] == b[0]
-        or a[0] == b[1]
-        or a[1] == b[0]
-        or a[1] == b[1]
-    )
+    return a[0] == b[0] or a[0] == b[1] or a[1] == b[0] or a[1] == b[1]
 
 
 def _segments_intersect(a: Segment, b: Segment, *, inclusive: bool) -> bool:

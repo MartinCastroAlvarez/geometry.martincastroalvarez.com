@@ -280,16 +280,14 @@ class Job(Model):
         """
         return self.status == Status.SUCCESS
 
-    def start(self, *, clear_outputs: bool = False) -> None:
+    def start(self) -> None:
         """
-        Set status to PENDING and set started_at in meta for self.step_name. Does not save.
-        If clear_outputs is True (e.g. when reprocessing), also clear children_ids, stdout, and stderr.
+        Set status to PENDING, clear children_ids/stdout/stderr, and set started_at in meta for self.step_name. Does not save.
         """
         self.status = Status.PENDING
-        if clear_outputs:
-            self.children_ids = []
-            self.stdout.clear()
-            self.stderr.clear()
+        self.children_ids = []
+        self.stdout.clear()
+        self.stderr.clear()
         slug: str = self.step_name.slug
         self.meta[f"step:{slug}:started_at"] = Timestamp.now().to_iso()
 

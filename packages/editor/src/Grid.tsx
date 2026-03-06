@@ -1,7 +1,7 @@
 /**
- * Shared grid background for Editor and EditorSkeleton.
- * Background uses Tailwind slate classes (light: slate-200, dark: slate-900). Grid lines use
- * --grid-line from theme.css. size prop (default 18px).
+ * Shared grid background for Editor and Viewer.
+ * Solid background at full opacity (light: slate-200, dark: slate-900); grid lines at reduced
+ * opacity so the canvas has a visible background. size prop (default 18px).
  */
 
 /** Grid lines as linear gradients using theme variable for line color. */
@@ -15,7 +15,7 @@ export interface GridProps {
     height?: number;
     /** Grid cell size in pixels (default 18). */
     size?: number;
-    /** Grid opacity 0–100 (default 20). */
+    /** Grid line opacity 0–100 (default 20). Background is always full opacity. */
     opacity?: number;
 }
 
@@ -27,15 +27,25 @@ export const Grid = ({ width, height, size = DEFAULT_SIZE, opacity = DEFAULT_OPA
     if (typeof opacity === "number" && Number.isFinite(opacity) && opacity >= 0 && opacity <= 100) {
         resolvedOpacity = opacity;
     }
+    const sizeStyle = width != null && height != null ? { width, height, left: 0, top: 0 } : {};
     return (
         <div
-            className="bg-slate-200 dark:bg-slate-900 absolute inset-0 pointer-events-none z-0"
+            className="absolute inset-0 pointer-events-none z-0"
             style={{
-                backgroundImage: GRID_LINES,
-                backgroundSize: `${size}px ${size}px`,
-                opacity: resolvedOpacity / 100,
-                ...(width != null && height != null ? { width, height, left: 0, top: 0 } : {}),
+                ...sizeStyle,
+                background: "rgb(var(--color-canvas-bg))",
             }}
-        />
+        >
+            <div
+                aria-hidden
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                    backgroundImage: GRID_LINES,
+                    backgroundSize: `${size}px ${size}px`,
+                    opacity: resolvedOpacity / 100,
+                    ...sizeStyle,
+                }}
+            />
+        </div>
     );
 };

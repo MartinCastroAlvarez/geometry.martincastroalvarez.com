@@ -348,6 +348,7 @@ const ViewerInner = ({
                         width: "100%",
                         height: effectiveHeight,
                         minHeight: size,
+                        background: "rgb(var(--color-canvas-bg))",
                     }}
                 >
                     <Grid

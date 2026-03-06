@@ -248,7 +248,7 @@ class JobMutation(PrivateControllerMixin, Mutation):
 class ReprocessingJobMutation(PrivateControllerMixin, Mutation):
     """
     Reprocess an existing job: load by id, require status success or failed,
-    call job.start() (clear children/stdout/stderr, set pending), enqueue START.
+    call job.start() (clears children/stdout/stderr, sets pending), then save and enqueue START.
     Idempotent: yes (re-reprocess overwrites; same job runs again).
 
     For example, to reprocess a job:
@@ -286,7 +286,7 @@ class ReprocessingJobMutation(PrivateControllerMixin, Mutation):
             gallery_index.delete(Identifier(Countdown.from_timestamp(gallery.created_at)))
             gallery_repo.delete(gallery_id)
             logger.info("ReprocessingJobMutation.execute() | deleted gallery_id=%s for job_id=%s", gallery_id, job_id)
-        job.start(clear_outputs=True)
+        job.start()
         repo.save(job)
         queue.put(Message(action=Action.START, job_id=job.id, user_email=self.user.email))
         logger.info("ReprocessingJobMutation.execute() | reprocess job_id=%s user=%s", job.id, self.user.email)

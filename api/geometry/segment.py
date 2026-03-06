@@ -211,9 +211,7 @@ class Segment(list, Spatial, Bounded, Serializable[SerializedSegment]):
         to both segments. Sharing an endpoint or collinear overlap is not a cross.
         """
         if not isinstance(other, Segment):
-            raise NotImplementedError(
-                f"Segment.crosses only supports Segment, got {type(other).__name__}"
-            )
+            raise NotImplementedError(f"Segment.crosses only supports Segment, got {type(other).__name__}")
 
         if (
             max(self[0].x, self[1].x) < min(other[0].x, other[1].x)
@@ -244,10 +242,7 @@ class Segment(list, Spatial, Bounded, Serializable[SerializedSegment]):
         if collinearity1 and collinearity2 and collinearity3 and collinearity4:
             return False
 
-        return (
-            walk1.orientation != walk2.orientation
-            and walk3.orientation != walk4.orientation
-        )
+        return walk1.orientation != walk2.orientation and walk3.orientation != walk4.orientation
 
     def serialize(self) -> SerializedSegment:
         return [self[0].serialize(), self[1].serialize()]

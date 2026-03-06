@@ -476,6 +476,7 @@ export const Editor = ({
                         width: "100%",
                         height: effectiveHeight,
                         minHeight: height,
+                        background: "rgb(var(--color-canvas-bg))",
                     }}
                 >
                         <Grid

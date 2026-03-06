@@ -110,7 +110,7 @@ class TestJobLifecycle:
         assert "step:stitching:started_at" in job.meta
         assert "T" in job.meta["step:stitching:started_at"]
 
-    def test_start_clear_outputs_clears_children_stdout_stderr(self):
+    def test_start_clears_children_stdout_stderr(self):
         job = Job(
             id=Identifier("j1"),
             status=Status.SUCCESS,
@@ -119,7 +119,7 @@ class TestJobLifecycle:
             stdout={"key": "value"},
             stderr={"error": "msg"},
         )
-        job.start(clear_outputs=True)
+        job.start()
         assert job.status == Status.PENDING
         assert job.children_ids == []
         assert job.stdout == {}

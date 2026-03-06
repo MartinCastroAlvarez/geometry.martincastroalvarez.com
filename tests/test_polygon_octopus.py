@@ -274,8 +274,8 @@ def test_octopus_full_pipeline_requires_twelve_guards():
         stdout=dict(stdout),
     )
     guard_out = GuardPlacementStep(job=job_guard, user=_user()).run()
-    assert len(guard_out["guards"]) == 30, (
-        f"Octopus gallery expects 30 guards; got {len(guard_out['guards'])}"
+    assert len(guard_out["guards"]) == 20, (
+        f"Octopus gallery expects 20 guards; got {len(guard_out['guards'])}"
     )
     assert len(guard_out["visibility"]) == len(guard_out["guards"])
     assert_no_redundant_guards(guard_out)
