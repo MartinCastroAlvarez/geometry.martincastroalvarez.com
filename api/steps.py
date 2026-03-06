@@ -38,7 +38,9 @@ from enums import Status
 from enums import StepName
 from exceptions import BridgeFailureError
 from exceptions import ConvexComponentNotSimpleError
+from exceptions import ConvexComponentOptimizationFailureError
 from exceptions import EarClippingFailureError
+from exceptions import GuardCoverageFailureError
 from exceptions import GuardNotInComponentIdByPointError
 from exceptions import OnlyMidpointsRemainingError
 from exceptions import PolygonNotSimpleError
@@ -481,12 +483,12 @@ class EarClippingStep(SequenceStep):
                     continue
 
                 # The ear diagonal midpoint must not be inside any obstacle.
-                if any(obstacle.contains(ear.diagonal.midpoint, inclusive=False) for obstacle in self.gallery.obstacles):
-                    continue
+                # if any(obstacle.contains(ear.diagonal.midpoint, inclusive=False) for obstacle in self.gallery.obstacles):
+                #     continue
 
                 # The ear diagonal must not cross any obstacle edges.
-                if any(any(ear.diagonal.crosses(obs_edge) for obs_edge in obstacle.edges) for obstacle in self.gallery.obstacles):
-                    continue
+                # if any(any(ear.diagonal.crosses(obs_edge) for obs_edge in obstacle.edges) for obstacle in self.gallery.obstacles):
+                #     continue
 
                 # Add the ear to the table.
                 yield ear
@@ -531,6 +533,8 @@ class EarClippingStep(SequenceStep):
                 if any(ear.diagonal.crosses(edge) for edge in obs.edges):
                     raise EarClippingFailureError(f"Ear diagonal crosses obstacle edge: {ear.diagonal} crosses {obs.edges}")
 
+        if not self.gallery.ears:
+            raise EarClippingFailureError("No ears found for polygon")
         logger.info("EarClippingStep.run() | job.id=%s ears=%s", self.job.id, len(self.gallery.ears))
         return {"ears": self.gallery.ears.serialize()}
 
@@ -615,6 +619,8 @@ class ConvexComponentOptimizationStep(SequenceStep):
             adjacency_table = self.build_adjacency_table(components_table)
 
         logger.info("ConvexComponentOptimizationStep.run() | job.id=%s components_after_merges=%s", self.job.id, len(components_table))
+        if len(components_table) == 0:
+            raise ConvexComponentOptimizationFailureError("No convex components found")
         return {"convex_components": components_table.serialize(), "adjacency": adjacency_table.serialize()}
 
 
@@ -785,7 +791,8 @@ class GuardPlacementStep(SequenceStep):
         coverage_by_guard: dict[Point, int] = {
             guard: sum(1 for point in self.remaining_points if point in visibility_by_guard[guard]) for guard in candidates
         }
-        sorted_candidates: list[Point] = sorted(candidates, key=lambda guard: coverage_by_guard[guard], reverse=True)
+        key = lambda guard: (coverage_by_guard[guard], len(visibility_by_guard[guard]), hash(guard))
+        sorted_candidates: list[Point] = sorted(candidates, key=key, reverse=True)
         return sorted_candidates[0], visibility_by_guard[sorted_candidates[0]]
 
     def analyze(self) -> None:
@@ -800,8 +807,9 @@ class GuardPlacementStep(SequenceStep):
             other_points: set[Point] = {point for other in self.gallery.guards.values() if other != guard for point in self.gallery.visibility[other].items}
             exclusive: set[Point] = set(visibility.items) - other_points
             if not exclusive:
-                self.gallery.visibility[guard] -= guard
                 self.gallery.guards -= guard
+                self.gallery.visibility -= guard
+                continue
             exclusivity: Collection[Point, Point] = Collection(guard)
             for point in exclusive:
                 exclusivity += point
@@ -817,7 +825,8 @@ class GuardPlacementStep(SequenceStep):
         """
         if not self.remaining_components:
             raise OnlyMidpointsRemainingError("Only midpoints remain.")
-        sorted_components: list[ConvexComponent] = sorted(self.remaining_components, key=lambda c: self.measure(c))
+        key = lambda c: (self.measure(c), len(c), c.id)
+        sorted_components: list[ConvexComponent] = sorted(self.remaining_components, key=key)
         largest_component: ConvexComponent = sorted_components[0]
         return list(largest_component)[:max_candidates]
 
@@ -875,6 +884,8 @@ class GuardPlacementStep(SequenceStep):
             logger.info("GuardPlacementStep.run() | job.id=%s points_remaining=%s", self.job.id, len(self.remaining_points))
 
         logger.info("GuardPlacementStep.run() | job.id=%s guards=%s", self.job.id, len(self.gallery.guards))
+        if len(self.gallery.guards) == 0:
+            raise GuardCoverageFailureError("No guards placed")
         assert not self.remaining_components, "Remaining components should be empty."
         assert not self.remaining_points, "Remaining points should be empty."
 

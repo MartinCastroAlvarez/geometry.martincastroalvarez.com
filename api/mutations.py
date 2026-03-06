@@ -46,7 +46,6 @@ from exceptions import GalleryHasStitchesWithoutObstaclesError
 from exceptions import JobAlreadyExistsError
 from exceptions import JobNotFinishedToPublishError
 from exceptions import JobNotFoundError
-from exceptions import JobNotReprocessableError
 from exceptions import JobNotSuccessToUpdateError
 from exceptions import MetaKeysMustBeStringsError
 from exceptions import MetaMustBeDictError
@@ -247,9 +246,9 @@ class JobMutation(PrivateControllerMixin, Mutation):
 
 class ReprocessingJobMutation(PrivateControllerMixin, Mutation):
     """
-    Reprocess an existing job: load by id, require status success or failed,
-    delete associated gallery (if any), delete all children via JobDeleteMutation,
-    then job.start() (clears children/stdout/stderr, sets pending), save and enqueue START.
+    Reprocess an existing job: load by id (any status allowed), delete associated gallery (if any),
+    delete all children via JobDeleteMutation, then job.start() (clears children/stdout/stderr,
+    sets pending), save and enqueue START.
     Idempotent: yes (re-reprocess overwrites; same job runs again).
 
     For example, to reprocess a job:
@@ -276,8 +275,6 @@ class ReprocessingJobMutation(PrivateControllerMixin, Mutation):
             job = repo.get(job_id)
         except RecordNotFoundError:
             raise JobNotFoundError("Job not found")
-        if not (job.is_finished() or job.is_failed()):
-            raise JobNotReprocessableError("Job can only be reprocessed when status is success or failed")
 
         # Delete associated art gallery (if any) so reprocess produces a fresh pipeline; re-publish if needed after completion.
         gallery_id = gallery_id_from_job_and_user(job_id, self.user.email)

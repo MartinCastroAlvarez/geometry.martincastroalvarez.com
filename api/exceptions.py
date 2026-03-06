@@ -668,6 +668,15 @@ class EarClippingFailureError(GeometryException):
         super().__init__(message)
 
 
+class ConvexComponentOptimizationFailureError(GeometryException):
+    """Convex component optimization produced no convex components."""
+
+    code: http.HTTPStatus = http.HTTPStatus.BAD_REQUEST
+
+    def __init__(self, message: str = "No convex components found"):
+        super().__init__(message)
+
+
 class GuardCoverageFailureError(GeometryException):
     """Guards failed to cover all convex components or all perimeter points."""
 

@@ -181,10 +181,19 @@ class StartTask(Task):
     def execute(self, validated_input: TaskRequest) -> StartTaskResponse:
         self.job.start()
 
-        # If this job has a parent, inherit parent's stdout so the step has shared state (e.g. stitched, ears).
+        # If this job has a parent, inherit parent's stdout and all previous siblings' stdout
+        # so the step has the full pipeline state (e.g. ear_clipping needs stitched from stitching).
         if self.job.parent_id is not None:
             parent_job: Job = self.parent
             self.job.stdout.update(parent_job.stdout)
+            sibling_ids: list[Identifier] = list(parent_job.children_ids)
+            try:
+                my_idx: int = sibling_ids.index(self.job.id)
+            except ValueError:
+                my_idx = -1
+            for prev_idx in range(my_idx):
+                prev_job: Job = self.repository.get(sibling_ids[prev_idx])
+                self.job.stdout.update(prev_job.stdout)
 
         meta: dict[str, Any] = validated_input.get("meta") or {}
         try:

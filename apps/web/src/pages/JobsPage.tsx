@@ -51,32 +51,24 @@ const Cell = ({ job }: CellProps) => {
                 <Title left truncate>{title}</Title>
             </Container>
             <Container size={isMobile ? 12 : 6} right={!isMobile} center={isMobile}>
-                <Container size={12} left center>
-                    <Container size={6} left center>
-                        <div className="flex items-center gap-1.5">
-                            <CircleDotDashed size={16} className="shrink-0 text-slate-600 dark:text-slate-400" aria-hidden />
-                            <Title sm left>{stitchedPointsCount}</Title>
-                        </div>
-                    </Container>
-                    <Container size={6} left center>
-                        <div className="flex items-center gap-1.5">
-                            <UserStar size={20} className="shrink-0 text-slate-600 dark:text-slate-400" aria-hidden />
-                            {isSuccess ? (
-                                <Title sm left>{guardsCount}</Title>
-                            ) : (
-                                <Badge danger={displayStatus === Status.FAILED}>
-                                    {displayStatus === Status.FAILED ? (
-                                        <TriangleAlert size={16} aria-label={t(`jobs.status.${displayStatus}`)} />
-                                    ) : displayStatus === Status.PENDING ? (
-                                        <Clock size={16} aria-label={t(`jobs.status.${displayStatus}`)} />
-                                    ) : (
-                                        t(`jobs.status.${displayStatus}`)
-                                    )}
-                                </Badge>
-                            )}
-                        </div>
-                    </Container>
-                </Container>
+                <Title sm right={!isMobile} center={isMobile}>
+                    <span className={`inline-flex items-center gap-1.5 ${isMobile ? "justify-center" : "justify-end"}`}>
+                        <CircleDotDashed size={16} className="shrink-0 text-slate-600 dark:text-slate-400" aria-hidden />
+                        {stitchedPointsCount}
+                        <UserStar size={20} className="shrink-0 text-slate-600 dark:text-slate-400" aria-hidden />
+                        {isSuccess ? guardsCount : (
+                            <Badge danger={displayStatus === Status.FAILED}>
+                                {displayStatus === Status.FAILED ? (
+                                    <TriangleAlert size={16} aria-label={t(`jobs.status.${displayStatus}`)} />
+                                ) : displayStatus === Status.PENDING ? (
+                                    <Clock size={16} aria-label={t(`jobs.status.${displayStatus}`)} />
+                                ) : (
+                                    t(`jobs.status.${displayStatus}`)
+                                )}
+                            </Badge>
+                        )}
+                    </span>
+                </Title>
             </Container>
         </Container>
     );

@@ -305,14 +305,12 @@ export const JobPage = () => {
                                 {t("jobs.job.publish")}
                             </Button>
                         )}
-                        {(displayStatus === Status.SUCCESS || displayStatus === Status.FAILED) && (
-                            <Button
-                                onClick={handleReprocessClick}
-                                icon={<RefreshCw size={16} aria-hidden />}
-                                sm
-                                aria-label={t("jobs.job.reprocess")}
-                            />
-                        )}
+                        <Button
+                            onClick={handleReprocessClick}
+                            icon={<RefreshCw size={16} aria-hidden />}
+                            sm
+                            aria-label={t("jobs.job.reprocess")}
+                        />
                         {job!.artGallery != null && (
                             <Button
                                 onClick={handleEditClick}
