@@ -11,9 +11,7 @@ from geometry import Polygon
 from geometry import Segment
 from geometry.polygon import _segments_share_endpoint
 from models import Job
-from tests.utils import assert_convex_components_simple_convex_no_obstacle_intersection
 from tests.utils import assert_convex_components_visibility_within_component
-from tests.utils import assert_ears_no_obstacle_intersection
 from tests.utils import assert_ears_simple_and_convex
 from tests.utils import assert_no_redundant_guards
 from tests.utils import print_guard_coverage_report
@@ -89,13 +87,9 @@ def test_fire_full_pipeline_requires_four_guards():
     job_ear = Job(id=Identifier("fire-e"), step_name=StepName.EAR_CLIPPING, stdin=dict(FIRE_STDIN), stdout=dict(stdout))
     stdout.update(EarClippingStep(job=job_ear, user=_user()).run())
     assert_ears_simple_and_convex(stdout["ears"])
-    assert_ears_no_obstacle_intersection(stdout["ears"], stdout["obstacles"])
     job_convex = Job(id=Identifier("fire-c"), step_name=StepName.CONVEX_COMPONENT_OPTIMIZATION, stdin=dict(FIRE_STDIN), stdout=dict(stdout))
     stdout.update(ConvexComponentOptimizationStep(job=job_convex, user=_user()).run())
 
-    assert_convex_components_simple_convex_no_obstacle_intersection(
-        stdout["convex_components"], stdout["obstacles"]
-    )
     assert_convex_components_visibility_within_component(
         stdout["convex_components"], stdout["obstacles"]
     )

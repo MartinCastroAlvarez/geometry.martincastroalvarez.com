@@ -214,7 +214,6 @@ export const JobPage = () => {
             ? `${t("jobs.job.updated")} ${formatDistanceToNow(new Date(job!.updated_at), { addSuffix: true, locale: dateFnsLocale })}`
             : t("jobs.job.updated");
 
-    const hasError = Object.keys(job!.stderr ?? {}).length > 0;
     const displayStatus = getDisplayStatus(job!);
 
     return (
@@ -336,25 +335,25 @@ export const JobPage = () => {
             </Container>
             <Container padded spaced>
                 <Container size={12} spaced>
-                    <Container size={isMobile ? 12 : 4} left>
+                    <Container size={isMobile ? 12 : 3} left>
                         <Container left padded spaced>
                             <Title left>{t("jobs.job.input")}</Title>
                             <Inspector data={job!.stdin ?? {}} size={INSPECTOR_HEIGHT} />
                         </Container>
                     </Container>
-                    <Container size={hasError ? 0 : isMobile ? 12 : 4} left>
+                    <Container size={isMobile ? 12 : 3} left>
                         <Container left padded spaced>
                             <Title left>{t("jobs.job.output")}</Title>
                             <Inspector data={job!.stdout ?? {}} size={INSPECTOR_HEIGHT} />
                         </Container>
                     </Container>
-                    <Container size={hasError ? isMobile ? 12 : 4 : 0} left>
+                    <Container size={isMobile ? 12 : 3} left>
                         <Container left padded spaced>
                             <Title left>{t("jobs.job.error")}</Title>
                             <Inspector data={job!.stderr ?? {}} size={INSPECTOR_HEIGHT} />
                         </Container>
                     </Container>
-                    <Container size={isMobile ? 12 : 4} left>
+                    <Container size={isMobile ? 12 : 3} left>
                         <Container left padded spaced>
                             <Title left>{t("jobs.job.metadata")}</Title>
                             <Inspector data={job!.meta ?? {}} size={INSPECTOR_HEIGHT} />

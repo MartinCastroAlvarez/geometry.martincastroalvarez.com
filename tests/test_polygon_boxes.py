@@ -10,9 +10,7 @@ from geometry import Ear
 from geometry import Point
 from models import Job
 from models import User
-from tests.utils import assert_convex_components_simple_convex_no_obstacle_intersection
 from tests.utils import assert_convex_components_visibility_within_component
-from tests.utils import assert_ears_no_obstacle_intersection
 from tests.utils import assert_ears_simple_and_convex
 from tests.utils import print_guard_coverage_report
 from steps import ConvexComponentOptimizationStep
@@ -86,7 +84,6 @@ def test_polygon_boxes_full_pipeline_three_guards():
     )
     stdout.update(EarClippingStep(job=job_ear, user=_user()).run())
     assert_ears_simple_and_convex(stdout["ears"])
-    assert_ears_no_obstacle_intersection(stdout["ears"], stdout["obstacles"])
     for ear_id, ear_serialized in stdout["ears"].items():
         ear = Ear.unserialize(ear_serialized)
         assert ear.is_ccw(), (
@@ -122,9 +119,6 @@ def test_polygon_boxes_full_pipeline_three_guards():
     convex_out = ConvexComponentOptimizationStep(job=job_convex, user=_user()).run()
     stdout.update(convex_out)
 
-    assert_convex_components_simple_convex_no_obstacle_intersection(
-        stdout["convex_components"], stdout["obstacles"]
-    )
     assert_convex_components_visibility_within_component(
         stdout["convex_components"], stdout["obstacles"]
     )

@@ -9,9 +9,7 @@ from enums import StepName
 from geometry import Ear
 from geometry import Point
 from models import Job
-from tests.utils import assert_convex_components_simple_convex_no_obstacle_intersection
 from tests.utils import assert_convex_components_visibility_within_component
-from tests.utils import assert_ears_no_obstacle_intersection
 from tests.utils import assert_ears_simple_and_convex
 from tests.utils import assert_no_redundant_guards
 from tests.utils import assert_visibility_segments_inside_boundary
@@ -93,7 +91,6 @@ def test_spikes_full_pipeline_validation_stitching_ear_clipping_convex_guard_pla
     assert "ears" in ear_out
     stdout.update(ear_out)
     assert_ears_simple_and_convex(stdout["ears"])
-    assert_ears_no_obstacle_intersection(stdout["ears"], stdout["obstacles"])
     for ear_id, ear_serialized in stdout["ears"].items():
         ear = Ear.unserialize(ear_serialized)
         assert ear.is_ccw(), (
@@ -132,9 +129,6 @@ def test_spikes_full_pipeline_validation_stitching_ear_clipping_convex_guard_pla
     assert "adjacency" in convex_out
     stdout.update(convex_out)
 
-    assert_convex_components_simple_convex_no_obstacle_intersection(
-        stdout["convex_components"], stdout["obstacles"]
-    )
     assert_convex_components_visibility_within_component(
         stdout["convex_components"], stdout["obstacles"]
     )

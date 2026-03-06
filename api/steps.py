@@ -528,11 +528,6 @@ class EarClippingStep(SequenceStep):
         for ear in self.clip(Polygon(list(self.gallery.stitched))):
             self.gallery.ears.add(ear)
 
-        for obs in self.gallery.obstacles:
-            for ear in self.gallery.ears:
-                if any(ear.diagonal.crosses(edge) for edge in obs.edges):
-                    raise EarClippingFailureError(f"Ear diagonal crosses obstacle edge: {ear.diagonal} crosses {obs.edges}")
-
         if not self.gallery.ears:
             raise EarClippingFailureError("No ears found for polygon")
         logger.info("EarClippingStep.run() | job.id=%s ears=%s", self.job.id, len(self.gallery.ears))

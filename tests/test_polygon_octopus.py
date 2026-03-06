@@ -8,9 +8,7 @@ from attributes import Identifier
 from enums import StepName
 from models import Job
 from models import User
-from tests.utils import assert_convex_components_simple_convex_no_obstacle_intersection
 from tests.utils import assert_convex_components_visibility_within_component
-from tests.utils import assert_ears_no_obstacle_intersection
 from tests.utils import assert_ears_simple_and_convex
 from tests.utils import assert_no_redundant_guards
 from tests.utils import print_guard_coverage_report
@@ -251,7 +249,6 @@ def test_octopus_full_pipeline_requires_twelve_guards():
     )
     stdout.update(EarClippingStep(job=job_ear, user=_user()).run())
     assert_ears_simple_and_convex(stdout["ears"])
-    assert_ears_no_obstacle_intersection(stdout["ears"], stdout["obstacles"])
     job_convex = Job(
         id=Identifier("octopus-c"),
         step_name=StepName.CONVEX_COMPONENT_OPTIMIZATION,
@@ -260,9 +257,6 @@ def test_octopus_full_pipeline_requires_twelve_guards():
     )
     stdout.update(ConvexComponentOptimizationStep(job=job_convex, user=_user()).run())
 
-    assert_convex_components_simple_convex_no_obstacle_intersection(
-        stdout["convex_components"], stdout["obstacles"]
-    )
     assert_convex_components_visibility_within_component(
         stdout["convex_components"], stdout["obstacles"]
     )

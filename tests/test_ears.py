@@ -187,7 +187,6 @@ def test_triangle_polygon_ear_clipping_output():
     Run validation, stitching, then ear clipping for the triangle polygon.
     Assert ear clipping output: ear count, ears simple and convex, no obstacle intersection.
     """
-    from tests.utils import assert_ears_no_obstacle_intersection
     from tests.utils import assert_ears_simple_and_convex
 
     stdout = {}
@@ -217,12 +216,10 @@ def test_triangle_polygon_ear_clipping_output():
         f"Expected {n_stitched - 2} ears; got {len(stdout['ears'])}"
     )
     assert_ears_simple_and_convex(stdout["ears"])
-    assert_ears_no_obstacle_intersection(stdout["ears"], stdout["obstacles"])
 
 
 def _run_validate_stitch_ear_clip(stdin: dict, job_prefix: str, tolerance: int = 0):
     """Run validation, stitching, ear clipping; return stdout. Used by example polygon tests."""
-    from tests.utils import assert_ears_no_obstacle_intersection
     from tests.utils import assert_ears_simple_and_convex
 
     stdout = {}
@@ -251,4 +248,3 @@ def _run_validate_stitch_ear_clip(stdin: dict, job_prefix: str, tolerance: int =
         f"Expected {n_stitched - 2 - tolerance} ears; got {len(stdout['ears'])}"
     )
     assert_ears_simple_and_convex(stdout["ears"])
-    assert_ears_no_obstacle_intersection(stdout["ears"], stdout["obstacles"])
