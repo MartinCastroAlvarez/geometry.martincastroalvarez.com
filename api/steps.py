@@ -800,15 +800,14 @@ class GuardPlacementStep(SequenceStep):
             other_points: set[Point] = {point for other in self.gallery.guards.values() if other != guard for point in self.gallery.visibility[other].items}
             exclusive: set[Point] = set(visibility.items) - other_points
             if not exclusive:
-                del self.gallery.visibility[guard]
-                del self.gallery.guards[guard]
-                # raise GuardHasNoExclusivityError(f"Guard at {guard} has no exclusivity points (all visible points are covered by other guards).")
+                self.gallery.visibility[guard] -= guard
+                self.gallery.guards -= guard
             exclusivity: Collection[Point, Point] = Collection(guard)
             for point in exclusive:
                 exclusivity += point
             self.gallery.exclusivity += exclusivity
 
-    def propose(self, max_candidates: int = 5) -> list[Point]:
+    def propose(self, max_candidates: int = 10) -> list[Point]:
         """
         Return the candidates to compete.
         It reduces the number of explore() calls later in self.compete().
