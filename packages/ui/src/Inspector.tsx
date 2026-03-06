@@ -17,8 +17,8 @@ import { Scrollable } from "./Scrollable";
 import { Button } from "./Button";
 
 export interface InspectorProps {
-    /** JSON-serializable data to display (object or array). */
-    data: object;
+    /** JSON-serializable data to display (object or array). Null/undefined treated as {}. */
+    data: object | null | undefined;
     /** Max height of the JSON view container in pixels; overflow scrolls on the y-axis. Default 300. */
     size?: number;
     /** Max string length before collapsing in the JSON view (small payloads only). Default 25. */
@@ -37,8 +37,23 @@ const DEFAULT_DISPLAY_LIMIT = 50_000;
 const JSON_VIEW_THEME_LIGHT = "bright";
 const JSON_VIEW_THEME_DARK = "monokai";
 
-/** Data attribute for light-mode inspector; apps should add CSS so inner text uses theme color. */
+/** Data attribute for inspector panel; apps add CSS so inner elements use theme and panel background is visible. */
 export const INSPECTOR_LIGHT_ATTR = "data-inspector-light";
+export const INSPECTOR_CONTENT_ATTR = "data-inspector-content";
+
+function sanitizeForDisplay(raw: object | null | undefined): object {
+    const obj =
+        raw === null || raw === undefined
+            ? {}
+            : typeof raw === "object" && raw !== null
+              ? raw
+              : { value: raw };
+    try {
+        return JSON.parse(JSON.stringify(obj)) as object;
+    } catch {
+        return { "(unserializable)": "e.g. circular reference" };
+    }
+}
 
 export const Inspector: React.FC<InspectorProps> = ({
     data,
@@ -50,24 +65,33 @@ export const Inspector: React.FC<InspectorProps> = ({
     const { t } = useLocale();
     const isLight = theme === Theme.Light;
 
+    const safeData = useMemo(() => sanitizeForDisplay(data), [data]);
+
     const displayInfo = useMemo(() => {
         try {
-            const full = JSON.stringify(data, null, 2);
+            const full = JSON.stringify(safeData, null, 2);
             if (full.length <= displayLimit) return { large: false as const };
             return { large: true as const, displayText: full.slice(0, displayLimit) };
         } catch {
             return { large: false as const };
         }
-    }, [data, displayLimit]);
+    }, [safeData, displayLimit]);
 
     const copyFullJson = useCallback(() => {
         try {
-            const text = JSON.stringify(data, null, 2);
+            const text =
+                data != null && typeof data === "object"
+                    ? JSON.stringify(data, null, 2)
+                    : JSON.stringify(safeData, null, 2);
             void navigator.clipboard.writeText(text);
         } catch {
-            // no-op if copy or stringify fails
+            try {
+                void navigator.clipboard.writeText(JSON.stringify(safeData, null, 2));
+            } catch {
+                /* no-op */
+            }
         }
-    }, [data]);
+    }, [data, safeData]);
 
     const truncationSuffix = `\n\n... ${t("inspector.truncated")}`;
 
@@ -80,13 +104,14 @@ export const Inspector: React.FC<InspectorProps> = ({
             </div>
             <Scrollable height={size} left>
                 <div
-                    {...(isLight && {
-                        [INSPECTOR_LIGHT_ATTR]: "",
+                    {...{
+                        [INSPECTOR_CONTENT_ATTR]: "",
+                        ...(isLight && { [INSPECTOR_LIGHT_ATTR]: "" }),
                         style: {
+                            background: getColor("--color-inspector-bg"),
                             color: getColor("--color-text"),
-                            background: getColor("--color-bg")
-                        }
-                    })}
+                        },
+                    }}
                 >
                     {displayInfo.large ? (
                         <pre
@@ -103,7 +128,7 @@ export const Inspector: React.FC<InspectorProps> = ({
                         </pre>
                     ) : (
                         <ReactJson
-                            src={data}
+                            src={safeData}
                             name={false}
                             theme={isLight ? JSON_VIEW_THEME_LIGHT : JSON_VIEW_THEME_DARK}
                             indentWidth={2}

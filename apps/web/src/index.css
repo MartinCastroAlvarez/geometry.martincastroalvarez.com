@@ -75,9 +75,18 @@ body {
   display: none;
 }
 
-/* Light-mode Inspector: force theme colors; override react-json-view inline styles */
+/* Inspector panels (Input/Output/Metadata): visible background in both themes; override react-json-view */
+[data-inspector-content] {
+  background: rgb(var(--color-inspector-bg)) !important;
+  color: rgb(var(--color-text)) !important;
+}
+[data-inspector-content] * {
+  background: transparent !important;
+  color: rgb(var(--color-text)) !important;
+}
+/* Light-mode Inspector: legacy override when both attributes present */
 [data-theme="light"] [data-inspector-light] {
-  background: rgb(var(--color-bg)) !important;
+  background: rgb(var(--color-inspector-bg)) !important;
   color: rgb(var(--color-text)) !important;
 }
 [data-theme="light"] [data-inspector-light] * {

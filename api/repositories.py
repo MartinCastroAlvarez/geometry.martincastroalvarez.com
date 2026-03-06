@@ -41,6 +41,7 @@ from typing import cast
 from attributes import Identifier
 from attributes import Limit
 from attributes import Offset
+from attributes import Timestamp
 from data import Bucket
 from data import Page
 from exceptions import ConfigurationError
@@ -138,6 +139,7 @@ class Repository(Generic[T], ABC):
             raise ConfigurationError("MODEL is not set")
         if not isinstance(record, self.MODEL):
             raise ValidationError(f"Object must be a {self.MODEL.__name__}")
+        record.updated_at = Timestamp.now()
         key: str = f"{self.path}/{record.id}.json"
         bucket.save(key, record.serialize())
         logger.debug("Repository.save() | path=%s id=%s", self.path, record.id)

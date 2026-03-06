@@ -179,7 +179,10 @@ export const useReprocessJob = () => {
             console.log("[data] useReprocessJob response", data);
             return data;
         },
-        onSuccess: (_, jobId) => {
+        onSuccess: (data, jobId) => {
+            // Update cache immediately so the UI shows "pending" instead of stale "failed" until refetch
+            const job = toDomainJob(fromApiJob(data));
+            queryClient.setQueryData([...JOB_QUERY_KEY(jobId), token ?? ""], job);
             queryClient.invalidateQueries({ queryKey: JOB_QUERY_KEY(jobId) });
         },
     });
