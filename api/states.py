@@ -117,13 +117,13 @@ class ConvexComponentOptimizationStepState(State):
 class GuardPlacementStepState(State):
     """
     State for GuardPlacementStep. Has component_id_by_point, visibility_by_segment,
-    remaining_points, remaining_components, component_id_by_midpoint.
+    remaining_points, remaining_component_ids, component_id_by_midpoint.
     """
 
     component_id_by_point: dict[int, list[Identifier]]
     visibility_by_segment: dict[Segment, bool]
     remaining_points: set[Point]
-    remaining_components: set[Identifier]
+    remaining_component_ids: set[Identifier]
     component_id_by_midpoint: dict[Point, set[Identifier]]
 
     def __init__(
@@ -131,13 +131,13 @@ class GuardPlacementStepState(State):
         component_id_by_point: dict[int, list[Identifier]] | None = None,
         visibility_by_segment: dict[Segment, bool] | None = None,
         remaining_points: set[Point] | None = None,
-        remaining_components: set[Identifier] | None = None,
+        remaining_component_ids: set[Identifier] | None = None,
         component_id_by_midpoint: dict[Point, set[Identifier]] | None = None,
     ) -> None:
         self.component_id_by_point = component_id_by_point if component_id_by_point is not None else {}
         self.visibility_by_segment = visibility_by_segment if visibility_by_segment is not None else {}
         self.remaining_points = remaining_points if remaining_points is not None else set()
-        self.remaining_components = remaining_components if remaining_components is not None else set()
+        self.remaining_component_ids = remaining_component_ids if remaining_component_ids is not None else set()
         self.component_id_by_midpoint = component_id_by_midpoint if component_id_by_midpoint is not None else defaultdict(set)
 
     def serialize(self) -> dict[str, Any]:
@@ -145,7 +145,7 @@ class GuardPlacementStepState(State):
             "component_id_by_point": {str(k): [str(v) for v in vs] for k, vs in self.component_id_by_point.items()},
             "visibility_by_segment": {str(hash(k)): v for k, v in self.visibility_by_segment.items()},
             "remaining_points": [p.serialize() for p in self.remaining_points],
-            "remaining_components": [str(c) for c in self.remaining_components],
+            "remaining_component_ids": [str(c) for c in self.remaining_component_ids],
             "component_id_by_midpoint": {str(hash(k)): [str(v) for v in vs] for k, vs in self.component_id_by_midpoint.items()},
         }
 
@@ -157,8 +157,8 @@ class GuardPlacementStepState(State):
         remaining_points_raw = data.get("remaining_points") or []
         remaining_points = {Point.unserialize(p) for p in remaining_points_raw}
 
-        remaining_components_raw = data.get("remaining_components") or []
-        remaining_components = {Identifier(c) for c in remaining_components_raw}
+        remaining_component_ids_raw = data.get("remaining_component_ids") or []
+        remaining_component_ids = {Identifier(c) for c in remaining_component_ids_raw}
 
         component_id_by_midpoint: dict[Point, set[Identifier]] = defaultdict(set)
 
@@ -166,6 +166,6 @@ class GuardPlacementStepState(State):
             component_id_by_point=component_id_by_point,
             visibility_by_segment={},
             remaining_points=remaining_points,
-            remaining_components=remaining_components,
+            remaining_component_ids=remaining_component_ids,
             component_id_by_midpoint=component_id_by_midpoint,
         )

@@ -167,16 +167,28 @@ class Task(Controller):
         try:
             result: TaskResponse = self.execute(validated)
         except SuspendedStepError as err:
-            # Step suspended: persist its state and re-queue START; do not save job or broadcast.
             self.state = dict(err.state)
-            self.requeue()
-            logger.debug("Task continuation: saved state and re-queued job_id=%s", self.job.id)
-            return {"status": Status.PENDING, "job_id": self.job.id}
+            return self.suspend()
 
         # Execute completed normally: persist job and state, then broadcast (e.g. START next or REPORT parent).
         self.save()
         self.broadcast()
         return result
+
+    def suspend(self) -> TaskResponse:
+        """
+        Handle step suspension: requeue (or fail if at max attempts), and return the appropriate response.
+        Caller must set self.state from err.state before calling. Called from handler when execute() raises SuspendedStepError.
+        """
+        try:
+            self.requeue()
+            logger.debug("Task continuation: saved state and re-queued job_id=%s", self.job.id)
+            return {"status": Status.PENDING, "job_id": self.job.id}
+        except MaxTaskContinuationAttemptsError:
+            self.job.fail(MaxTaskContinuationAttemptsError("Max task continuation attempts reached"))
+            self.save()
+            logger.info("Task stopped: max continuation attempts job_id=%s", self.job.id)
+            return {"status": Status.FAILED, "job_id": self.job.id}
 
     def resume(self) -> None:
         """
@@ -205,17 +217,23 @@ class Task(Controller):
     def flush(self) -> None:
         """
         Persist step state with attempt incremented by one (Attempt(self.attempt + 1)); no queue.
-        requeue() calls this then puts the START message. Raises if attempt exceeds MAX_TASK_CONTINUATION_STEPS.
+        Updates job.meta with step:{step_name_slug}:attempt. requeue() calls this then save() then puts the START message.
+        Raises if attempt exceeds MAX_TASK_CONTINUATION_STEPS.
         """
-        job_state = JobState(id=self.job.id, data=dict(self.state), attempt=self.attempt + 1)
+        new_attempt: Attempt = self.attempt + 1
+        slug: str = self.job.step_name.slug
+        self.job.meta[f"step:{slug}:attempt"] = int(new_attempt)
+        self.attempt = new_attempt
+        job_state = JobState(id=self.job.id, data=dict(self.state), attempt=self.attempt)
         self.state_repository.save(job_state)
 
     def requeue(self) -> None:
         """
-        Persist step state with incremented attempt (flush) and enqueue START for this job so the next run continues.
+        Persist step state with incremented attempt (flush), save the job, and enqueue START for this job so the next run continues.
         Used only when SuspendedStepError is caught; the next handler invocation will resume() and load this state.
         """
         self.flush()
+        self.save()
         message = Message(action=Action.START, job_id=self.job.id, user_email=self.user.email)
         queue.put(message)
 

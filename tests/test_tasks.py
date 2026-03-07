@@ -5,15 +5,19 @@ from unittest.mock import patch
 
 import pytest
 
+from attributes import Attempt
 from attributes import Duration
 from attributes import Email
 from attributes import Identifier
 from enums import Action
 from enums import Status
 from enums import StepName
+from exceptions import MaxTaskContinuationAttemptsError
 from exceptions import RecordNotFoundError
 from exceptions import StepNotHandledError
+from exceptions import SuspendedStepError
 from models import Job
+from models import JobState
 from steps import Step
 from tasks import ReportTask
 from tasks import StartTask
@@ -49,6 +53,60 @@ class TestTaskHandler:
                 task.handler(body=None)
                 mock_validate.assert_called_once_with({})
                 mock_execute.assert_called_once()
+
+
+class TestTaskFlushRequeue:
+    """Test Task.flush() and Task.requeue() behavior."""
+
+    @patch("tasks.JobStateRepository")
+    @patch("tasks.JobsRepository")
+    def test_flush_updates_job_meta_attempt(self, mock_repo_cls, mock_state_repo_cls):
+        mock_repo = MagicMock()
+        mock_repo_cls.return_value = mock_repo
+        mock_state_repo = MagicMock()
+        mock_state_repo_cls.return_value = mock_state_repo
+        job = Job(
+            id=Identifier("j1"),
+            step_name=StepName.STITCHING,
+            status=Status.PENDING,
+            meta={},
+        )
+        task = StartTask()
+        task.user = MagicMock()
+        task.user.email = Email("u@e.com")
+        task.job = job
+        task.state = {"key": "value"}
+        task.attempt = Attempt(0)
+        task.flush()
+        assert job.meta["step:stitching:attempt"] == 1
+        call_args = mock_state_repo.save.call_args[0][0]
+        assert call_args.attempt == 1
+        assert call_args.data == {"key": "value"}
+
+    @patch("tasks.queue")
+    @patch("tasks.JobStateRepository")
+    @patch("tasks.JobsRepository")
+    def test_requeue_calls_save(self, mock_repo_cls, mock_state_repo_cls, mock_queue):
+        mock_repo = MagicMock()
+        mock_repo_cls.return_value = mock_repo
+        mock_state_repo = MagicMock()
+        mock_state_repo_cls.return_value = mock_state_repo
+        job = Job(
+            id=Identifier("j1"),
+            step_name=StepName.STITCHING,
+            status=Status.PENDING,
+            meta={},
+        )
+        task = StartTask()
+        task.user = MagicMock()
+        task.user.email = Email("u@e.com")
+        task.job = job
+        task.state = {}
+        task.attempt = Attempt(0)
+        task.requeue()
+        mock_repo.save.assert_called_once_with(job)
+        assert mock_state_repo.save.call_count >= 1
+        mock_queue.put.assert_called_once()
 
 
 class TestStartTask:
@@ -233,6 +291,69 @@ class TestStartTask:
         assert Action.START in actions
         start_msg = next(m for m in (put_calls[i][0][0] for i in range(len(put_calls))) if m.action == Action.START)
         assert start_msg.job_id == job.children_ids[0]
+
+    @patch("tasks.queue")
+    @patch("tasks.JobStateRepository")
+    @patch("tasks.JobsRepository")
+    def test_execute_suspended_step_requeues_and_saves_job(
+        self, mock_repo_cls, mock_state_repo_cls, mock_tasks_queue
+    ):
+        mock_repo = MagicMock()
+        mock_repo_cls.return_value = mock_repo
+        mock_state_repo_cls.return_value.get.side_effect = RecordNotFoundError("")
+        job = Job(
+            id=Identifier("j1"),
+            step_name=StepName.STITCHING,
+            status=Status.PENDING,
+            meta={},
+        )
+        mock_repo.get.return_value = job
+        task = StartTask()
+        req = {"job_id": Identifier("j1"), "user_email": Email("u@e.com")}
+        with patch.object(
+            StartTask,
+            "execute",
+            side_effect=SuspendedStepError("Step suspended", state={"resume": "data"}),
+        ):
+            result = task.handler(req)
+        assert result["status"] == Status.PENDING
+        assert result["job_id"] == job.id
+        mock_repo.save.assert_called_once_with(job)
+        assert job.meta.get("step:stitching:attempt") == 1
+        mock_tasks_queue.put.assert_called_once()
+
+    @patch("tasks.queue")
+    @patch("tasks.JobStateRepository")
+    @patch("tasks.JobsRepository")
+    def test_execute_suspended_step_at_max_attempts_fails_job_and_saves(
+        self, mock_repo_cls, mock_state_repo_cls, mock_tasks_queue
+    ):
+        mock_repo = MagicMock()
+        mock_repo_cls.return_value = mock_repo
+        job = Job(
+            id=Identifier("j1"),
+            step_name=StepName.STITCHING,
+            status=Status.PENDING,
+            meta={},
+        )
+        mock_repo.get.return_value = job
+        # resume() will load state with attempt=10 (max); requeue() -> flush() would do attempt+1 and raise
+        mock_state_repo_cls.return_value.get.return_value = JobState(
+            id=job.id, data={}, attempt=Attempt(10)
+        )
+        task = StartTask()
+        req = {"job_id": Identifier("j1"), "user_email": Email("u@e.com")}
+        with patch.object(
+            StartTask,
+            "execute",
+            side_effect=SuspendedStepError("Step suspended", state={"resume": "data"}),
+        ):
+            result = task.handler(req)
+        assert result["status"] == Status.FAILED
+        assert result["job_id"] == job.id
+        assert job.status == Status.FAILED
+        mock_repo.save.assert_called_once_with(job)
+        mock_tasks_queue.put.assert_not_called()
 
 
 class TestReportTask:

@@ -101,33 +101,33 @@ class TestGuardPlacementStepState:
         assert "component_id_by_point" in d
         assert "visibility_by_segment" in d
         assert "remaining_points" in d
-        assert "remaining_components" in d
+        assert "remaining_component_ids" in d
         assert "component_id_by_midpoint" in d
 
     def test_serialize_with_data(self):
         state = GuardPlacementStepState(
             component_id_by_point={123: [Identifier("c1")]},
             remaining_points={Point([0, 0])},
-            remaining_components={Identifier("c1")},
+            remaining_component_ids={Identifier("c1")},
         )
         d = state.serialize()
         assert "123" in d["component_id_by_point"]
         assert len(d["remaining_points"]) == 1
-        assert len(d["remaining_components"]) == 1
+        assert len(d["remaining_component_ids"]) == 1
 
     def test_unserialize(self):
         data = {
             "component_id_by_point": {"123": ["c1"]},
             "remaining_points": [[0, 0]],
-            "remaining_components": ["c1"],
+            "remaining_component_ids": ["c1"],
         }
         state = GuardPlacementStepState.unserialize(data)
         assert 123 in state.component_id_by_point
         assert len(state.remaining_points) == 1
-        assert len(state.remaining_components) == 1
+        assert len(state.remaining_component_ids) == 1
 
     def test_unserialize_empty(self):
         state = GuardPlacementStepState.unserialize({})
         assert state.component_id_by_point == {}
         assert state.remaining_points == set()
-        assert state.remaining_components == set()
+        assert state.remaining_component_ids == set()

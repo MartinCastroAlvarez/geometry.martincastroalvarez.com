@@ -62,6 +62,7 @@ from models import ArtGallery
 from models import Job
 from models import User
 from repositories import JobsRepository
+from settings import GUARD_PLACEMENT_MAX_SEES_PER_RUN
 from settings import STITCH_BUCKET_SIZE
 from states import ArtGalleryStepState
 from states import ConvexComponentOptimizationStepState
@@ -712,7 +713,7 @@ class GuardPlacementStep(SequenceStep):
         if state_arg == {}:
             self.prepare()
             self.state.remaining_points = set(self.gallery.coverage)
-            self.state.remaining_components = {c.id for c in self.gallery.convex_components}
+            self.state.remaining_component_ids = {c.id for c in self.gallery.convex_components}
 
     def init(self) -> None:
         pass
@@ -783,7 +784,11 @@ class GuardPlacementStep(SequenceStep):
         """
         True if target is visible from guard in the art gallery. Uses self.gallery. Caches by segment in visibility_by_segment.
         If both points belong to the same convex component, they are visible.
+        After GUARD_PLACEMENT_MAX_SEES_PER_RUN calls in this run, suspends so the task can be continued by another worker.
         """
+        self.work = getattr(self, "work", 0) + 1
+        if self.work >= GUARD_PLACEMENT_MAX_SEES_PER_RUN:
+            self.suspend()
 
         # If the guard and target are the same, they are visible.
         if guard == target:
@@ -881,21 +886,24 @@ class GuardPlacementStep(SequenceStep):
         Returns:
             list[Point]: The candidates to compete.
         """
-        if not self.state.remaining_components:
+        if not self.state.remaining_component_ids:
             raise OnlyMidpointsRemainingError("Only midpoints remain.")
         key = lambda c: (self.measure(c), len(c), c.id)
-        sorted_components: list[ConvexComponent] = sorted([self.gallery.convex_components[cid] for cid in self.state.remaining_components], key=key)
+        sorted_components: list[ConvexComponent] = sorted(
+            [self.gallery.convex_components[cid] for cid in self.state.remaining_component_ids], key=key
+        )
         largest_component: ConvexComponent = sorted_components[0]
         return list(largest_component)[:max_candidates]
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
         # Run until all points are covered.
+        self.work = 0
         while self.state.remaining_points:
             logger.debug(
                 "GuardPlacementStep.run() | job.id=%s points_remaining=%s components_remaining=%s",
                 self.job.id,
                 len(self.state.remaining_points),
-                len(self.state.remaining_components),
+                len(self.state.remaining_component_ids),
             )
 
             # Find the best candidates to compete.
@@ -910,6 +918,7 @@ class GuardPlacementStep(SequenceStep):
                     for component_id in self.state.component_id_by_midpoint[midpoint]
                 ]
                 candidates = list(candidates_list)
+                assert candidates, "Candidates are all monsters: f{self.remaining_points}"
 
             # Add the best guard and its visibility to the gallery.
             # Remove the component and the points from the remaining sets.
@@ -920,19 +929,19 @@ class GuardPlacementStep(SequenceStep):
             self.state.remaining_points -= set(best_visibility)
 
             # Remove any component fully covered by best_guard using best_visibility (avoids redundant sees() calls).
-            for cid in list(self.state.remaining_components):
+            for cid in list(self.state.remaining_component_ids):
                 component: ConvexComponent = self.gallery.convex_components[cid]
                 if any(point in self.state.remaining_points for point in component):
                     continue
                 if any(midpoint in self.state.remaining_points for midpoint in component.midpoints):
                     continue
-                self.state.remaining_components -= {cid}
+                self.state.remaining_component_ids -= {cid}
             logger.info("GuardPlacementStep.run() | job.id=%s points_remaining=%s", self.job.id, len(self.state.remaining_points))
 
         logger.info("GuardPlacementStep.run() | job.id=%s guards=%s", self.job.id, len(self.gallery.guards))
         if len(self.gallery.guards) == 0:
             raise GuardCoverageFailureError("No guards placed")
-        assert not self.state.remaining_components, "Remaining components should be empty."
+        assert not self.state.remaining_component_ids, "Remaining components should be empty."
         assert not self.state.remaining_points, "Remaining points should be empty."
 
         self.analyze()

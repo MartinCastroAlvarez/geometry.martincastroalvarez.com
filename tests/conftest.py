@@ -11,6 +11,9 @@ from unittest.mock import MagicMock
 os.environ.setdefault("DATA_BUCKET_NAME", "test-data-bucket")
 os.environ.setdefault("SECRETS_BUCKET_NAME", "test-secrets-bucket")
 
+# Guard placement: unit tests run to completion without suspending (patch to very large value)
+os.environ.setdefault("GUARD_PLACEMENT_MAX_SEES_PER_RUN", "999999999")
+
 # Allow api package to load without boto3/jwt (e.g. in local pytest without Lambda deps)
 if "boto3" not in sys.modules:
     sys.modules["boto3"] = MagicMock()

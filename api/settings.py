@@ -62,7 +62,10 @@ DEFAULT_ORIGIN: str = os.getenv("DEFAULT_ORIGIN") or "https://geometry.martincas
 STITCH_BUCKET_SIZE: int = int(os.getenv("STITCH_BUCKET_SIZE", "5"))
 
 # Task continuation: max number of times a step may re-queue (START same job_id) before failing.
-MAX_TASK_CONTINUATION_STEPS: int = int(os.getenv("MAX_TASK_CONTINUATION_STEPS", "10"))
+MAX_TASK_CONTINUATION_STEPS: int = int(os.getenv("MAX_TASK_CONTINUATION_STEPS", "300"))
+
+# Guard placement: max sees() calls per run before suspending (for worker handoff). Unit tests override to a large value.
+GUARD_PLACEMENT_MAX_SEES_PER_RUN: int = int(os.getenv("GUARD_PLACEMENT_MAX_SEES_PER_RUN", "5000"))
 
 # Anonymous and test user constants (used by User model)
 ANONYMOUS_EMAIL: str = "nobody@unknown.local"
