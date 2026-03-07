@@ -725,15 +725,15 @@ class GuardExclusivityFailureError(ValidationError):
         super().__init__(message)
 
 
-class StepContinuationError(GeometryException):
+class SuspendedStepError(GeometryException):
     """
-    Raised when a step must continue in another Lambda invocation.
-    The step provides its serialized state so the next run can resume.
+    Raised when a step suspends to continue in another Lambda invocation.
+    The step provides its serialized state so the next run can resume; tasks.py catches it and requeue()s.
     """
 
-    def __init__(self, message: str = "Step requires continuation", state: dict | None = None):
+    def __init__(self, message: str = "Step suspended", state: dict | None = None):
         if state is None:
-            raise ValueError("StepContinuationError requires state; cannot be None")
+            raise ValueError("SuspendedStepError requires state; cannot be None")
         super().__init__(message)
         self.state: dict = state
 

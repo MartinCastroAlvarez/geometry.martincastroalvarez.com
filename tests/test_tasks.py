@@ -32,12 +32,16 @@ class TestTaskResponse:
 class TestTaskHandler:
     """Test Task.handler default body."""
 
+    @patch.object(StartTask, "broadcast")
+    @patch("tasks.JobStateRepository")
     @patch("tasks.JobsRepository")
-    def test_handler_body_none_defaults_to_empty_dict(self, mock_repo_cls):
+    def test_handler_body_none_defaults_to_empty_dict(self, mock_repo_cls, mock_state_repo_cls, mock_broadcast):
         mock_repo = MagicMock()
         mock_repo_cls.return_value = mock_repo
+        mock_state_repo_cls.return_value.get.side_effect = RecordNotFoundError("")
         mock_job = MagicMock()
         mock_job.is_failed.return_value = False
+        mock_job.id = Identifier("j1")
         mock_repo.get.return_value = mock_job
         with patch.object(StartTask, "validate", return_value={"job_id": Identifier("j1"), "user_email": Email("u@e.com")}) as mock_validate:
             with patch.object(StartTask, "execute", return_value={"status": Status.SUCCESS, "job_id": Identifier("j1")}) as mock_execute:
@@ -72,10 +76,12 @@ class TestStartTask:
         mock_queue.put.assert_not_called()
 
     @patch("tasks.queue")
+    @patch("tasks.JobStateRepository")
     @patch("tasks.JobsRepository")
-    def test_execute_unknown_step_raises_step_not_handled(self, mock_repo_cls, mock_queue):
+    def test_execute_unknown_step_raises_step_not_handled(self, mock_repo_cls, mock_state_repo_cls, mock_queue):
         mock_repo = MagicMock()
         mock_repo_cls.return_value = mock_repo
+        mock_state_repo_cls.return_value.get.side_effect = RecordNotFoundError("")
         job = Job(
             id=Identifier("j1"),
             step_name=StepName.ART_GALLERY,
@@ -90,29 +96,37 @@ class TestStartTask:
             assert job.status == Status.FAILED
             assert "error:art-gallery:message" in job.stderr
 
-    @patch.object(StartTask, "broadcast")
     @patch("tasks.queue")
     @patch("tasks.JobStateRepository")
     @patch("tasks.JobsRepository")
     def test_execute_success_enqueues_report_for_non_art_gallery_step(
-        self, mock_repo_cls, mock_state_repo_cls, mock_tasks_queue, mock_broadcast
+        self, mock_repo_cls, mock_state_repo_cls, mock_tasks_queue
     ):
         mock_repo = MagicMock()
         mock_repo_cls.return_value = mock_repo
         mock_state_repo_cls.return_value.get.side_effect = RecordNotFoundError("")
+        parent_id = Identifier("parent-1")
         job = Job(
             id=Identifier("j1"),
             step_name=StepName.STITCHING,
             stdin={"boundary": [[0, 0], [10, 0], [10, 10], [0, 10]], "obstacles": []},
             stdout={},
             children_ids=[],
+            parent_id=parent_id,
+        )
+        parent_job = Job(
+            id=parent_id,
+            step_name=StepName.ART_GALLERY,
+            stdin={},
+            stdout={},
+            children_ids=[job.id],
             parent_id=None,
         )
-        mock_repo.get.return_value = job
+        mock_repo.get.side_effect = lambda id: parent_job if id == parent_id else job
         task = StartTask()
         req = {"job_id": Identifier("j1"), "user_email": Email("u@e.com")}
         result = task.handler(req)
-        # Job stays PENDING until ReportTask runs; execute completed successfully and enqueued report.
+        # Job stays PENDING until ReportTask runs; execute completed successfully; handler calls save() and broadcast() (report).
         assert result["status"] == Status.PENDING
         started_at_key = "step:stitching:started_at"
         assert started_at_key in job.meta
@@ -121,16 +135,16 @@ class TestStartTask:
         mock_tasks_queue.put.assert_called()
         mock_repo.save.assert_called_once()
 
-    @patch.object(StartTask, "broadcast")
     @patch("tasks.queue")
     @patch("tasks.JobStateRepository")
     @patch("tasks.JobsRepository")
     def test_execute_step_with_empty_stdout_returns_pending(
-        self, mock_repo_cls, mock_state_repo_cls, mock_tasks_queue, mock_broadcast
+        self, mock_repo_cls, mock_state_repo_cls, mock_tasks_queue
     ):
         mock_repo = MagicMock()
         mock_repo_cls.return_value = mock_repo
         mock_state_repo_cls.return_value.get.side_effect = RecordNotFoundError("")
+        parent_id = Identifier("parent-1")
         # job.start() clears stdout before step runs, so StitchingStep gets an empty stdout
         # and runs successfully with 0 boundary points (no exception raised).
         job = Job(
@@ -139,24 +153,31 @@ class TestStartTask:
             stdin={},
             stdout={"boundary": 123, "obstacles": []},
             children_ids=[],
+            parent_id=parent_id,
+        )
+        parent_job = Job(
+            id=parent_id,
+            step_name=StepName.ART_GALLERY,
+            stdin={},
+            stdout={},
+            children_ids=[job.id],
             parent_id=None,
         )
-        mock_repo.get.return_value = job
+        mock_repo.get.side_effect = lambda id: parent_job if id == parent_id else job
         task = StartTask()
         req = {"job_id": Identifier("j1"), "user_email": Email("u@e.com")}
         result = task.handler(req)
-        # stdout is cleared by job.start(), so no exception is raised
+        # stdout is cleared by job.start(), so no exception is raised; handler calls save() and broadcast().
         assert result["status"] == Status.PENDING
         mock_repo.save.assert_called_once()
         mock_tasks_queue.put.assert_called()
 
-    @patch.object(StartTask, "broadcast")
     @patch("tasks.queue")
     @patch("tasks.JobStateRepository")
     @patch("tasks.JobsRepository")
     @patch("tasks.Step")
     def test_execute_step_raises_marks_job_failed_and_saves_stderr(
-        self, mock_step_cls, mock_repo_cls, mock_state_repo_cls, mock_tasks_queue, mock_broadcast
+        self, mock_step_cls, mock_repo_cls, mock_state_repo_cls, mock_tasks_queue
     ):
         mock_repo = MagicMock()
         mock_repo_cls.return_value = mock_repo
@@ -181,7 +202,8 @@ class TestStartTask:
         assert job.status == Status.FAILED
         assert "error:stitching" in str(job.stderr)
         mock_repo.save.assert_called_once()
-        mock_tasks_queue.put.assert_called()
+        # When job is failed, broadcast() returns without enqueuing; no put expected.
+        mock_tasks_queue.put.assert_not_called()
 
     @patch("tasks.queue")
     @patch("tasks.JobStateRepository")

@@ -47,6 +47,7 @@ from exceptions import PolygonNotSimpleError
 from exceptions import PolygonsDoNotShareEdgeError
 from exceptions import StepNotHandledError
 from exceptions import StitchWinnerSubsequenceError
+from exceptions import SuspendedStepError
 from exceptions import ValidationError
 from exceptions import ValidationObstacleNotContainedError
 from geometry import Point
@@ -89,6 +90,13 @@ class Step(ABC):
         self.job: Job = job
         self.user: User = user
         self.state: State = self.STATE_CLASS.unserialize(state)
+        if state == {}:
+            self.init()
+
+    @abstractmethod
+    def init(self) -> None:
+        """Initialize step state when starting fresh (state was empty). Subclasses must implement."""
+        raise NotImplementedError
 
     @cached_property
     def repository(self) -> JobsRepository:
@@ -120,6 +128,13 @@ class Step(ABC):
         if cls is None:
             raise StepNotHandledError(f"Step cannot be handled: {step_name.slug}")
         return cls
+
+    def suspend(self) -> None:
+        """
+        Raise SuspendedStepError with current step state so the task handler can requeue().
+        The exception carries self.state.serialize() so tasks.py dumps the state to the repository.
+        """
+        raise SuspendedStepError("Step suspended", state=self.state.serialize())
 
     @abstractmethod
     def run(self, **kwargs: Any) -> dict[str, Any]:
@@ -177,6 +192,9 @@ class ArtGalleryStep(CoordinatorStep):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.gallery: ArtGallery = ArtGallery.unserialize(self.job.stdin)
+
+    def init(self) -> None:
+        pass
 
     def spawn(self) -> None:
         """
@@ -242,6 +260,9 @@ class ValidationPolygonStep(SequenceStep):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.gallery: ArtGallery = ArtGallery.unserialize(self.job.stdin)
+
+    def init(self) -> None:
+        pass
 
     def validate_simplicity(self) -> None:
         """
@@ -325,11 +346,17 @@ class StitchingStep(SequenceStep):
     """
 
     STATE_CLASS: Type[State] = StitchingStepState
-    points: Polygon
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.gallery: ArtGallery = ArtGallery.unserialize(self.job.stdout)
+        state_arg: dict = args[2] if len(args) > 2 else kwargs.get("state", {})
+        if state_arg == {}:
+            self.gallery.stitched = Polygon([])
+            self.gallery.stitches = []
+
+    def init(self) -> None:
+        self.state.points = []
 
     def sort(self) -> None:
         """Sort obstacles in place by rightmost vertex (x, y) descending for bridge order."""
@@ -338,13 +365,12 @@ class StitchingStep(SequenceStep):
         self.gallery.obstacles = Table.unserialize(obstacles)
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
-        obstacles = list(self.gallery.obstacles)
 
         # No obstacles: stitched result is the boundary; no bridge edges added.
-        if not obstacles:
-            self.points = self.gallery.boundary
+        if not len(self.gallery.obstacles):
+            self.state.points = list(self.gallery.boundary)
             logger.info("StitchingStep.run() | job.id=%s boundary_points=%s", self.job.id, len(self.gallery.boundary))
-            return {"stitched": self.points.serialize(), "stitches": []}
+            return {"stitched": Polygon(self.state.points).serialize(), "stitches": []}
 
         # Sort obstacles by rightmost vertex (desc) and init working polygon and its edges.
         self.sort()
@@ -441,9 +467,9 @@ class StitchingStep(SequenceStep):
             stitches.append(bridge)
 
         assert stitched.is_ccw(), f"Stitched polygon is not CCW: {stitched}"
-        self.points = stitched
-        logger.info("StitchingStep.run() | job.id=%s stitched_points=%s bridge_edges=%s", self.job.id, len(self.points), len(stitches))
-        return {"stitched": self.points.serialize(), "stitches": [stitch.serialize() for stitch in stitches]}
+        self.state.points = list(stitched)
+        logger.info("StitchingStep.run() | job.id=%s stitched_points=%s bridge_edges=%s", self.job.id, len(self.state.points), len(stitches))
+        return {"stitched": Polygon(self.state.points).serialize(), "stitches": [stitch.serialize() for stitch in stitches]}
 
 
 class EarClippingStep(SequenceStep):
@@ -462,6 +488,12 @@ class EarClippingStep(SequenceStep):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.gallery: ArtGallery = ArtGallery.unserialize(self.job.stdout)
+        state_arg: dict = args[2] if len(args) > 2 else kwargs.get("state", {})
+        if state_arg == {}:
+            self.gallery.ears = Table()
+
+    def init(self) -> None:
+        pass
 
     def clip(self, titanic: Polygon) -> Generator[Ear, None, None]:
         # Enforce global CCW once so ear detection, diagonal tests, and final merge are consistent.
@@ -538,7 +570,6 @@ class EarClippingStep(SequenceStep):
             yield ear
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
-        self.gallery.ears = Table()
         for ear in self.clip(Polygon(list(self.gallery.stitched))):
             self.gallery.ears.add(ear)
 
@@ -566,6 +597,12 @@ class ConvexComponentOptimizationStep(SequenceStep):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.gallery: ArtGallery = ArtGallery.unserialize(self.job.stdout)
+        state_arg: dict = args[2] if len(args) > 2 else kwargs.get("state", {})
+        if state_arg == {}:
+            self.gallery.convex_components = Table()
+
+    def init(self) -> None:
+        pass
 
     def build_adjacency_table(self, table: Table[ConvexComponent]) -> Table[Collection[ConvexComponent, Identifier]]:
         """
@@ -667,20 +704,23 @@ class GuardPlacementStep(SequenceStep):
     """
 
     STATE_CLASS: Type[State] = GuardPlacementStepState
-    component_id_by_point: Table[Collection[Point, Identifier]]
-    visibility_by_segment: dict[Segment, bool]
-    remaining_points: set[Point]
-    remaining_components: set[ConvexComponent]
-    component_id_by_midpoint: dict[Point, Identifier]
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.gallery: ArtGallery = ArtGallery.unserialize(self.job.stdout)
+        state_arg: dict = args[2] if len(args) > 2 else kwargs.get("state", {})
+        if state_arg == {}:
+            self.prepare()
+            self.state.remaining_points = set(self.gallery.coverage)
+            self.state.remaining_components = {c.id for c in self.gallery.convex_components}
+
+    def init(self) -> None:
+        pass
 
     def measure(self, convex_component: ConvexComponent) -> int:
-        """Return the number of points (vertices and edge midpoints) of the component that are not in self.remaining_points."""
+        """Return the number of points (vertices and edge midpoints) of the component that are not in remaining_points."""
         points: list[Point] = list(convex_component) + [edge.midpoint for edge in convex_component.edges]
-        return len([p for p in points if p not in self.remaining_points])
+        return len([p for p in points if p not in self.state.remaining_points])
 
     def explore(self, guard: Point) -> Collection[Point, Point]:
         """
@@ -692,11 +732,11 @@ class GuardPlacementStep(SequenceStep):
         """
         visibility: Collection[Point, Point] = Collection(guard)
 
-        if hash(guard) not in self.component_id_by_point:
+        if hash(guard) not in self.state.component_id_by_point:
             raise GuardNotInComponentIdByPointError("Guard not in component_id_by_point; invalid state (prepare() not run or guard not a vertex).")
 
         # Record the components that are already visible due to being a vertex of the guard's component.
-        explored: set[Identifier] = set(self.component_id_by_point[guard])
+        explored: set[Identifier] = set(self.state.component_id_by_point[hash(guard)])
         explorable: set[Identifier] = {
             adj_id for component_id in explored for adj_id in self.gallery.adjacency[self.gallery.convex_components[component_id]].items
         }
@@ -751,12 +791,12 @@ class GuardPlacementStep(SequenceStep):
 
         # Check if the segment has already been evaluated (explore() pre-fills same-component segments).
         segment: Segment = guard.to(target)
-        if segment in self.visibility_by_segment:
-            return self.visibility_by_segment[segment]
+        if segment in self.state.visibility_by_segment:
+            return self.state.visibility_by_segment[segment]
 
         # Segment must lie entirely inside the boundary (endpoints, midpoint, no interior crossing).
         if not self.gallery.boundary.contains(segment, inclusive=True):
-            self.visibility_by_segment[segment] = False
+            self.state.visibility_by_segment[segment] = False
             return False
 
         # Check if the segment intersects any obstacles (must not cross an obstacle edge in the interior).
@@ -764,32 +804,32 @@ class GuardPlacementStep(SequenceStep):
 
             # Exit early: segment is inside the obstacle.
             if obstacle.intersects(segment.midpoint, inclusive=False):
-                self.visibility_by_segment[segment] = False
+                self.state.visibility_by_segment[segment] = False
                 return False
 
             for edge in obstacle.edges:
                 if segment.crosses(edge):
-                    self.visibility_by_segment[segment] = False
+                    self.state.visibility_by_segment[segment] = False
                     return False
 
         # The segment is visible if no checks failed.
-        self.visibility_by_segment[segment] = True
+        self.state.visibility_by_segment[segment] = True
         return True
 
     def prepare(self) -> None:
         """
-        Hydrate self.component_id_by_point: for each convex component and each point in it,
-        map the point to that component's id. Points on shared edges appear in multiple components.
+        Hydrate state.component_id_by_point and state.component_id_by_midpoint: for each convex
+        component and each point in it, map the point to that component's id. Points on shared
+        edges appear in multiple components.
         """
         self.gallery.coverage = set(self.gallery.stitched)
-        self.component_id_by_point = Table()
+        self.state.component_id_by_point = {}
+        self.state.component_id_by_midpoint = defaultdict(set)
         for component in self.gallery.convex_components:
             for point in component:
-                if point not in self.component_id_by_point:
-                    self.component_id_by_point.add(Collection(point))
-                self.component_id_by_point[point] += component.id
+                self.state.component_id_by_point.setdefault(hash(point), []).append(component.id)
             for midpoint in component.midpoints:
-                self.component_ids_by_midpoint[midpoint].add(component.id)
+                self.state.component_id_by_midpoint[midpoint].add(component.id)
                 self.gallery.coverage.add(midpoint)
 
     def compete(self, candidates: list[Point]) -> (Point, Collection[Point, Point]):
@@ -805,7 +845,7 @@ class GuardPlacementStep(SequenceStep):
         assert len(candidates) > 0, f"GuardPlacementStep.compete() | job.id={self.job.id} candidates={candidates}"
         visibility_by_guard: dict[Point, Collection[Point, Point]] = {guard: self.explore(guard) for guard in candidates}
         coverage_by_guard: dict[Point, int] = {
-            guard: sum(1 for point in self.remaining_points if point in visibility_by_guard[guard]) for guard in candidates
+            guard: sum(1 for point in self.state.remaining_points if point in visibility_by_guard[guard]) for guard in candidates
         }
         key = lambda guard: (coverage_by_guard[guard], len(visibility_by_guard[guard]), hash(guard))
         sorted_candidates: list[Point] = sorted(candidates, key=key, reverse=True)
@@ -841,30 +881,21 @@ class GuardPlacementStep(SequenceStep):
         Returns:
             list[Point]: The candidates to compete.
         """
-        if not self.remaining_components:
+        if not self.state.remaining_components:
             raise OnlyMidpointsRemainingError("Only midpoints remain.")
         key = lambda c: (self.measure(c), len(c), c.id)
-        sorted_components: list[ConvexComponent] = sorted(self.remaining_components, key=key)
+        sorted_components: list[ConvexComponent] = sorted([self.gallery.convex_components[cid] for cid in self.state.remaining_components], key=key)
         largest_component: ConvexComponent = sorted_components[0]
         return list(largest_component)[:max_candidates]
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
-        self.visibility_by_segment = {}
-        self.component_ids_by_midpoint = defaultdict(set)
-        self.component_id_by_point = Table()
-
-        self.prepare()
-
-        self.remaining_points = set(self.gallery.coverage)
-        self.remaining_components = set(self.gallery.convex_components)
-
         # Run until all points are covered.
-        while self.remaining_points:
+        while self.state.remaining_points:
             logger.debug(
                 "GuardPlacementStep.run() | job.id=%s points_remaining=%s components_remaining=%s",
                 self.job.id,
-                len(self.remaining_points),
-                len(self.remaining_components),
+                len(self.state.remaining_points),
+                len(self.state.remaining_components),
             )
 
             # Find the best candidates to compete.
@@ -873,12 +904,12 @@ class GuardPlacementStep(SequenceStep):
             try:
                 candidates: list[Point] = self.propose()
             except OnlyMidpointsRemainingError:
-                candidates: set[Point] = [
+                candidates_list: list[Point] = [
                     self.gallery.convex_components[component_id][0]
-                    for midpoint in self.remaining_points
-                    for component_id in self.component_ids_by_midpoint[midpoint]
+                    for midpoint in self.state.remaining_points
+                    for component_id in self.state.component_id_by_midpoint[midpoint]
                 ]
-                candidates: list[Point] = list(candidates)
+                candidates = list(candidates_list)
 
             # Add the best guard and its visibility to the gallery.
             # Remove the component and the points from the remaining sets.
@@ -886,25 +917,23 @@ class GuardPlacementStep(SequenceStep):
             self.gallery.guards += best_guard
             self.gallery.visibility += best_visibility
             assert len(best_visibility) > 0, f"GuardPlacementStep.run() | job.id={self.job.id} best_visibility={best_visibility}"
-            self.remaining_points -= set(best_visibility)
+            self.state.remaining_points -= set(best_visibility)
 
             # Remove any component fully covered by best_guard using best_visibility (avoids redundant sees() calls).
-            # This should already include the best_component, but we'll be safe and remove it anyway.
-            # The guard was placed inside the `best_component`, so it is guaranteed to be covered by the best_visibility.
-            # However, we don't explicitely remove it here, just to make sure the following code works.
-            for component in list(self.remaining_components):
-                if any(point in self.remaining_points for point in component):
+            for cid in list(self.state.remaining_components):
+                component: ConvexComponent = self.gallery.convex_components[cid]
+                if any(point in self.state.remaining_points for point in component):
                     continue
-                if any(midpoint in self.remaining_points for midpoint in component.midpoints):
+                if any(midpoint in self.state.remaining_points for midpoint in component.midpoints):
                     continue
-                self.remaining_components -= {component}
-            logger.info("GuardPlacementStep.run() | job.id=%s points_remaining=%s", self.job.id, len(self.remaining_points))
+                self.state.remaining_components -= {cid}
+            logger.info("GuardPlacementStep.run() | job.id=%s points_remaining=%s", self.job.id, len(self.state.remaining_points))
 
         logger.info("GuardPlacementStep.run() | job.id=%s guards=%s", self.job.id, len(self.gallery.guards))
         if len(self.gallery.guards) == 0:
             raise GuardCoverageFailureError("No guards placed")
-        assert not self.remaining_components, "Remaining components should be empty."
-        assert not self.remaining_points, "Remaining points should be empty."
+        assert not self.state.remaining_components, "Remaining components should be empty."
+        assert not self.state.remaining_points, "Remaining points should be empty."
 
         self.analyze()
 

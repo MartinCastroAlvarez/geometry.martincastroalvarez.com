@@ -46,7 +46,7 @@ from exceptions import ParallelStepRequiresParentError
 from exceptions import RecordNotFoundError
 from exceptions import SequenceStepJobNotInSiblingsError
 from exceptions import SequenceStepRequiresParentError
-from exceptions import StepContinuationError
+from exceptions import SuspendedStepError
 from logger import get_logger
 from messages import Message
 from messages import Queue
@@ -166,8 +166,8 @@ class Task(Controller):
         # The job is pending and within attempt limit. Run the execute method.
         try:
             result: TaskResponse = self.execute(validated)
-        except StepContinuationError as err:
-            # Step asked to continue in another Lambda: persist its state and re-queue START; do not save job or broadcast.
+        except SuspendedStepError as err:
+            # Step suspended: persist its state and re-queue START; do not save job or broadcast.
             self.state = dict(err.state)
             self.requeue()
             logger.debug("Task continuation: saved state and re-queued job_id=%s", self.job.id)
@@ -213,7 +213,7 @@ class Task(Controller):
     def requeue(self) -> None:
         """
         Persist step state with incremented attempt (flush) and enqueue START for this job so the next run continues.
-        Used only when StepContinuationError is caught; the next handler invocation will resume() and load this state.
+        Used only when SuspendedStepError is caught; the next handler invocation will resume() and load this state.
         """
         self.flush()
         message = Message(action=Action.START, job_id=self.job.id, user_email=self.user.email)
@@ -285,8 +285,8 @@ class StartTask(Task):
             stdout: dict[str, Any] = step.run(**meta)
             self.job = step.job
             self.job.stdout.update(stdout)
-        except StepContinuationError as err:
-            self.state = dict(err.state)
+        except SuspendedStepError:
+            # If the step is suspended, let the supervisor handle it.
             raise
         except Exception as error:
             self.job.fail(error)
