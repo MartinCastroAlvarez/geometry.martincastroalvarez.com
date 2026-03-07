@@ -85,10 +85,10 @@ class Step(ABC):
 
     STATE_CLASS: Type[State] = State
 
-    def __init__(self, job: Job, user: User) -> None:
+    def __init__(self, job: Job, user: User, state: dict | None = None) -> None:
         self.job: Job = job
         self.user: User = user
-        self.state: State = self.STATE_CLASS.unserialize({})
+        self.state: State = self.STATE_CLASS.unserialize(state or {})
 
     @cached_property
     def repository(self) -> JobsRepository:
@@ -174,8 +174,8 @@ class ArtGalleryStep(CoordinatorStep):
 
     STATE_CLASS: Type[State] = ArtGalleryStepState
 
-    def __init__(self, job: Job, user: User) -> None:
-        super().__init__(job, user)
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.gallery: ArtGallery = ArtGallery.unserialize(self.job.stdin)
 
     def spawn(self) -> None:
@@ -239,8 +239,8 @@ class ValidationPolygonStep(SequenceStep):
 
     STATE_CLASS: Type[State] = ValidationPolygonStepState
 
-    def __init__(self, job: Job, user: User) -> None:
-        super().__init__(job, user)
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.gallery: ArtGallery = ArtGallery.unserialize(self.job.stdin)
 
     def validate_simplicity(self) -> None:
@@ -327,8 +327,8 @@ class StitchingStep(SequenceStep):
     STATE_CLASS: Type[State] = StitchingStepState
     points: Polygon
 
-    def __init__(self, job: Job, user: User) -> None:
-        super().__init__(job, user)
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.gallery: ArtGallery = ArtGallery.unserialize(self.job.stdout)
 
     def sort(self) -> None:
@@ -459,8 +459,8 @@ class EarClippingStep(SequenceStep):
 
     STATE_CLASS: Type[State] = EarClippingStepState
 
-    def __init__(self, job: Job, user: User) -> None:
-        super().__init__(job, user)
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.gallery: ArtGallery = ArtGallery.unserialize(self.job.stdout)
 
     def clip(self, titanic: Polygon) -> Generator[Ear, None, None]:
@@ -563,8 +563,8 @@ class ConvexComponentOptimizationStep(SequenceStep):
 
     STATE_CLASS: Type[State] = ConvexComponentOptimizationStepState
 
-    def __init__(self, job: Job, user: User) -> None:
-        super().__init__(job, user)
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.gallery: ArtGallery = ArtGallery.unserialize(self.job.stdout)
 
     def build_adjacency_table(self, table: Table[ConvexComponent]) -> Table[Collection[ConvexComponent, Identifier]]:
@@ -673,8 +673,8 @@ class GuardPlacementStep(SequenceStep):
     remaining_components: set[ConvexComponent]
     component_id_by_midpoint: dict[Point, Identifier]
 
-    def __init__(self, job: Job, user: User) -> None:
-        super().__init__(job, user)
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.gallery: ArtGallery = ArtGallery.unserialize(self.job.stdout)
 
     def measure(self, convex_component: ConvexComponent) -> int:

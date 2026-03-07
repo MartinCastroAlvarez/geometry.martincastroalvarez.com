@@ -34,11 +34,13 @@ from typing import Any
 from urllib.parse import ParseResult
 from urllib.parse import urlparse
 
+from exceptions import MaxTaskContinuationAttemptsError
 from exceptions import PathMissingResourceIdError
 from exceptions import ValidationError
 from settings import DEFAULT_ORIGIN
 from settings import DEFAULT_TITLE_MAX_LENGTH
 from settings import MAX_LIMIT
+from settings import MAX_TASK_CONTINUATION_STEPS
 from slugify import slugify
 
 
@@ -216,6 +218,26 @@ class Duration(int):
         delta_seconds: float = (finished_at.to_datetime() - started_at.to_datetime()).total_seconds()
         ms: int = int(round(delta_seconds * 1000))
         return cls(max(0, ms))
+
+
+class Attempt(int):
+    """
+    Non-negative integer attempt count for task continuation (0 = first run).
+    Must be >= 0 and <= settings.MAX_TASK_CONTINUATION_STEPS; otherwise raises MaxTaskContinuationAttemptsError.
+    """
+
+    def __new__(cls, value: Any) -> "Attempt":
+        if isinstance(value, Attempt):
+            return super().__new__(cls, int(value))
+        try:
+            raw: int = int(value)
+        except (TypeError, ValueError):
+            raise ValidationError("Attempt must be an integer")
+        if raw < 0:
+            raise ValidationError("Attempt must be >= 0")
+        if raw > MAX_TASK_CONTINUATION_STEPS:
+            raise MaxTaskContinuationAttemptsError(f"Attempt must be <= {MAX_TASK_CONTINUATION_STEPS} (max task continuation steps)")
+        return super().__new__(cls, raw)
 
 
 class Countdown(int):

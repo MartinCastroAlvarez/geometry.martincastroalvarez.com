@@ -57,7 +57,7 @@ def test_snake_full_pipeline_validation_stitching_ear_clipping_convex_guard_plac
         step_name=StepName.VALIDATE_POLYGONS,
         stdin=dict(SNAKE_STDIN),
     )
-    validation_out = ValidationPolygonStep(job=job_validate, user=_user()).run()
+    validation_out = ValidationPolygonStep(job=job_validate, user=_user(), state={}).run()
     assert "boundary" in validation_out
     assert "obstacles" in validation_out
     stdout.update(validation_out)
@@ -69,7 +69,7 @@ def test_snake_full_pipeline_validation_stitching_ear_clipping_convex_guard_plac
         stdin=dict(SNAKE_STDIN),
         stdout=dict(stdout),
     )
-    stitch_out = StitchingStep(job=job_stitch, user=_user()).run()
+    stitch_out = StitchingStep(job=job_stitch, user=_user(), state={}).run()
     assert "stitched" in stitch_out
     assert "stitches" in stitch_out
     stdout.update(stitch_out)
@@ -81,7 +81,7 @@ def test_snake_full_pipeline_validation_stitching_ear_clipping_convex_guard_plac
         stdin=dict(SNAKE_STDIN),
         stdout=dict(stdout),
     )
-    ear_out = EarClippingStep(job=job_ear, user=_user()).run()
+    ear_out = EarClippingStep(job=job_ear, user=_user(), state={}).run()
     assert "ears" in ear_out
     stdout.update(ear_out)
     assert_ears_simple_and_convex(stdout["ears"])
@@ -93,7 +93,7 @@ def test_snake_full_pipeline_validation_stitching_ear_clipping_convex_guard_plac
         stdin=dict(SNAKE_STDIN),
         stdout=dict(stdout),
     )
-    convex_out = ConvexComponentOptimizationStep(job=job_convex, user=_user()).run()
+    convex_out = ConvexComponentOptimizationStep(job=job_convex, user=_user(), state={}).run()
     assert "convex_components" in convex_out
     assert "adjacency" in convex_out
     stdout.update(convex_out)
@@ -109,7 +109,7 @@ def test_snake_full_pipeline_validation_stitching_ear_clipping_convex_guard_plac
         stdin=dict(SNAKE_STDIN),
         stdout=dict(stdout),
     )
-    guard_out = GuardPlacementStep(job=job_guard, user=_user()).run()
+    guard_out = GuardPlacementStep(job=job_guard, user=_user(), state={}).run()
     assert "guards" in guard_out
     assert "visibility" in guard_out
     assert len(guard_out["guards"]) == 3, (

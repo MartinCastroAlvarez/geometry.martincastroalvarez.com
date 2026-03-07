@@ -66,6 +66,7 @@ from models import Job
 from models import User
 from repositories import ArtGalleryRepository
 from repositories import JobsRepository
+from repositories import JobStateRepository
 from settings import UNTITLED_ART_GALLERY_NAME
 from structs import Table
 from validators import PolygonValidator
@@ -454,6 +455,12 @@ class JobDeleteMutation(PrivateControllerMixin, Mutation):
         # Remove the job index entry, so that it is not listed in the job list.
         index = JobsPrivateIndex(user_email=user_email)
         index.delete(Identifier(Countdown.from_timestamp(job.created_at)))
+
+        # Delete step state for this job if it exists (e.g. from a continuation). If none was persisted, ignore.
+        state_repo = JobStateRepository(user=User(email=user_email))
+        if state_repo.exists(job_id):
+            state_repo.delete(job_id)
+            logger.debug("JobDeleteMutation.kill() | deleted state for job_id=%s", job_id)
 
         # Finally, delete the job itself.
         repo.delete(job.id)

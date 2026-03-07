@@ -117,7 +117,7 @@ def test_polygon_monster_full_pipeline_ten_guards_forty_nine_convex_components()
         step_name=StepName.VALIDATE_POLYGONS,
         stdin=dict(POLYGON_MONSTER_STDIN),
     )
-    stdout.update(ValidationPolygonStep(job=job_validate, user=_user()).run())
+    stdout.update(ValidationPolygonStep(job=job_validate, user=_user(), state={}).run())
 
     job_stitch = Job(
         id=Identifier("polygon-monster-stitch"),
@@ -125,7 +125,7 @@ def test_polygon_monster_full_pipeline_ten_guards_forty_nine_convex_components()
         stdin=dict(POLYGON_MONSTER_STDIN),
         stdout=dict(stdout),
     )
-    stdout.update(StitchingStep(job=job_stitch, user=_user()).run())
+    stdout.update(StitchingStep(job=job_stitch, user=_user(), state={}).run())
 
     job_ear = Job(
         id=Identifier("polygon-monster-ear"),
@@ -133,7 +133,7 @@ def test_polygon_monster_full_pipeline_ten_guards_forty_nine_convex_components()
         stdin=dict(POLYGON_MONSTER_STDIN),
         stdout=dict(stdout),
     )
-    stdout.update(EarClippingStep(job=job_ear, user=_user()).run())
+    stdout.update(EarClippingStep(job=job_ear, user=_user(), state={}).run())
     assert_ears_simple_and_convex(stdout["ears"])
     for ear_id, ear_serialized in stdout["ears"].items():
         ear = Ear.unserialize(ear_serialized)
@@ -167,7 +167,7 @@ def test_polygon_monster_full_pipeline_ten_guards_forty_nine_convex_components()
         stdin=dict(POLYGON_MONSTER_STDIN),
         stdout=dict(stdout),
     )
-    convex_out = ConvexComponentOptimizationStep(job=job_convex, user=_user()).run()
+    convex_out = ConvexComponentOptimizationStep(job=job_convex, user=_user(), state={}).run()
     stdout.update(convex_out)
 
     assert_convex_components_visibility_within_component(
@@ -184,7 +184,7 @@ def test_polygon_monster_full_pipeline_ten_guards_forty_nine_convex_components()
         stdin=dict(POLYGON_MONSTER_STDIN),
         stdout=dict(stdout),
     )
-    guard_out = GuardPlacementStep(job=job_guard, user=_user()).run()
+    guard_out = GuardPlacementStep(job=job_guard, user=_user(), state={}).run()
 
     assert len(guard_out["visibility"]) == len(guard_out["guards"])
 

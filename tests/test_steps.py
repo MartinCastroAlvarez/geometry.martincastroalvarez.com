@@ -46,7 +46,7 @@ class TestSimpleSteps:
                 "obstacles": [],
             },
         )
-        step = StitchingStep(job=job, user=_user())
+        step = StitchingStep(job=job, user=_user(), state={})
         out = step.run()
         assert "stitched" in out
         assert len(out["stitched"]) == 4
@@ -64,7 +64,7 @@ class TestSimpleSteps:
                 "obstacles": [[[2, 2], [4, 2], [4, 4], [2, 4]]],
             },
         )
-        step = StitchingStep(job=job, user=_user())
+        step = StitchingStep(job=job, user=_user(), state={})
         out = step.run()
         assert "stitched" in out
         assert "stitches" in out
@@ -77,7 +77,7 @@ class TestSimpleSteps:
             step_name=StepName.VALIDATE_POLYGONS,
             stdin={"boundary": [[0, 0], [10, 0], [10, 10], [0, 10]], "obstacles": []},
         )
-        step = ValidationPolygonStep(job=job, user=_user())
+        step = ValidationPolygonStep(job=job, user=_user(), state={})
         out = step.run()
         assert "boundary" in out
         assert "obstacles" in out
@@ -92,7 +92,7 @@ class TestSimpleSteps:
             stdin={"boundary": [[0, 0], [10, 0], [10, 10], [0, 10]], "obstacles": []},
             stdout={"stitched": [[0, 0], [10, 0], [10, 10], [0, 10]]},
         )
-        step = EarClippingStep(job=job, user=_user())
+        step = EarClippingStep(job=job, user=_user(), state={})
         out = step.run()
         assert "ears" in out
         ears_values = list(out["ears"].values()) if isinstance(out["ears"], dict) else out["ears"]
@@ -107,7 +107,7 @@ class TestSimpleSteps:
             stdin={"boundary": pentagon, "obstacles": []},
             stdout={"stitched": pentagon},
         )
-        step = EarClippingStep(job=job, user=_user())
+        step = EarClippingStep(job=job, user=_user(), state={})
         out = step.run()
         assert "ears" in out
         ears_values = list(out["ears"].values()) if isinstance(out["ears"], dict) else out["ears"]
@@ -124,14 +124,14 @@ class TestSimpleSteps:
             stdin={"boundary": stitched, "obstacles": []},
             stdout={"stitched": stitched},
         )
-        ear_out = EarClippingStep(job=job_ear, user=_user()).run()
+        ear_out = EarClippingStep(job=job_ear, user=_user(), state={}).run()
         job = Job(
             id=Identifier("j1"),
             step_name=StepName.CONVEX_COMPONENT_OPTIMIZATION,
             stdin={"boundary": stitched, "obstacles": []},
             stdout={"stitched": stitched, "ears": ear_out["ears"]},
         )
-        step = ConvexComponentOptimizationStep(job=job, user=_user())
+        step = ConvexComponentOptimizationStep(job=job, user=_user(), state={})
         out = step.run()
         assert "convex_components" in out
         assert "adjacency" in out
@@ -150,14 +150,14 @@ class TestSimpleSteps:
             stdin={"boundary": stitched, "obstacles": []},
             stdout={"stitched": stitched},
         )
-        ear_out = EarClippingStep(job=job_ear, user=_user()).run()
+        ear_out = EarClippingStep(job=job_ear, user=_user(), state={}).run()
         job_convex = Job(
             id=Identifier("j_convex"),
             step_name=StepName.CONVEX_COMPONENT_OPTIMIZATION,
             stdin={"boundary": stitched, "obstacles": []},
             stdout={"stitched": stitched, "ears": ear_out["ears"]},
         )
-        convex_out = ConvexComponentOptimizationStep(job=job_convex, user=_user()).run()
+        convex_out = ConvexComponentOptimizationStep(job=job_convex, user=_user(), state={}).run()
         job = Job(
             id=Identifier("j1"),
             step_name=StepName.GUARD_PLACEMENT,
@@ -170,7 +170,7 @@ class TestSimpleSteps:
                 "adjacency": convex_out["adjacency"],
             },
         )
-        step = GuardPlacementStep(job=job, user=_user())
+        step = GuardPlacementStep(job=job, user=_user(), state={})
         out = step.run()
         assert "guards" in out
         assert "visibility" in out
@@ -187,21 +187,21 @@ class TestSimpleSteps:
             stdin={},
             stdout={"boundary": boundary, "obstacles": obstacles},
         )
-        stitch_out = StitchingStep(job=job_stitch, user=_user()).run()
+        stitch_out = StitchingStep(job=job_stitch, user=_user(), state={}).run()
         job_ear = Job(
             id=Identifier("j_ear"),
             step_name=StepName.EAR_CLIPPING,
             stdin={"boundary": boundary, "obstacles": obstacles},
             stdout={"stitched": stitch_out["stitched"]},
         )
-        ear_out = EarClippingStep(job=job_ear, user=_user()).run()
+        ear_out = EarClippingStep(job=job_ear, user=_user(), state={}).run()
         job_convex = Job(
             id=Identifier("j_convex"),
             step_name=StepName.CONVEX_COMPONENT_OPTIMIZATION,
             stdin={"boundary": boundary, "obstacles": obstacles},
             stdout={"stitched": stitch_out["stitched"], "ears": ear_out["ears"]},
         )
-        convex_out = ConvexComponentOptimizationStep(job=job_convex, user=_user()).run()
+        convex_out = ConvexComponentOptimizationStep(job=job_convex, user=_user(), state={}).run()
         job = Job(
             id=Identifier("j1"),
             step_name=StepName.GUARD_PLACEMENT,
@@ -214,7 +214,7 @@ class TestSimpleSteps:
                 "adjacency": convex_out["adjacency"],
             },
         )
-        step = GuardPlacementStep(job=job, user=_user())
+        step = GuardPlacementStep(job=job, user=_user(), state={})
         out = step.run()
         assert "guards" in out
         assert "visibility" in out
@@ -232,7 +232,7 @@ class TestArtGalleryStep:
         mock_repo.exists.return_value = False
 
         job = Job(id=Identifier("parent-1"), step_name=StepName.ART_GALLERY, stdin={"boundary": []})
-        step = ArtGalleryStep(job=job, user=_user())
+        step = ArtGalleryStep(job=job, user=_user(), state={})
 
         out = step.run()
 
@@ -247,7 +247,7 @@ class TestArtGalleryStep:
         mock_repo.exists.return_value = True
 
         job = Job(id=Identifier("parent-1"), step_name=StepName.ART_GALLERY, stdin={})
-        step = ArtGalleryStep(job=job, user=_user())
+        step = ArtGalleryStep(job=job, user=_user(), state={})
 
         out = step.run()
 

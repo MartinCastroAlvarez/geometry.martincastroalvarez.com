@@ -69,7 +69,7 @@ def test_triangle_stitching_one_stitch_per_obstacle():
         step_name=StepName.VALIDATE_POLYGONS,
         stdin=dict(TRIANGLE_STDIN),
     )
-    stdout.update(ValidationPolygonStep(job=job_validate, user=_user()).run())
+    stdout.update(ValidationPolygonStep(job=job_validate, user=_user(), state={}).run())
 
     job_stitch = Job(
         id=Identifier("tri-stitch"),
@@ -77,7 +77,7 @@ def test_triangle_stitching_one_stitch_per_obstacle():
         stdin=dict(TRIANGLE_STDIN),
         stdout=dict(stdout),
     )
-    stitch_out = StitchingStep(job=job_stitch, user=_user()).run()
+    stitch_out = StitchingStep(job=job_stitch, user=_user(), state={}).run()
     stdout.update(stitch_out)
 
     assert "stitched" in stdout, "Stitching step must output stitched polygon"
@@ -106,14 +106,14 @@ def test_triangle_stitching_output_valid_for_ear_clipping():
         step_name=StepName.VALIDATE_POLYGONS,
         stdin=dict(TRIANGLE_STDIN),
     )
-    stdout.update(ValidationPolygonStep(job=job_validate, user=_user()).run())
+    stdout.update(ValidationPolygonStep(job=job_validate, user=_user(), state={}).run())
     job_stitch = Job(
         id=Identifier("tri-stitch-ec"),
         step_name=StepName.STITCHING,
         stdin=dict(TRIANGLE_STDIN),
         stdout=dict(stdout),
     )
-    stdout.update(StitchingStep(job=job_stitch, user=_user()).run())
+    stdout.update(StitchingStep(job=job_stitch, user=_user(), state={}).run())
 
     stitched = Polygon.unserialize(stdout["stitched"])
 

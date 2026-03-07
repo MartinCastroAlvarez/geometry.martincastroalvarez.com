@@ -384,6 +384,7 @@ class JobState(Model):
 
     id: Identifier
     data: dict[str, Any] = field(default_factory=dict)
+    attempt: int = 0
     created_at: Timestamp = field(default_factory=Timestamp.now)
     updated_at: Timestamp = field(default_factory=Timestamp.now)
 
@@ -396,16 +397,19 @@ class JobState(Model):
     @classmethod
     def unserialize(cls, data: Any) -> JobState:
         """
-        Build JobState from dict. Parses id, data, created_at, updated_at.
+        Build JobState from dict. Parses id, data, attempt, created_at, updated_at.
 
         For example, to load state from S3:
         >>> state = JobState.unserialize({"id": "abc", "data": {"key": "value"}})
         >>> state.data["key"]
         'value'
         """
+        raw_attempt: Any = data.get("attempt", 0)
+        attempt_val: int = int(raw_attempt) if raw_attempt is not None else 0
         return cls(
             id=Identifier(data.get("id", "")),
             data=dict(data.get("data") or {}),
+            attempt=attempt_val,
             created_at=Timestamp(data.get("created_at")),
             updated_at=Timestamp(data.get("updated_at")),
         )
@@ -414,6 +418,7 @@ class JobState(Model):
         return {
             "id": str(self.id),
             "data": dict(self.data),
+            "attempt": int(self.attempt),
             "created_at": str(self.created_at),
             "updated_at": str(self.updated_at),
         }

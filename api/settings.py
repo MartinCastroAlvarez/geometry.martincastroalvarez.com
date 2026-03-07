@@ -61,6 +61,9 @@ DEFAULT_ORIGIN: str = os.getenv("DEFAULT_ORIGIN") or "https://geometry.martincas
 # before we pick the smallest one by size and stop. Default 5 is empirical.
 STITCH_BUCKET_SIZE: int = int(os.getenv("STITCH_BUCKET_SIZE", "5"))
 
+# Task continuation: max number of times a step may re-queue (START same job_id) before failing.
+MAX_TASK_CONTINUATION_STEPS: int = int(os.getenv("MAX_TASK_CONTINUATION_STEPS", "10"))
+
 # Anonymous and test user constants (used by User model)
 ANONYMOUS_EMAIL: str = "nobody@unknown.local"
 ANONYMOUS_NAME: str = "Anonymous"

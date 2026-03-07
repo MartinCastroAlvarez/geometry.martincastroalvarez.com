@@ -723,3 +723,23 @@ class GuardExclusivityFailureError(ValidationError):
 
     def __init__(self, message: str = "A guard has no exclusivity points"):
         super().__init__(message)
+
+
+class StepContinuationError(GeometryException):
+    """
+    Raised when a step must continue in another Lambda invocation.
+    The step provides its serialized state so the next run can resume.
+    """
+
+    def __init__(self, message: str = "Step requires continuation", state: dict | None = None):
+        super().__init__(message)
+        self.state: dict = state if state is not None else {}
+
+
+class MaxTaskContinuationAttemptsError(GeometryException):
+    """Raised when the task continuation attempt count exceeds MAX_TASK_CONTINUATION_STEPS."""
+
+    code: http.HTTPStatus = http.HTTPStatus.BAD_REQUEST
+
+    def __init__(self, message: str = "Max task continuation attempts reached"):
+        super().__init__(message)

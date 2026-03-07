@@ -233,21 +233,21 @@ def test_octopus_full_pipeline_requires_twelve_guards():
         step_name=StepName.VALIDATE_POLYGONS,
         stdin=dict(POLYGON_OCTOPUS_STDIN),
     )
-    stdout.update(ValidationPolygonStep(job=job_validate, user=_user()).run())
+    stdout.update(ValidationPolygonStep(job=job_validate, user=_user(), state={}).run())
     job_stitch = Job(
         id=Identifier("octopus-s"),
         step_name=StepName.STITCHING,
         stdin=dict(POLYGON_OCTOPUS_STDIN),
         stdout=dict(stdout),
     )
-    stdout.update(StitchingStep(job=job_stitch, user=_user()).run())
+    stdout.update(StitchingStep(job=job_stitch, user=_user(), state={}).run())
     job_ear = Job(
         id=Identifier("octopus-e"),
         step_name=StepName.EAR_CLIPPING,
         stdin=dict(POLYGON_OCTOPUS_STDIN),
         stdout=dict(stdout),
     )
-    stdout.update(EarClippingStep(job=job_ear, user=_user()).run())
+    stdout.update(EarClippingStep(job=job_ear, user=_user(), state={}).run())
     assert_ears_simple_and_convex(stdout["ears"])
     job_convex = Job(
         id=Identifier("octopus-c"),
@@ -255,7 +255,7 @@ def test_octopus_full_pipeline_requires_twelve_guards():
         stdin=dict(POLYGON_OCTOPUS_STDIN),
         stdout=dict(stdout),
     )
-    stdout.update(ConvexComponentOptimizationStep(job=job_convex, user=_user()).run())
+    stdout.update(ConvexComponentOptimizationStep(job=job_convex, user=_user(), state={}).run())
 
     assert_convex_components_visibility_within_component(
         stdout["convex_components"], stdout["obstacles"]
@@ -267,7 +267,7 @@ def test_octopus_full_pipeline_requires_twelve_guards():
         stdin=dict(POLYGON_OCTOPUS_STDIN),
         stdout=dict(stdout),
     )
-    guard_out = GuardPlacementStep(job=job_guard, user=_user()).run()
+    guard_out = GuardPlacementStep(job=job_guard, user=_user(), state={}).run()
     assert len(guard_out["guards"]) == 18, (
         f"Octopus gallery expects 18 guards; got {len(guard_out['guards'])}"
     )

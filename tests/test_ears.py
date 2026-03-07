@@ -48,7 +48,7 @@ def _run_ear_clipping(stitched: Polygon) -> list[Ear]:
         stdin={},
         stdout=stdout,
     )
-    step = EarClippingStep(job=job, user=_user())
+    step = EarClippingStep(job=job, user=_user(), state={})
     out = step.run()
     ears_ser = out["ears"]
     if isinstance(ears_ser, dict):
@@ -195,21 +195,21 @@ def test_triangle_polygon_ear_clipping_output():
         step_name=StepName.VALIDATE_POLYGONS,
         stdin=dict(TRIANGLE_STDIN),
     )
-    stdout.update(ValidationPolygonStep(job=job_validate, user=_user()).run())
+    stdout.update(ValidationPolygonStep(job=job_validate, user=_user(), state={}).run())
     job_stitch = Job(
         id=Identifier("tri-ears-stitch"),
         step_name=StepName.STITCHING,
         stdin=dict(TRIANGLE_STDIN),
         stdout=dict(stdout),
     )
-    stdout.update(StitchingStep(job=job_stitch, user=_user()).run())
+    stdout.update(StitchingStep(job=job_stitch, user=_user(), state={}).run())
     job_ear = Job(
         id=Identifier("tri-ears-run"),
         step_name=StepName.EAR_CLIPPING,
         stdin=dict(TRIANGLE_STDIN),
         stdout=dict(stdout),
     )
-    stdout.update(EarClippingStep(job=job_ear, user=_user()).run())
+    stdout.update(EarClippingStep(job=job_ear, user=_user(), state={}).run())
 
     n_stitched = len(Polygon.unserialize(stdout["stitched"]))
     assert len(stdout["ears"]) == n_stitched - 2, (
@@ -228,21 +228,21 @@ def _run_validate_stitch_ear_clip(stdin: dict, job_prefix: str, tolerance: int =
         step_name=StepName.VALIDATE_POLYGONS,
         stdin=dict(stdin),
     )
-    stdout.update(ValidationPolygonStep(job=job_validate, user=_user()).run())
+    stdout.update(ValidationPolygonStep(job=job_validate, user=_user(), state={}).run())
     job_stitch = Job(
         id=Identifier(f"{job_prefix}-s"),
         step_name=StepName.STITCHING,
         stdin=dict(stdin),
         stdout=dict(stdout),
     )
-    stdout.update(StitchingStep(job=job_stitch, user=_user()).run())
+    stdout.update(StitchingStep(job=job_stitch, user=_user(), state={}).run())
     job_ear = Job(
         id=Identifier(f"{job_prefix}-e"),
         step_name=StepName.EAR_CLIPPING,
         stdin=dict(stdin),
         stdout=dict(stdout),
     )
-    stdout.update(EarClippingStep(job=job_ear, user=_user()).run())
+    stdout.update(EarClippingStep(job=job_ear, user=_user(), state={}).run())
     n_stitched = len(Polygon.unserialize(stdout["stitched"]))
     assert len(stdout["ears"]) == n_stitched - 2 - tolerance, (
         f"Expected {n_stitched - 2 - tolerance} ears; got {len(stdout['ears'])}"

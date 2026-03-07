@@ -234,21 +234,21 @@ def test_gallery_full_pipeline_requires_sixty_four_guards():
         step_name=StepName.VALIDATE_POLYGONS,
         stdin=dict(GALLERY_STDIN),
     )
-    stdout.update(ValidationPolygonStep(job=job_validate, user=_user()).run())
+    stdout.update(ValidationPolygonStep(job=job_validate, user=_user(), state={}).run())
     job_stitch = Job(
         id=Identifier("gallery-s"),
         step_name=StepName.STITCHING,
         stdin=dict(GALLERY_STDIN),
         stdout=dict(stdout),
     )
-    stdout.update(StitchingStep(job=job_stitch, user=_user()).run())
+    stdout.update(StitchingStep(job=job_stitch, user=_user(), state={}).run())
     job_ear = Job(
         id=Identifier("gallery-e"),
         step_name=StepName.EAR_CLIPPING,
         stdin=dict(GALLERY_STDIN),
         stdout=dict(stdout),
     )
-    stdout.update(EarClippingStep(job=job_ear, user=_user()).run())
+    stdout.update(EarClippingStep(job=job_ear, user=_user(), state={}).run())
     assert_ears_simple_and_convex(stdout["ears"])
     job_convex = Job(
         id=Identifier("gallery-c"),
@@ -256,7 +256,7 @@ def test_gallery_full_pipeline_requires_sixty_four_guards():
         stdin=dict(GALLERY_STDIN),
         stdout=dict(stdout),
     )
-    stdout.update(ConvexComponentOptimizationStep(job=job_convex, user=_user()).run())
+    stdout.update(ConvexComponentOptimizationStep(job=job_convex, user=_user(), state={}).run())
 
     assert_convex_components_visibility_within_component(
         stdout["convex_components"], stdout["obstacles"]
@@ -268,7 +268,7 @@ def test_gallery_full_pipeline_requires_sixty_four_guards():
         stdin=dict(GALLERY_STDIN),
         stdout=dict(stdout),
     )
-    guard_out = GuardPlacementStep(job=job_guard, user=_user()).run()
+    guard_out = GuardPlacementStep(job=job_guard, user=_user(), state={}).run()
     assert len(guard_out["guards"]) == 64, (
         f"Gallery expects 64 guards; got {len(guard_out['guards'])}"
     )

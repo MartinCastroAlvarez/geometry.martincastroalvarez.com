@@ -65,6 +65,7 @@ class TestAdjacencyCollection:
         step = ConvexComponentOptimizationStep(
             job=Job.unserialize({"id": "j1", "stdout": {}}),
             user=User(email=Email("test@test.com")),
+            state={},
         )
         built = step.build_adjacency_table(table)
         assert len(built) == 2

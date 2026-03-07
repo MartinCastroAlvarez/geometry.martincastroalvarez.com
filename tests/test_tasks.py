@@ -11,6 +11,7 @@ from attributes import Identifier
 from enums import Action
 from enums import Status
 from enums import StepName
+from exceptions import RecordNotFoundError
 from exceptions import StepNotHandledError
 from models import Job
 from steps import Step
@@ -91,12 +92,14 @@ class TestStartTask:
 
     @patch.object(StartTask, "broadcast")
     @patch("tasks.queue")
+    @patch("tasks.JobStateRepository")
     @patch("tasks.JobsRepository")
     def test_execute_success_enqueues_report_for_non_art_gallery_step(
-        self, mock_repo_cls, mock_tasks_queue, mock_broadcast
+        self, mock_repo_cls, mock_state_repo_cls, mock_tasks_queue, mock_broadcast
     ):
         mock_repo = MagicMock()
         mock_repo_cls.return_value = mock_repo
+        mock_state_repo_cls.return_value.get.side_effect = RecordNotFoundError("")
         job = Job(
             id=Identifier("j1"),
             step_name=StepName.STITCHING,
@@ -120,12 +123,14 @@ class TestStartTask:
 
     @patch.object(StartTask, "broadcast")
     @patch("tasks.queue")
+    @patch("tasks.JobStateRepository")
     @patch("tasks.JobsRepository")
     def test_execute_step_with_empty_stdout_returns_pending(
-        self, mock_repo_cls, mock_tasks_queue, mock_broadcast
+        self, mock_repo_cls, mock_state_repo_cls, mock_tasks_queue, mock_broadcast
     ):
         mock_repo = MagicMock()
         mock_repo_cls.return_value = mock_repo
+        mock_state_repo_cls.return_value.get.side_effect = RecordNotFoundError("")
         # job.start() clears stdout before step runs, so StitchingStep gets an empty stdout
         # and runs successfully with 0 boundary points (no exception raised).
         job = Job(
@@ -147,13 +152,15 @@ class TestStartTask:
 
     @patch.object(StartTask, "broadcast")
     @patch("tasks.queue")
+    @patch("tasks.JobStateRepository")
     @patch("tasks.JobsRepository")
     @patch("tasks.Step")
     def test_execute_step_raises_marks_job_failed_and_saves_stderr(
-        self, mock_step_cls, mock_repo_cls, mock_tasks_queue, mock_broadcast
+        self, mock_step_cls, mock_repo_cls, mock_state_repo_cls, mock_tasks_queue, mock_broadcast
     ):
         mock_repo = MagicMock()
         mock_repo_cls.return_value = mock_repo
+        mock_state_repo_cls.return_value.get.side_effect = RecordNotFoundError("")
         job = Job(
             id=Identifier("j1"),
             step_name=StepName.STITCHING,
@@ -177,10 +184,12 @@ class TestStartTask:
         mock_tasks_queue.put.assert_called()
 
     @patch("tasks.queue")
+    @patch("tasks.JobStateRepository")
     @patch("tasks.JobsRepository")
-    def test_execute_art_gallery_step_broadcast_starts_first_child(self, mock_repo_cls, mock_queue):
+    def test_execute_art_gallery_step_broadcast_starts_first_child(self, mock_repo_cls, mock_state_repo_cls, mock_queue):
         mock_repo = MagicMock()
         mock_repo_cls.return_value = mock_repo
+        mock_state_repo_cls.return_value.get.side_effect = RecordNotFoundError("")
         mock_repo.exists.return_value = False
         job = Job(
             id=Identifier("parent-1"),
@@ -231,10 +240,14 @@ class TestReportTask:
         mock_queue.put.assert_not_called()
 
     @patch("tasks.queue")
+    @patch("tasks.JobStateRepository")
     @patch("tasks.JobsRepository")
-    def test_execute_children_all_success_sets_status_success_and_notifies(self, mock_repo_cls, mock_queue):
+    def test_execute_children_all_success_sets_status_success_and_notifies(
+        self, mock_repo_cls, mock_state_repo_cls, mock_queue
+    ):
         mock_repo = MagicMock()
         mock_repo_cls.return_value = mock_repo
+        mock_state_repo_cls.return_value.get.side_effect = RecordNotFoundError("")
         parent = Job(
             id=Identifier("p1"),
             parent_id=Identifier("grandparent"),
@@ -265,10 +278,14 @@ class TestReportTask:
 
     @patch("tasks.ReportTask.broadcast")
     @patch("tasks.queue")
+    @patch("tasks.JobStateRepository")
     @patch("tasks.JobsRepository")
-    def test_execute_any_child_failed_merges_stderr_sets_failed(self, mock_repo_cls, mock_queue, mock_broadcast):
+    def test_execute_any_child_failed_merges_stderr_sets_failed(
+        self, mock_repo_cls, mock_state_repo_cls, mock_queue, mock_broadcast
+    ):
         mock_repo = MagicMock()
         mock_repo_cls.return_value = mock_repo
+        mock_state_repo_cls.return_value.get.side_effect = RecordNotFoundError("")
         parent = Job(
             id=Identifier("p1"),
             parent_id=None,
@@ -292,10 +309,14 @@ class TestReportTask:
 
     @patch("tasks.ReportTask.broadcast")
     @patch("tasks.queue")
+    @patch("tasks.JobStateRepository")
     @patch("tasks.JobsRepository")
-    def test_execute_merges_children_meta_into_parent(self, mock_repo_cls, mock_queue, mock_broadcast):
+    def test_execute_merges_children_meta_into_parent(
+        self, mock_repo_cls, mock_state_repo_cls, mock_queue, mock_broadcast
+    ):
         mock_repo = MagicMock()
         mock_repo_cls.return_value = mock_repo
+        mock_state_repo_cls.return_value.get.side_effect = RecordNotFoundError("")
         parent = Job(
             id=Identifier("p1"),
             parent_id=None,
