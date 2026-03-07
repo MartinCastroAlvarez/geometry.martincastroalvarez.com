@@ -343,7 +343,7 @@ class TestStartTask:
         )
         task = StartTask()
         req = {"job_id": Identifier("j1"), "user_email": Email("u@e.com")}
-        with patch.object(
+        with patch("attributes.MAX_TASK_CONTINUATION_STEPS", 10), patch.object(
             StartTask,
             "execute",
             side_effect=SuspendedStepError("Step suspended", state={"resume": "data"}),

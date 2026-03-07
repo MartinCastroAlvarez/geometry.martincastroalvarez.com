@@ -668,12 +668,26 @@ class EarClippingFailureError(GeometryException):
         super().__init__(message)
 
 
+class NoMoreEarsError(GeometryException):
+    """Ear clipping is complete; no more ears to clip (polygon reduced to final triangle or less)."""
+
+    def __init__(self, message: str = "No more ears to clip"):
+        super().__init__(message)
+
+
 class ConvexComponentOptimizationFailureError(GeometryException):
     """Convex component optimization produced no convex components."""
 
     code: http.HTTPStatus = http.HTTPStatus.BAD_REQUEST
 
     def __init__(self, message: str = "No convex components found"):
+        super().__init__(message)
+
+
+class NoMoreConvexComponentsMergeError(GeometryException):
+    """No more adjacent convex components can be merged; optimization is complete."""
+
+    def __init__(self, message: str = "No more convex component merges possible"):
         super().__init__(message)
 
 

@@ -114,6 +114,42 @@ class TestLimit:
             Limit([])
 
 
+class TestWork:
+    """Test Work (unit of work, non-negative int, supports += 1)."""
+
+    def test_zero(self):
+        from attributes import Work
+
+        w = Work(0)
+        assert w == 0
+
+    def test_positive(self):
+        from attributes import Work
+
+        assert Work(1) == 1
+        assert Work(10) == 10
+
+    def test_negative_raises(self):
+        from attributes import Work
+
+        with pytest.raises(ValidationError, match=">= 0"):
+            Work(-1)
+
+    def test_non_integer_raises(self):
+        from attributes import Work
+
+        with pytest.raises(ValidationError, match="integer"):
+            Work("x")
+
+    def test_add_one(self):
+        from attributes import Work
+
+        w = Work(0)
+        w2 = w + 1
+        assert w2 == 1
+        assert type(w2).__name__ == "Work"
+
+
 class TestAttributesGetAttr:
     """Test that attributes does not expose geometry types (they live in geometry package)."""
 

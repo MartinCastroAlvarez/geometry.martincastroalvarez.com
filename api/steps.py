@@ -29,19 +29,21 @@ from collections import defaultdict
 from decimal import Decimal
 from functools import cached_property
 from typing import Any
-from typing import Generator
 from typing import Type
 
 from attributes import Identifier
 from attributes import Signature
+from attributes import Work
 from enums import Status
 from enums import StepName
 from exceptions import BridgeFailureError
 from exceptions import ConvexComponentNotSimpleError
 from exceptions import ConvexComponentOptimizationFailureError
 from exceptions import EarClippingFailureError
+from exceptions import NoMoreConvexComponentsMergeError
 from exceptions import GuardCoverageFailureError
 from exceptions import GuardNotInComponentIdByPointError
+from exceptions import NoMoreEarsError
 from exceptions import OnlyMidpointsRemainingError
 from exceptions import PolygonNotSimpleError
 from exceptions import PolygonsDoNotShareEdgeError
@@ -62,8 +64,11 @@ from models import ArtGallery
 from models import Job
 from models import User
 from repositories import JobsRepository
+from settings import CONVEX_COMPONENT_OPTIMIZATION_MAX_WORK_PER_RUN
+from settings import EAR_CLIPPING_MAX_WORK_PER_RUN
 from settings import GUARD_PLACEMENT_MAX_SEES_PER_RUN
 from settings import STITCH_BUCKET_SIZE
+from settings import STITCH_MAX_WORK_PER_RUN
 from states import ArtGalleryStepState
 from states import ConvexComponentOptimizationStepState
 from states import EarClippingStepState
@@ -75,6 +80,25 @@ from structs import Collection
 from structs import Table
 
 logger = logging.getLogger(__name__)
+
+
+def work(max_work: int):
+    """
+    Decorator for step instance methods: increments self.work by 1 each call;
+    if self.work > max_work, calls self.suspend() before invoking the method.
+    Use a value from settings (e.g. STITCH_MAX_WORK_PER_RUN, GUARD_PLACEMENT_MAX_SEES_PER_RUN).
+    """
+
+    def decorator(f):
+        def wrapper(self, *args, **kwargs):
+            self.work = self.work + 1
+            if self.work > max_work:
+                self.suspend()
+            return f(self, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
 
 
 class Step(ABC):
@@ -90,9 +114,9 @@ class Step(ABC):
     def __init__(self, job: Job, user: User, state: dict) -> None:
         self.job: Job = job
         self.user: User = user
+        self.work: Work = Work(0)
         self.state: State = self.STATE_CLASS.unserialize(state)
-        if state == {}:
-            self.init()
+        self._state_was_empty: bool = state == {}
 
     @abstractmethod
     def init(self) -> None:
@@ -351,126 +375,119 @@ class StitchingStep(SequenceStep):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.gallery: ArtGallery = ArtGallery.unserialize(self.job.stdout)
-        state_arg: dict = args[2] if len(args) > 2 else kwargs.get("state", {})
-        if state_arg == {}:
-            self.gallery.stitched = Polygon([])
-            self.gallery.stitches = []
+        if self._state_was_empty:
+            self.init()
+        # Gallery is read-only; state holds points, stitches, remaining_obstacles
 
     def init(self) -> None:
-        self.state.points = []
+        self.state.points = Polygon(list(self.gallery.boundary))
+        self.state.stitches = []
+        self.state.remaining_obstacles = self.sort()
 
-    def sort(self) -> None:
-        """Sort obstacles in place by rightmost vertex (x, y) descending for bridge order."""
+    def sort(self) -> list[Polygon]:
+        """Return obstacles sorted by rightmost vertex (x, y) descending for bridge order."""
         obstacles = list(self.gallery.obstacles)
         obstacles.sort(key=lambda obstacle: (obstacle.rightmost.x, obstacle.rightmost.y), reverse=True)
-        self.gallery.obstacles = Table.unserialize(obstacles)
+        return obstacles
+
+    @work(STITCH_MAX_WORK_PER_RUN)
+    def bridge(self, obstacle: Polygon) -> None:
+        """Find a valid bridge from state.points to obstacle, merge, and update state.points and state.stitches."""
+        obstacle.sort("cw")
+        bridge: Segment | None = None
+        anchor: Point | None = None
+        stitched: Polygon = self.state.points
+        obstacles: list[Polygon] = self.state.remaining_obstacles
+
+        # Find the valid bridge from the obstacle to the stitched polygon.
+        # After lots of testing, there is no real benefit in finding the shortest bridge.
+        # Any bridge that is valid will do.
+        i: int = 0
+        for anchor in obstacle:
+            bridge = None
+            for candidate in stitched << stitched.rightmost:
+                if candidate == anchor:
+                    continue
+                segment: Segment = candidate.to(anchor)
+                if not self.gallery.boundary.contains(segment, inclusive=True):
+                    continue
+                if any(other.intersects(segment, inclusive=False) for other in obstacles if other is not obstacle):
+                    continue
+                if any(segment.crosses(edge) for edge in obstacle.edges):
+                    continue
+                if any(
+                    Walk(start=edge[0], center=edge[1], end=segment[0]).is_collinear()
+                    and Walk(start=edge[0], center=edge[1], end=segment[1]).is_collinear()
+                    for edge in self.gallery.boundary.edges
+                    if not _segments_share_endpoint(edge, segment)
+                ):
+                    continue
+                if any(segment.crosses(edge) for edge in stitched.edges):
+                    continue
+                if i >= STITCH_BUCKET_SIZE:
+                    break
+                i += 1
+                if bridge is None or segment.size < bridge.size:
+                    bridge = segment
+            if bridge is not None:
+                break
+
+        # Validate that the bridge is valid.
+        if bridge is None or anchor is None:
+            raise BridgeFailureError(f"No valid bridge found for obstacle: {obstacle}")
+
+        # Define the vertex of the bridge.
+        vertex: Point = bridge[0]
+
+        # Validate that the bridge is not a subsequence of the boundary or the obstacle.
+        if bridge in stitched:
+            raise StitchWinnerSubsequenceError("Winner is a subsequence of boundary points; cannot stitch")
+        if bridge in obstacle:
+            raise StitchWinnerSubsequenceError("Winner is a subsequence of obstacle; cannot stitch")
+
+        # Update state.points and state.stitches.
+        left: Polygon = Polygon(list(stitched))
+        right: Polygon = Polygon(list(obstacle))
+
+        # Sort polygons so that they can be merged.
+        left.sort("ccw")
+        right.sort("cw")
+
+        # Rotate polygons so that they can be merged.
+        left = left >> vertex
+        right = right << anchor
+
+        # Validate that the polygons can be merged correctly.
+        assert right[0] == anchor, f"Right polygon does not start with anchor: {right}"
+        assert left[-1] == vertex, f"Left polygon does not end with vertex: {left}"
+
+        # Merge the polygons.
+        merged: list[Point] = list(left) + list(right) + [anchor, vertex]
+
+        # Update the state.
+        self.state.points = Polygon(merged)
+        self.state.stitches.append(bridge)
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
+        logger.info(
+            "StitchingStep.run() | job.id=%s obstacles=%s boundary_points=%s",
+            self.job.id,
+            len(self.state.remaining_obstacles),
+            len(self.gallery.boundary),
+        )
+        while self.state.remaining_obstacles:
+            obstacle = self.state.remaining_obstacles.pop(0)
+            self.bridge(obstacle)
 
-        # No obstacles: stitched result is the boundary; no bridge edges added.
-        if not len(self.gallery.obstacles):
-            self.state.points = list(self.gallery.boundary)
-            logger.info("StitchingStep.run() | job.id=%s boundary_points=%s", self.job.id, len(self.gallery.boundary))
-            return {"stitched": Polygon(self.state.points).serialize(), "stitches": []}
-
-        # Sort obstacles by rightmost vertex (desc) and init working polygon and its edges.
-        self.sort()
-        obstacles = list(self.gallery.obstacles)
-        logger.info("StitchingStep.run() | job.id=%s obstacles=%s boundary_points=%s", self.job.id, len(obstacles), len(self.gallery.boundary))
-        stitched: Polygon = Polygon(list(self.gallery.boundary))
-        stitches: list[Segment] = []
-
-        for obstacle in obstacles:
-            obstacle.sort("cw")
-            bridge: Segment | None = None
-            anchor: Point | None = None
-
-            # Find valid bridge from polygon to obstacle anchor (bucket of candidates).
-            i: int = 0
-            for anchor in obstacle:
-                bridge = None
-
-                for candidate in stitched << stitched.rightmost:
-
-                    # Exit early if the candidate is the anchor.
-                    if candidate == anchor:
-                        continue
-
-                    segment: Segment = candidate.to(anchor)
-
-                    # Exit early if the segment is not contained in the boundary.
-                    if not self.gallery.boundary.contains(segment, inclusive=True):
-                        continue
-
-                    # Exit early if the segment intersects any other obstacle.
-                    if any(other.intersects(segment, inclusive=False) for other in obstacles if other is not obstacle):
-                        continue
-
-                    # Exit early if the segment crosses the current obstacle (except at anchor).
-                    if any(segment.crosses(edge) for edge in obstacle.edges):
-                        continue
-
-                    # Exit early if the segment is collinear with any boundary edge.
-                    if any(
-                        Walk(start=edge[0], center=edge[1], end=segment[0]).is_collinear()
-                        and Walk(start=edge[0], center=edge[1], end=segment[1]).is_collinear()
-                        for edge in self.gallery.boundary.edges
-                        if not _segments_share_endpoint(edge, segment)
-                    ):
-                        continue
-
-                    # Exit early if the segment intersects any other segment.
-                    if any(segment.crosses(edge) for edge in stitched.edges):
-                        continue
-
-                    # Exit early if the bucket is full.
-                    # Optimization: It might not be the shortest, but who cares...
-                    if i >= STITCH_BUCKET_SIZE:
-                        break
-
-                    # Candidate is bucket-eligible; count it.
-                    i += 1
-                    # Track the shortest segment among candidates seen so far.
-                    if bridge is None or segment.size < bridge.size:
-                        bridge = segment
-
-                # Exit early if a bridge is found.
-                if bridge is not None:
-                    break
-
-            if bridge is None or anchor is None:
-                raise BridgeFailureError(f"No valid bridge found for obstacle: {obstacle}")
-
-            # Reject if bridge is a contiguous subsequence of polygon or obstacle (cannot stitch).
-            vertex: Point = bridge[0]
-            if bridge in stitched:
-                raise StitchWinnerSubsequenceError("Winner is a subsequence of boundary points; cannot stitch")
-            if bridge in obstacle:
-                raise StitchWinnerSubsequenceError("Winner is a subsequence of obstacle; cannot stitch")
-
-            # Rotate polygon so vertex is last, obstacle so anchor is first; require CCW/CW; merge and update.
-
-            left: Polygon = Polygon(list(stitched))
-            right: Polygon = Polygon(list(obstacle))
-
-            left.sort("ccw")
-            right.sort("cw")
-
-            left = left >> vertex
-            right = right << anchor
-
-            assert right[0] == anchor, f"Right polygon does not start with anchor: {right}"
-            assert left[-1] == vertex, f"Left polygon does not end with vertex: {left}"
-
-            # Update the stitched polygon after adding the bridge.
-            merged: list[Point] = list(left) + list(right) + [anchor, vertex]
-            stitched = Polygon(merged)
-            stitches.append(bridge)
-
-        assert stitched.is_ccw(), f"Stitched polygon is not CCW: {stitched}"
-        self.state.points = list(stitched)
-        logger.info("StitchingStep.run() | job.id=%s stitched_points=%s bridge_edges=%s", self.job.id, len(self.state.points), len(stitches))
-        return {"stitched": Polygon(self.state.points).serialize(), "stitches": [stitch.serialize() for stitch in stitches]}
+        if len(self.state.points) > 0:
+            assert self.state.points.is_ccw(), f"Stitched polygon is not CCW: {self.state.points}"
+        logger.info(
+            "StitchingStep.run() | job.id=%s stitched_points=%s bridge_edges=%s",
+            self.job.id,
+            len(self.state.points),
+            len(self.state.stitches),
+        )
+        return {"stitched": self.state.points.serialize(), "stitches": [s.serialize() for s in self.state.stitches]}
 
 
 class EarClippingStep(SequenceStep):
@@ -489,95 +506,74 @@ class EarClippingStep(SequenceStep):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.gallery: ArtGallery = ArtGallery.unserialize(self.job.stdout)
-        state_arg: dict = args[2] if len(args) > 2 else kwargs.get("state", {})
-        if state_arg == {}:
-            self.gallery.ears = Table()
+        if self._state_was_empty:
+            self.init()
+        # Gallery is read-only; state holds titanic and ears
 
     def init(self) -> None:
-        pass
+        self.state.titanic = Polygon(list(self.gallery.stitched))
+        self.state.titanic.sort("ccw")
+        self.state.ears = Table()
 
-    def clip(self, titanic: Polygon) -> Generator[Ear, None, None]:
-        # Enforce global CCW once so ear detection, diagonal tests, and final merge are consistent.
-        titanic.sort("ccw")
-        logger.debug("EarClippingStep.clip() | job.id=%s polygon_vertices=%s", self.job.id, len(titanic))
+    @work(EAR_CLIPPING_MAX_WORK_PER_RUN)
+    def clip(self) -> Ear:
+        """
+        Find and clip the next ear from state.titanic; update state.ears and state.titanic.
+        Returns the ear, or raises NoMoreEarsError when done (≤3 vertices left).
+        """
+        titanic: Polygon = self.state.titanic
+        n: int = len(titanic)
 
-        # Ear clipping: while polygon has more than 3 vertices, find and clip an ear.
-        found: bool = True
-        while len(titanic) > 3 and found:
-            logger.debug("EarClippingStep.clip() | job.id=%s remaining_vertices=%s", self.job.id, len(titanic))
-            n: int = len(titanic)
-            found = False
-            for j in range(n):
+        # Polygon reduced to ≤3 vertices: add final triangle as last ear if exactly 3, then signal done.
+        if n <= 3:
+            if n == 3:
+                path: Walk = Walk(start=titanic[0], center=titanic[1], end=titanic[2])
+                if path.is_ccw():
+                    ear = Ear([titanic[0], titanic[1], titanic[2]])
+                    ear.sort("ccw")
+                    self.state.ears.add(ear)
+            raise NoMoreEarsError("No more ears to clip")
 
-                # Only clip if we would leave at least 3 vertices (the last 3 are the final triangle).
-                # Check if the triangle is a valid ear.
-                walk: Walk = Walk(start=titanic[j - 1], center=titanic[j], end=titanic[j + 1])
+        # Ear clipping: find one valid ear (only clip if we would leave at least 3 vertices).
+        for j in range(n):
+            # Check if the triangle (j-1, j, j+1) is a valid ear.
+            walk: Walk = Walk(start=titanic[j - 1], center=titanic[j], end=titanic[j + 1])
 
-                # CW ears are not valid because they contain empty space.
-                if walk.is_cw() or walk.is_collinear():
-                    continue
+            # CW ears are not valid because they contain empty space.
+            if walk.is_cw() or walk.is_collinear():
+                continue
 
-                # Build the ear from the CCW walk.
-                # walk = walk if walk.is_ccw() else ~walk
-                ear = Ear(list(walk))
+            # Build the ear from the CCW walk.
+            ear = Ear(list(walk))
 
-                # The ear must be fully inside the boundary.
-                if not titanic.contains(ear.diagonal.midpoint, inclusive=True):
-                    continue
+            # The ear must be fully inside the boundary.
+            if not titanic.contains(ear.diagonal.midpoint, inclusive=True):
+                continue
 
-                # The ear must not contain any other vertices.
-                excluded = ((j - 1) % n, j, (j + 1) % n)
-                if any(ear.contains(titanic[k], inclusive=False) for k in range(n) if k not in excluded):
-                    continue
+            # The ear must not contain any other vertices.
+            excluded = ((j - 1) % n, j, (j + 1) % n)
+            if any(ear.contains(titanic[k], inclusive=False) for k in range(n) if k not in excluded):
+                continue
 
-                # The ear diagonal midpoint must not be inside any obstacle.
-                # if any(obstacle.contains(ear.diagonal.midpoint, inclusive=False) for obstacle in self.gallery.obstacles):
-                #     continue
+            # Add the ear to the table and remove ear tip from polygon by index (position), not by point value;
+            # the same point may appear at other indices and must be kept.
+            self.state.ears.add(ear)
+            titanic.pop(j)
+            return ear
 
-                # The ear diagonal must not cross any obstacle edges.
-                # if any(any(ear.diagonal.crosses(obs_edge) for obs_edge in obstacle.edges) for obstacle in self.gallery.obstacles):
-                #     continue
-
-                # Add the ear to the table.
-                yield ear
-
-                # Remove ear tip from polygon by index (position), not by point value;
-                # the same point may appear at other indices and must be kept.
-                titanic.pop(j)
-
-                # Continue searching for an ear.
-                found = True
-                break
-
-        logger.debug("EarClippingStep.clip() | job.id=%s final_triangle_vertices=%s", self.job.id, len(titanic))
-        # The remainder should contain exactly 3 vertices.
-        # If there are more than 3 vertices, then it means there
-        # is a problem in the ear clipping step above, not here.
-        # Some iteration failed to detect an ear propertly.
-        if len(titanic) != 3:
-            return
-            # raise EarClippingFailureError(
-            #     f"Expected 3 vertices or less; got {len(titanic)}."
-            #     f"The (remaining) polygon is: {titanic}."
-            #     f"The ears found so far are: {self.gallery.ears}."
-            # )
-
-        # Add final triangle as last ear (ccw or reversed if cw).
-        path: Walk = Walk(start=titanic[0], center=titanic[1], end=titanic[2])
-        if path.is_ccw():
-            ear = Ear([titanic[0], titanic[1], titanic[2]])
-            ear.sort("ccw")
-            logger.debug("EarClippingStep.clip() | job.id=%s final_ear tip=%s", self.job.id, titanic[1])
-            yield ear
+        raise EarClippingFailureError("No valid ear found for polygon")
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
-        for ear in self.clip(Polygon(list(self.gallery.stitched))):
-            self.gallery.ears.add(ear)
+        while True:
+            try:
+                self.clip()
+            except NoMoreEarsError:
+                break
 
-        if not self.gallery.ears:
+        if not self.state.ears:
             raise EarClippingFailureError("No ears found for polygon")
-        logger.info("EarClippingStep.run() | job.id=%s ears=%s", self.job.id, len(self.gallery.ears))
-        return {"ears": self.gallery.ears.serialize()}
+        logger.info("EarClippingStep.run() | job.id=%s ears=%s", self.job.id, len(self.state.ears))
+        return {"ears": self.state.ears.serialize()}
 
 
 class ConvexComponentOptimizationStep(SequenceStep):
@@ -598,12 +594,14 @@ class ConvexComponentOptimizationStep(SequenceStep):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.gallery: ArtGallery = ArtGallery.unserialize(self.job.stdout)
-        state_arg: dict = args[2] if len(args) > 2 else kwargs.get("state", {})
-        if state_arg == {}:
-            self.gallery.convex_components = Table()
+        if self._state_was_empty:
+            self.init()
 
     def init(self) -> None:
-        pass
+        """Build initial convex_components from ears and adjacency table; store both in state."""
+        ears: Table[Ear] = self.gallery.ears
+        self.state.convex_components = Table.unserialize([ConvexComponent(ear) for ear in ears])
+        self.state.adjacency = self.build_adjacency_table(self.state.convex_components)
 
     def build_adjacency_table(self, table: Table[ConvexComponent]) -> Table[Collection[ConvexComponent, Identifier]]:
         """
@@ -625,53 +623,54 @@ class ConvexComponentOptimizationStep(SequenceStep):
             result.add(collection)
         return result
 
+    @work(CONVEX_COMPONENT_OPTIMIZATION_MAX_WORK_PER_RUN)
+    def merge(self) -> None:
+        """
+        Perform one merge: find the best adjacent pair by area, merge them, and update state.
+        Raises NoMoreConvexComponentsMergeError when no valid merge is possible.
+        """
+        best_area: Decimal | None = None
+        best_merge: ConvexComponent | None = None
+        best_pair: tuple[ConvexComponent, ConvexComponent] | None = None
+        for component in self.state.convex_components:
+            for adjacent_id in self.state.adjacency[component]:
+                adjacent: ConvexComponent = self.state.convex_components[adjacent_id]
+                try:
+                    merged: ConvexComponent = component + adjacent
+                except (ValidationError, ConvexComponentNotSimpleError, PolygonsDoNotShareEdgeError):
+                    continue
+                if best_area is None or abs(merged.signed_area) > best_area:
+                    best_area = abs(merged.signed_area)
+                    best_merge = merged
+                    best_pair = (component, adjacent)
+
+        if best_pair is None or best_merge is None:
+            raise NoMoreConvexComponentsMergeError("No more convex component merges possible")
+
+        logger.debug(
+            "ConvexComponentOptimizationStep.merge() | job.id=%s id_a=%s id_b=%s merged_area=%s components_before=%s",
+            self.job.id,
+            best_pair[0].id,
+            best_pair[1].id,
+            best_area,
+            len(self.state.convex_components),
+        )
+        self.state.convex_components -= best_pair[0]
+        self.state.convex_components -= best_pair[1]
+        self.state.convex_components += best_merge
+        self.state.adjacency = self.build_adjacency_table(self.state.convex_components)
+
     def run(self, **kwargs: Any) -> dict[str, Any]:
-        ears: Table[Ear] = self.gallery.ears
-        components_table: Table[ConvexComponent] = Table.unserialize([ConvexComponent(ear) for ear in ears])
-        adjacency_table: Table[Collection[ConvexComponent, Identifier]] = self.build_adjacency_table(components_table)
-        logger.info("ConvexComponentOptimizationStep.run() | job.id=%s components=%s", self.job.id, len(components_table))
-
-        # Merge adjacent pairs by largest area until no merge possible.
+        logger.info("ConvexComponentOptimizationStep.run() | job.id=%s components=%s", self.job.id, len(self.state.convex_components))
         while True:
-            logger.debug("ConvexComponentOptimizationStep.run() | job.id=%s components=%s", self.job.id, len(components_table))
-            best_area: Decimal | None = None
-            best_merge: ConvexComponent | None = None
-            best_pair: tuple[ConvexComponent, ConvexComponent] | None = None
-            for component in components_table:
-                for adjacent_id in adjacency_table[component]:
-                    adjacent: ConvexComponent = components_table[adjacent_id]
-                    try:
-                        merge: ConvexComponent = component + adjacent
-                    except (ValidationError, ConvexComponentNotSimpleError, PolygonsDoNotShareEdgeError):
-                        continue
-                    if best_area is None or abs(merge.signed_area) > best_area:
-                        best_area = abs(merge.signed_area)
-                        best_merge = merge
-                        best_pair = (component, adjacent)
-
-            # When no merge occurs, it is time to stop.
-            if best_pair is None or best_merge is None:
-                logger.debug("ConvexComponentOptimizationStep.run() | job.id=%s no_merge_candidate stopping", self.job.id)
+            try:
+                self.merge()
+            except NoMoreConvexComponentsMergeError:
                 break
-
-            # Merge the best pair, and update the tables.
-            logger.debug(
-                "ConvexComponentOptimizationStep.run() | job.id=%s merging pair id_a=%s id_b=%s merged_area=%s components_before=%s",
-                self.job.id,
-                best_pair[0].id,
-                best_pair[1].id,
-                best_area,
-                len(components_table),
-            )
-            components_table -= best_pair[0]
-            components_table -= best_pair[1]
-            components_table += best_merge
-            adjacency_table = self.build_adjacency_table(components_table)
-
-        logger.info("ConvexComponentOptimizationStep.run() | job.id=%s components_after_merges=%s", self.job.id, len(components_table))
-        if len(components_table) == 0:
+        logger.info("ConvexComponentOptimizationStep.run() | job.id=%s components_after_merges=%s", self.job.id, len(self.state.convex_components))
+        if len(self.state.convex_components) == 0:
             raise ConvexComponentOptimizationFailureError("No convex components found")
-        return {"convex_components": components_table.serialize(), "adjacency": adjacency_table.serialize()}
+        return {"convex_components": self.state.convex_components.serialize(), "adjacency": self.state.adjacency.serialize()}
 
 
 class GuardPlacementStep(SequenceStep):
@@ -709,10 +708,8 @@ class GuardPlacementStep(SequenceStep):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.gallery: ArtGallery = ArtGallery.unserialize(self.job.stdout)
-        state_arg: dict = args[2] if len(args) > 2 else kwargs.get("state", {})
-        if state_arg == {}:
+        if self._state_was_empty:
             self.prepare()
-            self.state.remaining_points = set(self.gallery.coverage)
             self.state.remaining_component_ids = {c.id for c in self.gallery.convex_components}
 
     def init(self) -> None:
@@ -782,52 +779,40 @@ class GuardPlacementStep(SequenceStep):
 
     def sees(self, guard: Point, target: Point) -> bool:
         """
-        True if target is visible from guard in the art gallery. Uses self.gallery. Caches by segment in visibility_by_segment.
-        If both points belong to the same convex component, they are visible.
-        After GUARD_PLACEMENT_MAX_SEES_PER_RUN calls in this run, suspends so the task can be continued by another worker.
+        True if target is visible from guard in the art gallery. Caches by segment in visibility_by_segment.
+        Cached lookups do not count toward work; uncached calls are counted and may suspend after max.
         """
-        self.work = getattr(self, "work", 0) + 1
-        if self.work >= GUARD_PLACEMENT_MAX_SEES_PER_RUN:
-            self.suspend()
-
-        # If the guard and target are the same, they are visible.
         if guard == target:
             return True
-
-        # Check if the segment has already been evaluated (explore() pre-fills same-component segments).
         segment: Segment = guard.to(target)
         if segment in self.state.visibility_by_segment:
             return self.state.visibility_by_segment[segment]
+        return self._sees_uncached(guard, target, segment)
 
-        # Segment must lie entirely inside the boundary (endpoints, midpoint, no interior crossing).
+    @work(GUARD_PLACEMENT_MAX_SEES_PER_RUN)
+    def _sees_uncached(self, guard: Point, target: Point, segment: Segment) -> bool:
+        """Uncached visibility check; decorated so each call counts as work and may suspend."""
         if not self.gallery.boundary.contains(segment, inclusive=True):
             self.state.visibility_by_segment[segment] = False
             return False
-
-        # Check if the segment intersects any obstacles (must not cross an obstacle edge in the interior).
         for obstacle in self.gallery.obstacles:
-
-            # Exit early: segment is inside the obstacle.
             if obstacle.intersects(segment.midpoint, inclusive=False):
                 self.state.visibility_by_segment[segment] = False
                 return False
-
             for edge in obstacle.edges:
                 if segment.crosses(edge):
                     self.state.visibility_by_segment[segment] = False
                     return False
-
-        # The segment is visible if no checks failed.
         self.state.visibility_by_segment[segment] = True
         return True
 
     def prepare(self) -> None:
         """
-        Hydrate state.component_id_by_point and state.component_id_by_midpoint: for each convex
-        component and each point in it, map the point to that component's id. Points on shared
-        edges appear in multiple components.
+        Hydrate state from gallery (read-only). Set remaining_points and component maps;
+        do not mutate gallery.
         """
-        self.gallery.coverage = set(self.gallery.stitched)
+        coverage: set[Point] = set(self.gallery.stitched) | {mp for c in self.gallery.convex_components for mp in c.midpoints}
+        self.state.remaining_points = set(coverage)
         self.state.component_id_by_point = {}
         self.state.component_id_by_midpoint = defaultdict(set)
         for component in self.gallery.convex_components:
@@ -835,7 +820,6 @@ class GuardPlacementStep(SequenceStep):
                 self.state.component_id_by_point.setdefault(hash(point), []).append(component.id)
             for midpoint in component.midpoints:
                 self.state.component_id_by_midpoint[midpoint].add(component.id)
-                self.gallery.coverage.add(midpoint)
 
     def compete(self, candidates: list[Point]) -> (Point, Collection[Point, Point]):
         """
@@ -858,25 +842,24 @@ class GuardPlacementStep(SequenceStep):
 
     def analyze(self) -> None:
         """
-        Build exclusivity table: for each guard, points visible only by that guard (not covered by any other guard).
-        Sets self.gallery.exclusivity. Raises GuardHasNoExclusivityError if any guard has no exclusive points.
+        Build exclusivity table in state: for each guard, points visible only by that guard.
+        Reads state.guards and state.visibility; writes state.exclusivity.
         """
-        visibility: list[Collection[Point, Point]] = list(self.gallery.visibility.values())
-        self.gallery.exclusivity = Table()
-        for guard in list(self.gallery.guards):
-            visibility: Collection[Point, Point] = self.gallery.visibility[guard]
+        self.state.exclusivity = Table()
+        for guard in list(self.state.guards):
+            visibility: Collection[Point, Point] = self.state.visibility[guard]
             other_points: set[Point] = {
-                point for other in self.gallery.guards.values() if other != guard for point in self.gallery.visibility[other].items
+                point for other in self.state.guards.values() if other != guard for point in self.state.visibility[other].items
             }
             exclusive: set[Point] = set(visibility.items) - other_points
             if not exclusive:
-                self.gallery.guards -= guard
-                self.gallery.visibility -= guard
+                self.state.guards -= guard
+                self.state.visibility -= guard
                 continue
             exclusivity: Collection[Point, Point] = Collection(guard)
             for point in exclusive:
                 exclusivity += point
-            self.gallery.exclusivity += exclusivity
+            self.state.exclusivity += exclusivity
 
     def propose(self, max_candidates: int = 10) -> list[Point]:
         """
@@ -897,7 +880,6 @@ class GuardPlacementStep(SequenceStep):
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
         # Run until all points are covered.
-        self.work = 0
         while self.state.remaining_points:
             logger.debug(
                 "GuardPlacementStep.run() | job.id=%s points_remaining=%s components_remaining=%s",
@@ -920,11 +902,10 @@ class GuardPlacementStep(SequenceStep):
                 candidates = list(candidates_list)
                 assert candidates, "Candidates are all monsters: f{self.remaining_points}"
 
-            # Add the best guard and its visibility to the gallery.
-            # Remove the component and the points from the remaining sets.
+            # Add the best guard and its visibility to state (gallery is read-only until completion).
             best_guard, best_visibility = self.compete(candidates)
-            self.gallery.guards += best_guard
-            self.gallery.visibility += best_visibility
+            self.state.guards += best_guard
+            self.state.visibility += best_visibility
             assert len(best_visibility) > 0, f"GuardPlacementStep.run() | job.id={self.job.id} best_visibility={best_visibility}"
             self.state.remaining_points -= set(best_visibility)
 
@@ -938,17 +919,18 @@ class GuardPlacementStep(SequenceStep):
                 self.state.remaining_component_ids -= {cid}
             logger.info("GuardPlacementStep.run() | job.id=%s points_remaining=%s", self.job.id, len(self.state.remaining_points))
 
-        logger.info("GuardPlacementStep.run() | job.id=%s guards=%s", self.job.id, len(self.gallery.guards))
-        if len(self.gallery.guards) == 0:
+        logger.info("GuardPlacementStep.run() | job.id=%s guards=%s", self.job.id, len(self.state.guards))
+        if len(self.state.guards) == 0:
             raise GuardCoverageFailureError("No guards placed")
         assert not self.state.remaining_component_ids, "Remaining components should be empty."
         assert not self.state.remaining_points, "Remaining points should be empty."
 
         self.analyze()
 
+        coverage: set[Point] = set(self.gallery.stitched) | {mp for c in self.gallery.convex_components for mp in c.midpoints}
         return {
-            "guards": self.gallery.guards.serialize(),
-            "visibility": self.gallery.visibility.serialize(),
-            "exclusivity": self.gallery.exclusivity.serialize(),
-            "coverage": [p.serialize() for p in self.gallery.coverage],
+            "guards": self.state.guards.serialize(),
+            "visibility": {str(hash(bag.key)): [p.serialize() for p in bag.items] for bag in self.state.visibility},
+            "exclusivity": {str(hash(bag.key)): [p.serialize() for p in bag.items] for bag in self.state.exclusivity},
+            "coverage": [p.serialize() for p in coverage],
         }

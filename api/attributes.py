@@ -248,6 +248,30 @@ class Attempt(int):
         return Attempt(super().__radd__(other))
 
 
+class Work(int):
+    """
+    Unit of work: non-negative integer count for step run limits (e.g. bridge calls, sees calls).
+    Must be >= 0. Supports += 1 for decorators that increment per call.
+    """
+
+    def __new__(cls, value: Any) -> "Work":
+        if isinstance(value, Work):
+            return super().__new__(cls, int(value))
+        try:
+            raw: int = int(value)
+        except (TypeError, ValueError):
+            raise ValidationError("Work must be an integer")
+        if raw < 0:
+            raise ValidationError("Work must be >= 0")
+        return super().__new__(cls, raw)
+
+    def __add__(self, other: Any) -> "Work":
+        return Work(super().__add__(other))
+
+    def __radd__(self, other: Any) -> "Work":
+        return Work(super().__radd__(other))
+
+
 class Countdown(int):
     """
     Integer sort key for "newest first": (FAR_FUTURE - value) in total_seconds, multiplied by 10**PRECISION.

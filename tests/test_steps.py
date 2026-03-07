@@ -27,6 +27,14 @@ class TestStepRegistration:
     def test_step_class_by_name_has_validate_polygons(self):
         assert Step.of(StepName.VALIDATE_POLYGONS) is ValidationPolygonStep
 
+    def test_step_has_work_initialized_to_zero(self):
+        from attributes import Work
+
+        job = Job(id=Identifier("j1"), step_name=StepName.VALIDATE_POLYGONS)
+        step = ValidationPolygonStep(job=job, user=_user(), state={})
+        assert step.work == Work(0)
+        assert step.work == 0
+
 
 def _user():
     return User(email=Email("u@e.com"))

@@ -6,6 +6,7 @@ Expects 12 guards for sufficient coverage.
 from attributes import Email
 from attributes import Identifier
 from enums import StepName
+from exceptions import SuspendedStepError
 from models import Job
 from models import User
 from tests.utils import assert_convex_components_visibility_within_component
@@ -247,7 +248,14 @@ def test_octopus_full_pipeline_requires_twelve_guards():
         stdin=dict(POLYGON_OCTOPUS_STDIN),
         stdout=dict(stdout),
     )
-    stdout.update(EarClippingStep(job=job_ear, user=_user(), state={}).run())
+    state = {}
+    while True:
+        step = EarClippingStep(job=job_ear, user=_user(), state=state)
+        try:
+            stdout.update(step.run())
+            break
+        except SuspendedStepError as e:
+            state = e.state
     assert_ears_simple_and_convex(stdout["ears"])
     job_convex = Job(
         id=Identifier("octopus-c"),

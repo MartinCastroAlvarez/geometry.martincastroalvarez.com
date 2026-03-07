@@ -3,6 +3,7 @@
 import pytest
 from attributes import Identifier
 from geometry import Point
+from geometry import Polygon
 from states import ArtGalleryStepState
 from states import ConvexComponentOptimizationStepState
 from states import EarClippingStepState
@@ -40,52 +41,68 @@ class TestValidationPolygonStepState:
 
 
 class TestStitchingStepState:
-    """Test StitchingStepState."""
+    """Test StitchingStepState (points is Polygon; remaining_obstacles list of Polygon)."""
 
     def test_serialize_empty(self):
         state = StitchingStepState()
         d = state.serialize()
-        assert d == {"points": []}
+        assert "points" in d
+        assert d["points"] == []
+        assert d["stitches"] == []
+        assert d["remaining_obstacles"] == []
 
-    def test_serialize_with_points(self):
-        points = [Point([0, 0]), Point([1, 1])]
-        state = StitchingStepState(points=points)
+    def test_serialize_with_points_and_remaining_obstacles(self):
+        points = Polygon([Point([0, 0]), Point([1, 0]), Point([1, 1])])
+        obstacles = [Polygon([Point([0.25, 0.25]), Point([0.75, 0.25]), Point([0.75, 0.75])])]
+        state = StitchingStepState(points=points, remaining_obstacles=obstacles)
         d = state.serialize()
-        assert len(d["points"]) == 2
-        assert d["points"][0] == points[0].serialize()
-        assert d["points"][1] == points[1].serialize()
+        assert len(d["points"]) == 3
+        assert len(d["remaining_obstacles"]) == 1
+        assert d["stitches"] == []
 
     def test_unserialize(self):
-        data = {"points": [[0, 0], [1, 1]]}
+        data = {"points": [[0, 0], [1, 0], [1, 1]], "stitches": [], "remaining_obstacles": []}
         state = StitchingStepState.unserialize(data)
-        assert len(state.points) == 2
+        assert len(state.points) == 3
         assert state.points[0] == Point([0, 0])
+        assert state.remaining_obstacles == []
+        assert state.stitches == []
 
     def test_unserialize_empty(self):
         state = StitchingStepState.unserialize({})
-        assert state.points == []
+        assert len(state.points) == 0
+        assert state.remaining_obstacles == []
+        assert state.stitches == []
 
 
 class TestEarClippingStepState:
-    """Test EarClippingStepState."""
+    """Test EarClippingStepState (titanic Polygon, ears Table)."""
 
-    def test_serialize(self):
+    def test_serialize_empty(self):
         state = EarClippingStepState()
         d = state.serialize()
-        assert d == {}
+        assert "titanic" in d
+        assert "ears" in d
+        assert d["titanic"] == []
+        assert isinstance(d["ears"], dict)
 
     def test_unserialize(self):
         state = EarClippingStepState.unserialize({})
         assert isinstance(state, EarClippingStepState)
+        assert len(state.titanic) == 0
+        assert len(state.ears) == 0
 
 
 class TestConvexComponentOptimizationStepState:
-    """Test ConvexComponentOptimizationStepState."""
+    """Test ConvexComponentOptimizationStepState (convex_components and adjacency)."""
 
     def test_serialize(self):
         state = ConvexComponentOptimizationStepState()
         d = state.serialize()
-        assert d == {}
+        assert "convex_components" in d
+        assert "adjacency" in d
+        assert d["convex_components"] == {}
+        assert d["adjacency"] == {}
 
     def test_unserialize(self):
         state = ConvexComponentOptimizationStepState.unserialize({})
