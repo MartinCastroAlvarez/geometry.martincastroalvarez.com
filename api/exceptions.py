@@ -732,8 +732,10 @@ class StepContinuationError(GeometryException):
     """
 
     def __init__(self, message: str = "Step requires continuation", state: dict | None = None):
+        if state is None:
+            raise ValueError("StepContinuationError requires state; cannot be None")
         super().__init__(message)
-        self.state: dict = state if state is not None else {}
+        self.state: dict = state
 
 
 class MaxTaskContinuationAttemptsError(GeometryException):

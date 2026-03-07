@@ -224,6 +224,8 @@ class Attempt(int):
     """
     Non-negative integer attempt count for task continuation (0 = first run).
     Must be >= 0 and <= settings.MAX_TASK_CONTINUATION_STEPS; otherwise raises MaxTaskContinuationAttemptsError.
+    Constructor accepts int or Attempt; Attempt(Attempt(1)) is the same as Attempt(1).
+    Supports + 1 so that self.attempt + 1 returns an Attempt (validated).
     """
 
     def __new__(cls, value: Any) -> "Attempt":
@@ -238,6 +240,12 @@ class Attempt(int):
         if raw > MAX_TASK_CONTINUATION_STEPS:
             raise MaxTaskContinuationAttemptsError(f"Attempt must be <= {MAX_TASK_CONTINUATION_STEPS} (max task continuation steps)")
         return super().__new__(cls, raw)
+
+    def __add__(self, other: Any) -> "Attempt":
+        return Attempt(super().__add__(other))
+
+    def __radd__(self, other: Any) -> "Attempt":
+        return Attempt(super().__radd__(other))
 
 
 class Countdown(int):

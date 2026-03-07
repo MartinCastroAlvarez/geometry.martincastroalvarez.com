@@ -85,10 +85,10 @@ class Step(ABC):
 
     STATE_CLASS: Type[State] = State
 
-    def __init__(self, job: Job, user: User, state: dict | None = None) -> None:
+    def __init__(self, job: Job, user: User, state: dict) -> None:
         self.job: Job = job
         self.user: User = user
-        self.state: State = self.STATE_CLASS.unserialize(state or {})
+        self.state: State = self.STATE_CLASS.unserialize(state)
 
     @cached_property
     def repository(self) -> JobsRepository:

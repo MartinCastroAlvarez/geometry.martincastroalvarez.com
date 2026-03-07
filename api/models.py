@@ -30,6 +30,7 @@ from dataclasses import dataclass
 from dataclasses import field
 from typing import Any
 
+from attributes import Attempt
 from attributes import Duration
 from attributes import Email
 from attributes import Identifier
@@ -384,7 +385,7 @@ class JobState(Model):
 
     id: Identifier
     data: dict[str, Any] = field(default_factory=dict)
-    attempt: int = 0
+    attempt: Attempt = field(default_factory=lambda: Attempt(0))
     created_at: Timestamp = field(default_factory=Timestamp.now)
     updated_at: Timestamp = field(default_factory=Timestamp.now)
 
@@ -405,7 +406,7 @@ class JobState(Model):
         'value'
         """
         raw_attempt: Any = data.get("attempt", 0)
-        attempt_val: int = int(raw_attempt) if raw_attempt is not None else 0
+        attempt_val: Attempt = Attempt(int(raw_attempt)) if raw_attempt is not None else Attempt(0)
         return cls(
             id=Identifier(data.get("id", "")),
             data=dict(data.get("data") or {}),

@@ -140,7 +140,10 @@ class Task(Controller):
         """
         payload: dict[str, Any] = body if body is not None else {}
         validated: TaskRequest = self.validate(payload)
+
         self.user = User(email=validated["user_email"])
+
+        # Load the job from the repository.
         try:
             self.job = self.repository.get(validated["job_id"])
         except RecordNotFoundError:
@@ -192,27 +195,27 @@ class Task(Controller):
 
     def save(self) -> None:
         """
-        Persist job to repository and persist step state (flush) so state and job stay in sync.
+        Persist job to repository and persist step state (current attempt) so state and job stay in sync.
         Called after execute() completes successfully; also when max continuation attempts is reached.
         """
         self.repository.save(self.job)
-        self.flush()
+        job_state = JobState(id=self.job.id, data=dict(self.state), attempt=self.attempt)
+        self.state_repository.save(job_state)
 
     def flush(self) -> None:
         """
-        Persist current step state to JobStateRepository. save() calls this to keep state durable.
-        Does not increment attempt or enqueue messages.
+        Persist step state with attempt incremented by one (Attempt(self.attempt + 1)); no queue.
+        requeue() calls this then puts the START message. Raises if attempt exceeds MAX_TASK_CONTINUATION_STEPS.
         """
-        job_state = JobState(id=self.job.id, data=dict(self.state), attempt=int(self.attempt))
+        job_state = JobState(id=self.job.id, data=dict(self.state), attempt=self.attempt + 1)
         self.state_repository.save(job_state)
 
     def requeue(self) -> None:
         """
-        Persist step state with incremented attempt and enqueue START for this job so the next run continues.
+        Persist step state with incremented attempt (flush) and enqueue START for this job so the next run continues.
         Used only when StepContinuationError is caught; the next handler invocation will resume() and load this state.
         """
-        job_state = JobState(id=self.job.id, data=dict(self.state), attempt=int(self.attempt) + 1)
-        self.state_repository.save(job_state)
+        self.flush()
         message = Message(action=Action.START, job_id=self.job.id, user_email=self.user.email)
         queue.put(message)
 
