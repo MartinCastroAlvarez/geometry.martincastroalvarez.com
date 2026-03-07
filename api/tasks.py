@@ -251,9 +251,13 @@ class StartTask(Task):
 
         # SequenceStep: START next sibling (if any); REPORT parent is done by self.report() via ReportTask.
         if isinstance(step, SequenceStep):
-            if step.parent is None:
+            try:
+                if self.job.parent_id is None:
+                    raise SequenceStepRequiresParentError("SequenceStep requires parent")
+                parent_job: Job = self.repository.get(self.job.parent_id)
+            except RecordNotFoundError:
                 raise SequenceStepRequiresParentError("SequenceStep requires parent")
-            sibling_ids: list[Identifier] = list(step.parent.children_ids)
+            sibling_ids: list[Identifier] = list(parent_job.children_ids)
             try:
                 idx: int = sibling_ids.index(self.job.id)
             except ValueError:

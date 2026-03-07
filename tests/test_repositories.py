@@ -14,9 +14,11 @@ from exceptions import UnauthorizedError
 from exceptions import ValidationError
 from models import ArtGallery
 from models import Job
+from models import JobState
 from models import User
 from repositories import ArtGalleryRepository
 from repositories import JobsRepository
+from repositories import JobStateRepository
 from repositories import Results
 
 import api  # noqa: F401
@@ -119,3 +121,57 @@ class TestRepositories:
         repo = ArtGalleryRepository()
         with pytest.raises(ValidationError, match="must be"):
             repo.save(Job(id=Identifier("j1"), stdin={}))
+
+
+class TestJobStateRepository:
+    """Test JobStateRepository."""
+
+    def test_job_state_repository_path_includes_slug(self):
+        user = User.test()
+        repo = JobStateRepository(user=user)
+        assert "states" in repo.path
+        assert user.email.slug in repo.path
+
+    def test_job_state_repository_not_authenticated_raises(self):
+        anon = User.anonymous()
+        with pytest.raises(UnauthorizedError, match="not authenticated"):
+            _ = JobStateRepository(user=anon).path
+
+    @patch("repositories.bucket")
+    def test_job_state_repository_save_and_get(self, mock_bucket):
+        state_data = {
+            "id": "j1",
+            "data": {"key": "value"},
+            "created_at": "",
+            "updated_at": "",
+        }
+        mock_bucket.load.return_value = state_data
+        user = User.test()
+        repo = JobStateRepository(user=user)
+        state = JobState.unserialize(state_data)
+        saved = repo.save(state)
+        assert saved is not None
+        mock_bucket.save.assert_called()
+
+    @patch("repositories.bucket")
+    def test_job_state_repository_get_not_found_raises(self, mock_bucket):
+        mock_bucket.load.return_value = None
+        user = User.test()
+        repo = JobStateRepository(user=user)
+        with pytest.raises(RecordNotFoundError, match="not found"):
+            repo.get(Identifier("missing"))
+
+    @patch("repositories.bucket")
+    def test_job_state_repository_delete(self, mock_bucket):
+        mock_bucket.delete.return_value = True
+        user = User.test()
+        repo = JobStateRepository(user=user)
+        repo.delete(Identifier("j1"))
+        mock_bucket.delete.assert_called_once()
+
+    @patch("repositories.bucket")
+    def test_job_state_repository_exists(self, mock_bucket):
+        mock_bucket.exists.return_value = True
+        user = User.test()
+        repo = JobStateRepository(user=user)
+        assert repo.exists(Identifier("j1")) is True

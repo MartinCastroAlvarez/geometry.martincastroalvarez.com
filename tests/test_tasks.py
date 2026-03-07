@@ -121,12 +121,13 @@ class TestStartTask:
     @patch.object(StartTask, "broadcast")
     @patch("tasks.queue")
     @patch("tasks.JobsRepository")
-    def test_execute_step_raises_marks_job_failed_and_saves_stderr(
+    def test_execute_step_with_empty_stdout_returns_pending(
         self, mock_repo_cls, mock_tasks_queue, mock_broadcast
     ):
         mock_repo = MagicMock()
         mock_repo_cls.return_value = mock_repo
-        # StitchingStep reads from stdout; invalid boundary makes ArtGallery.unserialize raise.
+        # job.start() clears stdout before step runs, so StitchingStep gets an empty stdout
+        # and runs successfully with 0 boundary points (no exception raised).
         job = Job(
             id=Identifier("j1"),
             step_name=StepName.STITCHING,
@@ -136,6 +137,36 @@ class TestStartTask:
             parent_id=None,
         )
         mock_repo.get.return_value = job
+        task = StartTask()
+        req = {"job_id": Identifier("j1"), "user_email": Email("u@e.com")}
+        result = task.handler(req)
+        # stdout is cleared by job.start(), so no exception is raised
+        assert result["status"] == Status.PENDING
+        mock_repo.save.assert_called_once()
+        mock_tasks_queue.put.assert_called()
+
+    @patch.object(StartTask, "broadcast")
+    @patch("tasks.queue")
+    @patch("tasks.JobsRepository")
+    @patch("tasks.Step")
+    def test_execute_step_raises_marks_job_failed_and_saves_stderr(
+        self, mock_step_cls, mock_repo_cls, mock_tasks_queue, mock_broadcast
+    ):
+        mock_repo = MagicMock()
+        mock_repo_cls.return_value = mock_repo
+        job = Job(
+            id=Identifier("j1"),
+            step_name=StepName.STITCHING,
+            stdin={},
+            stdout={},
+            children_ids=[],
+            parent_id=None,
+        )
+        mock_repo.get.return_value = job
+        mock_step_instance = MagicMock()
+        mock_step_instance.run.side_effect = ValueError("test error")
+        mock_step_instance.job = job
+        mock_step_cls.of.return_value.return_value = mock_step_instance
         task = StartTask()
         req = {"job_id": Identifier("j1"), "user_email": Email("u@e.com")}
         result = task.handler(req)

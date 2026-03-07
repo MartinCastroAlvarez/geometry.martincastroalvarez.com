@@ -62,6 +62,13 @@ from models import Job
 from models import User
 from repositories import JobsRepository
 from settings import STITCH_BUCKET_SIZE
+from states import ArtGalleryStepState
+from states import ConvexComponentOptimizationStepState
+from states import EarClippingStepState
+from states import GuardPlacementStepState
+from states import State
+from states import StitchingStepState
+from states import ValidationPolygonStepState
 from structs import Collection
 from structs import Table
 
@@ -73,23 +80,20 @@ class Step(ABC):
     Abstract pipeline step. Receives a Job and user; run() returns a dict
     merged into job.stdout. Idempotent: given the same job and inputs, running
     multiple times must produce the same outcome and must not duplicate side effects.
+    All steps have two main attributes: self.gallery and self.state.
     """
+
+    STATE_CLASS: Type[State] = State
 
     def __init__(self, job: Job, user: User) -> None:
         self.job: Job = job
         self.user: User = user
+        self.state: State = self.STATE_CLASS.unserialize({})
 
     @cached_property
     def repository(self) -> JobsRepository:
         """JobsRepository for the step's user. Cached for the lifetime of the step instance."""
         return JobsRepository(user=self.user)
-
-    @cached_property
-    def parent(self) -> Job | None:
-        """Parent job from repository, or None if this job has no parent."""
-        if self.job.parent_id is None:
-            return None
-        return self.repository.get(self.job.parent_id)
 
     @staticmethod
     def of(step_name: StepName) -> Type[Step]:
@@ -168,6 +172,12 @@ class ArtGalleryStep(CoordinatorStep):
     Complexity: O(1).
     """
 
+    STATE_CLASS: Type[State] = ArtGalleryStepState
+
+    def __init__(self, job: Job, user: User) -> None:
+        super().__init__(job, user)
+        self.gallery: ArtGallery = ArtGallery.unserialize(self.job.stdin)
+
     def spawn(self) -> None:
         """
         Create child jobs (validate_polygons, stitching, ear_clipping, convex_component_optimization, guard_placement) with deterministic ids.
@@ -227,22 +237,20 @@ class ValidationPolygonStep(SequenceStep):
     Complexity: O(n^2), n = total vertices (boundary + all obstacles).
     """
 
-    boundary: Polygon | None
-    obstacles: list[Polygon]
+    STATE_CLASS: Type[State] = ValidationPolygonStepState
 
     def __init__(self, job: Job, user: User) -> None:
         super().__init__(job, user)
-        self.boundary: Polygon | None = None
-        self.obstacles: list[Polygon] = []
+        self.gallery: ArtGallery = ArtGallery.unserialize(self.job.stdin)
 
     def validate_simplicity(self) -> None:
         """
         Ensure boundary and every obstacle are simple (degree 2, no self-intersection).
         Required so later steps (ear clipping, stitching) operate on well-defined polygons.
         """
-        if not self.boundary.is_simple():
+        if not self.gallery.boundary.is_simple():
             raise PolygonNotSimpleError("Boundary polygon is not simple.")
-        if any(not obstacle.is_simple() for obstacle in self.obstacles):
+        if any(not obstacle.is_simple() for obstacle in self.gallery.obstacles):
             raise PolygonNotSimpleError("Obstacle polygon is not simple.")
 
     def validate_orientation(self) -> None:
@@ -250,8 +258,8 @@ class ValidationPolygonStep(SequenceStep):
         Ensure boundary is CCW (outer ring) and every obstacle is CW (hole).
         Convention required for containment tests and stitching (bridge/merge logic).
         """
-        self.boundary.sort("ccw")
-        for obstacle in self.obstacles:
+        self.gallery.boundary.sort("ccw")
+        for obstacle in self.gallery.obstacles:
             obstacle.sort("cw")
 
     def validate_containment(self) -> None:
@@ -259,8 +267,8 @@ class ValidationPolygonStep(SequenceStep):
         Ensure every obstacle vertex lies strictly inside the boundary.
         Obstacles must be holes fully enclosed by the outer polygon for valid stitching.
         """
-        if any(not all(self.boundary.contains(point, inclusive=False) for point in obstacle) for obstacle in self.obstacles):
-            raise ValidationObstacleNotContainedError(f"Obstacle is not strictly inside the boundary ({self.boundary}).")
+        if any(not all(self.gallery.boundary.contains(point, inclusive=False) for point in obstacle) for obstacle in self.gallery.obstacles):
+            raise ValidationObstacleNotContainedError(f"Obstacle is not strictly inside the boundary ({self.gallery.boundary}).")
 
     def validate_intersections(self) -> None:
         """
@@ -270,33 +278,32 @@ class ValidationPolygonStep(SequenceStep):
         """
         if any(
             _segments_intersect(edge, boundary_edge, inclusive=True) and not _segments_share_endpoint(edge, boundary_edge)
-            for obstacle in self.obstacles
+            for obstacle in self.gallery.obstacles
             for edge in obstacle.edges
-            for boundary_edge in self.boundary.edges
+            for boundary_edge in self.gallery.boundary.edges
         ):
             raise PolygonNotSimpleError("Obstacle edge intersects or touches boundary.")
         if any(
             boundary_edge.contains(point, inclusive=True)
-            for obstacle in self.obstacles
+            for obstacle in self.gallery.obstacles
             for point in obstacle
-            for boundary_edge in self.boundary.edges
+            for boundary_edge in self.gallery.boundary.edges
         ):
             raise PolygonNotSimpleError("Obstacle has a vertex on the boundary.")
-        if any(obstacle.intersects(other, inclusive=True) for obstacle in self.obstacles for other in self.obstacles if obstacle != other):
+        if any(
+            obstacle.intersects(other, inclusive=True) for obstacle in self.gallery.obstacles for other in self.gallery.obstacles if obstacle != other
+        ):
             raise PolygonNotSimpleError("Obstacles intersect or touch.")
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
-        gallery: ArtGallery = ArtGallery.unserialize(self.job.stdin)
-        self.boundary = gallery.boundary
-        self.obstacles = list(gallery.obstacles)
         self.validate_simplicity()
         self.validate_orientation()
         self.validate_containment()
         self.validate_intersections()
-        logger.info("ValidationPolygonStep.run() | job.id=%s obstacles=%s", self.job.id, len(self.obstacles))
+        logger.info("ValidationPolygonStep.run() | job.id=%s obstacles=%s", self.job.id, len(self.gallery.obstacles))
         return {
-            "boundary": self.boundary.serialize(),
-            "obstacles": [obstacle.serialize() for obstacle in self.obstacles],
+            "boundary": self.gallery.boundary.serialize(),
+            "obstacles": [obstacle.serialize() for obstacle in self.gallery.obstacles],
         }
 
 
@@ -317,32 +324,36 @@ class StitchingStep(SequenceStep):
     Complexity: O(n^3), n = total vertices (boundary + all obstacles); bucket early exit often reduces work.
     """
 
-    boundary: Polygon
-    obstacles: list[Polygon]
+    STATE_CLASS: Type[State] = StitchingStepState
     points: Polygon
+
+    def __init__(self, job: Job, user: User) -> None:
+        super().__init__(job, user)
+        self.gallery: ArtGallery = ArtGallery.unserialize(self.job.stdout)
 
     def sort(self) -> None:
         """Sort obstacles in place by rightmost vertex (x, y) descending for bridge order."""
-        self.obstacles.sort(key=lambda obstacle: (obstacle.rightmost.x, obstacle.rightmost.y), reverse=True)
+        obstacles = list(self.gallery.obstacles)
+        obstacles.sort(key=lambda obstacle: (obstacle.rightmost.x, obstacle.rightmost.y), reverse=True)
+        self.gallery.obstacles = Table.unserialize(obstacles)
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
-        gallery: ArtGallery = ArtGallery.unserialize(self.job.stdout)
-        self.boundary = gallery.boundary
-        self.obstacles = list(gallery.obstacles)
+        obstacles = list(self.gallery.obstacles)
 
         # No obstacles: stitched result is the boundary; no bridge edges added.
-        if not self.obstacles:
-            self.points = self.boundary
-            logger.info("StitchingStep.run() | job.id=%s boundary_points=%s", self.job.id, len(self.boundary))
+        if not obstacles:
+            self.points = self.gallery.boundary
+            logger.info("StitchingStep.run() | job.id=%s boundary_points=%s", self.job.id, len(self.gallery.boundary))
             return {"stitched": self.points.serialize(), "stitches": []}
 
         # Sort obstacles by rightmost vertex (desc) and init working polygon and its edges.
         self.sort()
-        logger.info("StitchingStep.run() | job.id=%s obstacles=%s boundary_points=%s", self.job.id, len(self.obstacles), len(self.boundary))
-        stitched: Polygon = Polygon(list(self.boundary))
+        obstacles = list(self.gallery.obstacles)
+        logger.info("StitchingStep.run() | job.id=%s obstacles=%s boundary_points=%s", self.job.id, len(obstacles), len(self.gallery.boundary))
+        stitched: Polygon = Polygon(list(self.gallery.boundary))
         stitches: list[Segment] = []
 
-        for obstacle in self.obstacles:
+        for obstacle in obstacles:
             obstacle.sort("cw")
             bridge: Segment | None = None
             anchor: Point | None = None
@@ -361,11 +372,11 @@ class StitchingStep(SequenceStep):
                     segment: Segment = candidate.to(anchor)
 
                     # Exit early if the segment is not contained in the boundary.
-                    if not self.boundary.contains(segment, inclusive=True):
+                    if not self.gallery.boundary.contains(segment, inclusive=True):
                         continue
 
                     # Exit early if the segment intersects any other obstacle.
-                    if any(other.intersects(segment, inclusive=False) for other in self.obstacles if other is not obstacle):
+                    if any(other.intersects(segment, inclusive=False) for other in obstacles if other is not obstacle):
                         continue
 
                     # Exit early if the segment crosses the current obstacle (except at anchor).
@@ -376,7 +387,7 @@ class StitchingStep(SequenceStep):
                     if any(
                         Walk(start=edge[0], center=edge[1], end=segment[0]).is_collinear()
                         and Walk(start=edge[0], center=edge[1], end=segment[1]).is_collinear()
-                        for edge in self.boundary.edges
+                        for edge in self.gallery.boundary.edges
                         if not _segments_share_endpoint(edge, segment)
                     ):
                         continue
@@ -446,7 +457,11 @@ class EarClippingStep(SequenceStep):
     Complexity: O(n^3), n = number of vertices of the stitched polygon.
     """
 
-    gallery: ArtGallery
+    STATE_CLASS: Type[State] = EarClippingStepState
+
+    def __init__(self, job: Job, user: User) -> None:
+        super().__init__(job, user)
+        self.gallery: ArtGallery = ArtGallery.unserialize(self.job.stdout)
 
     def clip(self, titanic: Polygon) -> Generator[Ear, None, None]:
         # Enforce global CCW once so ear detection, diagonal tests, and final merge are consistent.
@@ -523,7 +538,6 @@ class EarClippingStep(SequenceStep):
             yield ear
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
-        self.gallery = ArtGallery.unserialize(self.job.stdout)
         self.gallery.ears = Table()
         for ear in self.clip(Polygon(list(self.gallery.stitched))):
             self.gallery.ears.add(ear)
@@ -547,7 +561,11 @@ class ConvexComponentOptimizationStep(SequenceStep):
     Complexity: O(n^3), n = number of ears (triangles), on the order of stitched vertices.
     """
 
-    gallery: ArtGallery
+    STATE_CLASS: Type[State] = ConvexComponentOptimizationStepState
+
+    def __init__(self, job: Job, user: User) -> None:
+        super().__init__(job, user)
+        self.gallery: ArtGallery = ArtGallery.unserialize(self.job.stdout)
 
     def build_adjacency_table(self, table: Table[ConvexComponent]) -> Table[Collection[ConvexComponent, Identifier]]:
         """
@@ -570,7 +588,6 @@ class ConvexComponentOptimizationStep(SequenceStep):
         return result
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
-        self.gallery = ArtGallery.unserialize(self.job.stdout)
         ears: Table[Ear] = self.gallery.ears
         components_table: Table[ConvexComponent] = Table.unserialize([ConvexComponent(ear) for ear in ears])
         adjacency_table: Table[Collection[ConvexComponent, Identifier]] = self.build_adjacency_table(components_table)
@@ -649,12 +666,16 @@ class GuardPlacementStep(SequenceStep):
     Complexity: O(n^4) in the worst case; the exploration heuristic reduces visibility checks in practice.
     """
 
-    gallery: ArtGallery
+    STATE_CLASS: Type[State] = GuardPlacementStepState
     component_id_by_point: Table[Collection[Point, Identifier]]
     visibility_by_segment: dict[Segment, bool]
     remaining_points: set[Point]
     remaining_components: set[ConvexComponent]
     component_id_by_midpoint: dict[Point, Identifier]
+
+    def __init__(self, job: Job, user: User) -> None:
+        super().__init__(job, user)
+        self.gallery: ArtGallery = ArtGallery.unserialize(self.job.stdout)
 
     def measure(self, convex_component: ConvexComponent) -> int:
         """Return the number of points (vertices and edge midpoints) of the component that are not in self.remaining_points."""
@@ -828,7 +849,6 @@ class GuardPlacementStep(SequenceStep):
         return list(largest_component)[:max_candidates]
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
-        self.gallery = ArtGallery.unserialize(self.job.stdout)
         self.visibility_by_segment = {}
         self.component_ids_by_midpoint = defaultdict(set)
         self.component_id_by_point = Table()

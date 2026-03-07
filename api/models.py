@@ -48,6 +48,7 @@ from geometry import Segment
 from interfaces import Serializable
 from serializers import ArtGalleryDict
 from serializers import JobDict
+from serializers import JobStateDict
 from serializers import Serialized
 from serializers import UserDict
 from settings import ANONYMOUS_AVATAR_URL
@@ -364,6 +365,55 @@ class Job(Model):
             "meta": dict(self.meta),
             "stderr": dict(self.stderr),
             "duration": int(self.duration),
+            "created_at": str(self.created_at),
+            "updated_at": str(self.updated_at),
+        }
+
+
+@dataclass
+class JobState(Model):
+    """
+    Persistent state for a job. The id equals the job id (1:1 relationship).
+    Used to persist intermediate step state across retries or restarts.
+
+    For example, to create and persist job state:
+    >>> state = JobState(id=job.id, data={"remaining_points": [...]})
+    >>> state.serialize()
+    {'id': '...', 'data': {...}, ...}
+    """
+
+    id: Identifier
+    data: dict[str, Any] = field(default_factory=dict)
+    created_at: Timestamp = field(default_factory=Timestamp.now)
+    updated_at: Timestamp = field(default_factory=Timestamp.now)
+
+    def __str__(self) -> str:
+        return f"JobState(id={self.id})"
+
+    def __repr__(self) -> str:
+        return f"JobState(id={self.id!r})"
+
+    @classmethod
+    def unserialize(cls, data: Any) -> JobState:
+        """
+        Build JobState from dict. Parses id, data, created_at, updated_at.
+
+        For example, to load state from S3:
+        >>> state = JobState.unserialize({"id": "abc", "data": {"key": "value"}})
+        >>> state.data["key"]
+        'value'
+        """
+        return cls(
+            id=Identifier(data.get("id", "")),
+            data=dict(data.get("data") or {}),
+            created_at=Timestamp(data.get("created_at")),
+            updated_at=Timestamp(data.get("updated_at")),
+        )
+
+    def serialize(self) -> JobStateDict:
+        return {
+            "id": str(self.id),
+            "data": dict(self.data),
             "created_at": str(self.created_at),
             "updated_at": str(self.updated_at),
         }

@@ -431,23 +431,27 @@ class TestReprocessingJobMutation:
         assert str(req["job_id"]) == "job-123"
 
     @patch("mutations.queue")
+    @patch("mutations.ArtGalleryRepository")
     @patch("mutations.JobsRepository")
-    def test_execute_reprocesses_success_job(self, mock_repo_cls, mock_queue):
+    def test_execute_reprocesses_success_job(self, mock_jobs_repo_cls, mock_gallery_repo_cls, mock_queue):
         user = User.test()
-        mock_repo = MagicMock()
-        mock_repo_cls.return_value = mock_repo
+        mock_jobs_repo = MagicMock()
+        mock_jobs_repo_cls.return_value = mock_jobs_repo
+        mock_gallery_repo = MagicMock()
+        mock_gallery_repo_cls.return_value = mock_gallery_repo
+        mock_gallery_repo.exists.return_value = False
         job = Job(
             id=Identifier("j1"),
             status=Status.SUCCESS,
             step_name=StepName.ART_GALLERY,
         )
-        mock_repo.get.return_value = job
+        mock_jobs_repo.get.return_value = job
         handler = ReprocessingJobMutation(user=user)
         result = handler.execute({"job_id": Identifier("j1")})
         assert "id" in result
         assert result["id"] == "j1"
         assert job.status == Status.PENDING
-        mock_repo.save.assert_called_once()
+        mock_jobs_repo.save.assert_called_once()
         mock_queue.put.assert_called_once()
 
     @patch("mutations.JobsRepository")

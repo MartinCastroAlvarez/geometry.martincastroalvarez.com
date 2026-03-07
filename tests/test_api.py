@@ -322,12 +322,15 @@ class TestHandler:
         assert "data" in body and body["data"]["id"] == "j1"
 
     @patch("mutations.queue")
+    @patch("mutations.ArtGalleryRepository")
     @patch("mutations.JobsRepository")
     @patch("api.api.Secret")
-    def test_handler_post_jobs_id_reprocesses_job(self, mock_secret, mock_repo_cls, mock_queue):
+    def test_handler_post_jobs_id_reprocesses_job(self, mock_secret, mock_jobs_repo_cls, mock_gallery_repo_cls, mock_queue):
         """POST /v1/jobs/{id} (without /publish) triggers ReprocessingJobMutation."""
         mock_secret.get.side_effect = lambda key: "test-secret" if key == "JWT_SECRET" else "test-token"
-        mock_repo = mock_repo_cls.return_value
+        mock_jobs_repo = mock_jobs_repo_cls.return_value
+        mock_gallery_repo = mock_gallery_repo_cls.return_value
+        mock_gallery_repo.exists.return_value = False
         job = Job(
             id=Identifier("j1"),
             status=Status.SUCCESS,
@@ -335,7 +338,7 @@ class TestHandler:
             meta={},
             stdout={},
         )
-        mock_repo.get.return_value = job
+        mock_jobs_repo.get.return_value = job
         event = {
             "path": "/v1/jobs/j1",
             "httpMethod": "POST",
@@ -346,7 +349,7 @@ class TestHandler:
         }
         result = handler(event, None)
         assert result["statusCode"] == 200
-        mock_repo.save.assert_called_once()
+        mock_jobs_repo.save.assert_called_once()
         mock_queue.put.assert_called_once()
 
     @patch("indexes.bucket")
@@ -418,14 +421,16 @@ class TestInterceptor:
 class TestPublicAndPrivateRoutes:
     """Test PUBLIC_ROUTES and PRIVATE_ROUTES mapping."""
 
-    def test_public_routes_has_galleries_and_polygon(self):
+    def test_public_routes_has_galleries(self):
         assert Path("v1/galleries") in PUBLIC_ROUTES
         assert Path("v1/galleries/") in PUBLIC_ROUTES
-        assert Path("v1/polygon") in PUBLIC_ROUTES
 
     def test_private_routes_has_jobs(self):
         assert Path("v1/jobs") in PRIVATE_ROUTES
         assert Path("v1/jobs/") in PRIVATE_ROUTES
+
+    def test_private_routes_has_polygon(self):
+        assert Path("v1/polygon") in PRIVATE_ROUTES
 
     def test_private_routes_post_jobs_id_is_reprocess(self):
         """POST on v1/jobs/ is ReprocessingJobMutation (publish is /v1/jobs/{id}/publish)."""

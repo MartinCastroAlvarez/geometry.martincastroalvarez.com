@@ -54,6 +54,12 @@ class JobDict(ModelDict):
     duration: int
 
 
+class JobStateDict(ModelDict):
+    """Serialized form of JobState (serialize/unserialize)."""
+
+    data: dict[str, Any]
+
+
 class ArtGalleryDict(ModelDict):
     """Serialized form of ArtGallery (serialize/unserialize)."""
 

@@ -7,6 +7,7 @@ from geometry import ConvexComponent
 from geometry import Point
 from models import ArtGallery
 from models import Job
+from models import JobState
 from models import User
 from settings import ANONYMOUS_EMAIL
 from settings import ANONYMOUS_NAME
@@ -152,3 +153,36 @@ class TestJobLifecycle:
         assert job.stderr.get("error:ear-clipping:message") == "test error"
         assert job.stderr.get("error:ear-clipping:type") == "ValueError"
         assert "step:ear-clipping:finished_at" in job.meta
+
+
+class TestJobState:
+    """Test JobState model."""
+
+    def test_create_job_state(self):
+        state = JobState(id=Identifier("j1"), data={"key": "value"})
+        assert str(state.id) == "j1"
+        assert state.data == {"key": "value"}
+
+    def test_serialize(self):
+        state = JobState(id=Identifier("j1"), data={"key": "value"})
+        d = state.serialize()
+        assert d["id"] == "j1"
+        assert d["data"] == {"key": "value"}
+        assert "created_at" in d
+        assert "updated_at" in d
+
+    def test_unserialize(self):
+        state = JobState.unserialize({"id": "j1", "data": {"key": "value"}})
+        assert str(state.id) == "j1"
+        assert state.data == {"key": "value"}
+
+    def test_unserialize_empty_data(self):
+        state = JobState.unserialize({"id": "j1"})
+        assert str(state.id) == "j1"
+        assert state.data == {}
+
+    def test_str_and_repr(self):
+        state = JobState(id=Identifier("j1"))
+        assert "JobState" in str(state)
+        assert "j1" in str(state)
+        assert "JobState" in repr(state)

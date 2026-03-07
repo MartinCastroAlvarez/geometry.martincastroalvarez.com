@@ -52,6 +52,7 @@ from exceptions import ValidationError
 from logger import get_logger
 from models import ArtGallery
 from models import Job
+from models import JobState
 from models import Model
 from models import User
 from settings import DEFAULT_LIMIT
@@ -260,3 +261,19 @@ class JobsRepository(PrivateRepository[Job]):
 
     NAME: ClassVar[str] = "jobs"
     MODEL: ClassVar[type[Model]] = Job
+
+
+@dataclass
+class JobStateRepository(PrivateRepository[JobState]):
+    """
+    Per-user job state repository. Path: data/{email}/states.
+    The state id equals the job id (1:1 relationship).
+
+    For example, to create and save job state for the current user:
+    >>> repo = JobStateRepository(user=user)
+    >>> state = JobState(id=job.id, data={"key": "value"})
+    >>> repo.save(state)
+    """
+
+    NAME: ClassVar[str] = "states"
+    MODEL: ClassVar[type[Model]] = JobState
