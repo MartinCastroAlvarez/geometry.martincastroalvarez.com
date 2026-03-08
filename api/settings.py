@@ -62,7 +62,7 @@ DEFAULT_ORIGIN: str = os.getenv("DEFAULT_ORIGIN") or "https://geometry.martincas
 STITCH_BUCKET_SIZE: int = int(os.getenv("STITCH_BUCKET_SIZE", "5"))
 
 # Task continuation: max number of times a step may re-queue (START same job_id) before failing.
-MAX_TASK_CONTINUATION_STEPS: int = int(os.getenv("MAX_TASK_CONTINUATION_STEPS", "300"))
+MAX_TASK_CONTINUATION_STEPS: int = int(os.getenv("MAX_TASK_CONTINUATION_STEPS", "50"))
 
 # Max units of work of each run.
 STITCHING_MAX_WORK: int = int(os.getenv("STITCHING_MAX_WORK", "50"))

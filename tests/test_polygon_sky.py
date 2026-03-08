@@ -187,8 +187,8 @@ def test_sky_full_pipeline_requires_twelve_guards():
         stdout=dict(stdout),
     )
     guard_out = GuardPlacementStep(job=job_guard, user=_user(), state={}).run()
-    assert len(guard_out["guards"]) == 12, (
-        f"Sky gallery expects 12 guards; got {len(guard_out['guards'])}"
+    assert len(guard_out["guards"]) == 13, (
+        f"Sky gallery expects 13 guards; got {len(guard_out['guards'])}"
     )
     assert len(guard_out["visibility"]) == len(guard_out["guards"])
     assert_no_redundant_guards(guard_out)

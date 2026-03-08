@@ -76,29 +76,33 @@ class ValidationPolygonStepState(State):
 
 class StitchingStepState(State):
     """
-    State for StitchingStep. Has points (Polygon), stitches, and remaining_obstacles (list of Polygon).
-    Gallery is read-only; always read/write via state.
+    State for StitchingStep. Has points (Polygon), stitches, remaining_obstacles (list of Polygon),
+    and points_in_stitches (set of Point: endpoints of all bridges). Gallery is read-only; always read/write via state.
     """
 
     points: Polygon
     stitches: list[Segment]
     remaining_obstacles: list[Polygon]
+    points_in_stitches: set[Point]
 
     def __init__(
         self,
         points: Polygon | None = None,
         stitches: list[Segment] | None = None,
         remaining_obstacles: list[Polygon] | None = None,
+        points_in_stitches: set[Point] | None = None,
     ) -> None:
         self.points = points if points is not None else Polygon([])
         self.stitches = stitches if stitches is not None else []
         self.remaining_obstacles = remaining_obstacles if remaining_obstacles is not None else []
+        self.points_in_stitches = points_in_stitches if points_in_stitches is not None else set()
 
     def serialize(self) -> dict[str, Any]:
         return {
             "points": self.points.serialize(),
             "stitches": [s.serialize() for s in self.stitches],
             "remaining_obstacles": [p.serialize() for p in self.remaining_obstacles],
+            "points_in_stitches": [p.serialize() for p in self.points_in_stitches],
         }
 
     @classmethod
@@ -109,7 +113,18 @@ class StitchingStepState(State):
         stitches = [Segment.unserialize(s) for s in stitches_raw]
         obstacles_raw = data.get("remaining_obstacles") or []
         remaining_obstacles = [Polygon.unserialize(p) for p in obstacles_raw]
-        return cls(points=points, stitches=stitches, remaining_obstacles=remaining_obstacles)
+        points_in_stitches_raw = data.get("points_in_stitches") or []
+        points_in_stitches = (
+            set(Point.unserialize(p) for p in points_in_stitches_raw)
+            if points_in_stitches_raw
+            else {p for s in stitches for p in (s[0], s[1])}
+        )
+        return cls(
+            points=points,
+            stitches=stitches,
+            remaining_obstacles=remaining_obstacles,
+            points_in_stitches=points_in_stitches,
+        )
 
 
 class EarClippingStepState(State):

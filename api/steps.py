@@ -382,6 +382,7 @@ class StitchingStep(SequenceStep):
     def init(self) -> None:
         self.state.points = Polygon(list(self.gallery.boundary))
         self.state.stitches = []
+        self.state.points_in_stitches = set()
         self.state.remaining_obstacles = self.sort()
 
     def sort(self) -> list[Polygon]:
@@ -406,15 +407,29 @@ class StitchingStep(SequenceStep):
         for anchor in obstacle:
             bridge = None
             for candidate in stitched << stitched.rightmost:
+
+                # Rejecting candidate because it is the anchor already.
                 if candidate == anchor:
                     continue
+
+                # Rejecting candidate because it is already used as an endpoint of another stitch.
+                if candidate in self.state.points_in_stitches:
+                    continue
                 segment: Segment = candidate.to(anchor)
+
+                # Rejecting segment because it is not fully inside the boundary.
                 if not self.gallery.boundary.contains(segment, inclusive=True):
                     continue
+
+                # Rejecting segment because it intersects another remaining obstacle.
                 if any(other.intersects(segment, inclusive=False) for other in obstacles if other is not obstacle):
                     continue
+
+                # Rejecting segment because it crosses an edge of the obstacle we are bridging.
                 if any(segment.crosses(edge) for edge in obstacle.edges):
                     continue
+
+                # Rejecting segment because it is collinear with a boundary edge (would lie on boundary).
                 if any(
                     Walk(start=edge[0], center=edge[1], end=segment[0]).is_collinear()
                     and Walk(start=edge[0], center=edge[1], end=segment[1]).is_collinear()
@@ -422,6 +437,8 @@ class StitchingStep(SequenceStep):
                     if not _segments_share_endpoint(edge, segment)
                 ):
                     continue
+
+                # Rejecting segment because it crosses an edge of the current stitched polygon.
                 if any(segment.crosses(edge) for edge in stitched.edges):
                     continue
                 if i >= STITCH_BUCKET_SIZE:
@@ -467,6 +484,8 @@ class StitchingStep(SequenceStep):
         # Update the state.
         self.state.points = Polygon(merged)
         self.state.stitches.append(bridge)
+        self.state.points_in_stitches.add(bridge[0])
+        self.state.points_in_stitches.add(bridge[1])
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
         logger.info(
