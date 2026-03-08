@@ -115,9 +115,7 @@ class StitchingStepState(State):
         remaining_obstacles = [Polygon.unserialize(p) for p in obstacles_raw]
         points_in_stitches_raw = data.get("points_in_stitches") or []
         points_in_stitches = (
-            set(Point.unserialize(p) for p in points_in_stitches_raw)
-            if points_in_stitches_raw
-            else {p for s in stitches for p in (s[0], s[1])}
+            set(Point.unserialize(p) for p in points_in_stitches_raw) if points_in_stitches_raw else {p for s in stitches for p in (s[0], s[1])}
         )
         return cls(
             points=points,

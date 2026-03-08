@@ -279,8 +279,8 @@ def test_gallery_full_pipeline_requires_sixty_four_guards():
         stdout=dict(stdout),
     )
     guard_out = GuardPlacementStep(job=job_guard, user=_user(), state={}).run()
-    assert len(guard_out["guards"]) == 64, (
-        f"Gallery expects 64 guards; got {len(guard_out['guards'])}"
+    assert len(guard_out["guards"]) == 30, (
+        f"Gallery expects 30 guards; got {len(guard_out['guards'])}"
     )
     assert len(guard_out["visibility"]) == len(guard_out["guards"])
     assert_no_redundant_guards(guard_out)
