@@ -665,7 +665,7 @@ class ConvexComponentOptimizationStep(SequenceStep):
         self.state.convex_components -= best_pair[0]
         self.state.convex_components -= best_pair[1]
         self.state.convex_components += best_merge
-        self.state.adjacency = self.build_adjacency_table(self.state.convex_components)
+        self.state.adjacency = self.explore(self.state.convex_components)
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
         logger.info("ConvexComponentOptimizationStep.run() | job.id=%s components=%s", self.job.id, len(self.state.convex_components))
