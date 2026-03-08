@@ -23,7 +23,7 @@ from structs import Table
 
 
 class TestAdjacencyCollection:
-    """Test Table[Collection[ConvexComponent, Identifier]] (adjacency) and build_adjacency_table."""
+    """Test Table[Collection[ConvexComponent, Identifier]] (adjacency) and explore."""
 
     def test_collection_init_and_add(self):
         c = ConvexComponent([Point([0, 0]), Point([1, 0]), Point([0.5, 1])])
@@ -56,7 +56,7 @@ class TestAdjacencyCollection:
         assert 17 in collection
         assert collection.serialize() == [17, 42]
 
-    def test_build_adjacency_table(self):
+    def test_explore(self):
         left = ConvexComponent([Point([0, 0]), Point([1, 0]), Point([0.5, 1])])
         right = ConvexComponent([Point([1, 0]), Point([0.5, 1]), Point([1.5, 0.5])])
         table: Table[ConvexComponent] = Table()
@@ -67,7 +67,7 @@ class TestAdjacencyCollection:
             user=User(email=Email("test@test.com")),
             state={},
         )
-        built = step.build_adjacency_table(table)
+        built = step.explore(table)
         assert len(built) == 2
         collection_left = built[left]
         collection_right = built[right]

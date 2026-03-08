@@ -40,9 +40,9 @@ from exceptions import BridgeFailureError
 from exceptions import ConvexComponentNotSimpleError
 from exceptions import ConvexComponentOptimizationFailureError
 from exceptions import EarClippingFailureError
-from exceptions import NoMoreConvexComponentsMergeError
 from exceptions import GuardCoverageFailureError
 from exceptions import GuardNotInComponentIdByPointError
+from exceptions import NoMoreConvexComponentsMergeError
 from exceptions import NoMoreEarsError
 from exceptions import OnlyMidpointsRemainingError
 from exceptions import PolygonNotSimpleError
@@ -539,14 +539,14 @@ class EarClippingStep(SequenceStep):
             walk: Walk = Walk(start=self.state.titanic[j - 1], center=self.state.titanic[j], end=self.state.titanic[j + 1])
 
             # CW ears are not valid because they contain empty space.
-            if walk.is_collinear() or walk.is_cw():
+            if walk.is_collinear():
                 continue
 
             # Build the ear from the CCW walk.
             ear = Ear(list(walk))
 
             # The ear must be fully inside the boundary.
-            if not self.state.titanic.contains(ear.diagonal, inclusive=True):
+            if not self.state.titanic.contains(ear.diagonal.midpoint, inclusive=True):
                 continue
 
             # The ear must not contain any other vertices.
@@ -606,9 +606,9 @@ class ConvexComponentOptimizationStep(SequenceStep):
         """Build initial convex_components from ears and adjacency table; store both in state."""
         ears: Table[Ear] = self.gallery.ears
         self.state.convex_components = Table.unserialize([ConvexComponent(ear) for ear in ears])
-        self.state.adjacency = self.build_adjacency_table(self.state.convex_components)
+        self.state.adjacency = self.explore(self.state.convex_components)
 
-    def build_adjacency_table(self, table: Table[ConvexComponent]) -> Table[Collection[ConvexComponent, Identifier]]:
+    def explore(self, table: Table[ConvexComponent]) -> Table[Collection[ConvexComponent, Identifier]]:
         """
         Build Table[Collection[ConvexComponent, Identifier]] from Table[ConvexComponent]: index by edge,
         then for each component create a collection and add ids of components sharing an edge.
@@ -663,7 +663,7 @@ class ConvexComponentOptimizationStep(SequenceStep):
         self.state.convex_components -= best_pair[0]
         self.state.convex_components -= best_pair[1]
         self.state.convex_components += best_merge
-        self.state.adjacency = self.build_adjacency_table(self.state.convex_components)
+        self.state.adjacency = self.explore(self.state.convex_components)
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
         logger.info("ConvexComponentOptimizationStep.run() | job.id=%s components=%s", self.job.id, len(self.state.convex_components))
