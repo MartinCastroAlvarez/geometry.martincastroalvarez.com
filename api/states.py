@@ -113,22 +113,26 @@ class StitchingStepState(State):
 
 
 class EarClippingStepState(State):
-    """State for EarClippingStep. Has titanic (Polygon, remaining to clip) and ears (Table). Gallery is read-only."""
+    """State for EarClippingStep. Has titanic (Polygon, remaining to clip), splits (list of Polygon), and ears (Table). Gallery is read-only."""
 
     titanic: Polygon
+    splits: list[Polygon]
     ears: Table
 
     def __init__(
         self,
         titanic: Polygon | None = None,
+        splits: list[Polygon] | None = None,
         ears: Table | None = None,
     ) -> None:
         self.titanic = titanic if titanic is not None else Polygon([])
+        self.splits = splits if splits is not None else []
         self.ears = ears if ears is not None else Table()
 
     def serialize(self) -> dict[str, Any]:
         return {
             "titanic": self.titanic.serialize(),
+            "splits": [p.serialize() for p in self.splits],
             "ears": self.ears.serialize(),
         }
 
@@ -136,9 +140,11 @@ class EarClippingStepState(State):
     def unserialize(cls, data: dict[str, Any]) -> "EarClippingStepState":
         titanic_raw = data.get("titanic") or []
         titanic = Polygon.unserialize(titanic_raw) if titanic_raw else Polygon([])
+        splits_raw = data.get("splits") or []
+        splits = [Polygon.unserialize(p) for p in splits_raw]
         ears_raw = data.get("ears") or {}
         ears = Table.unserialize([Ear.unserialize(ser) for ser in (ears_raw.values() if isinstance(ears_raw, dict) else ears_raw)])
-        return cls(titanic=titanic, ears=ears)
+        return cls(titanic=titanic, splits=splits, ears=ears)
 
 
 class ConvexComponentOptimizationStepState(State):

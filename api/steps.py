@@ -510,10 +510,17 @@ class EarClippingStep(SequenceStep):
             self.init()
         # Gallery is read-only; state holds titanic and ears
 
+    def split(self) -> list[Polygon]:
+        """Return list of polygons to clip; default is a single polygon (titanic)."""
+        return [self.state.titanic]
+
     def init(self) -> None:
         self.state.titanic = Polygon(list(self.gallery.stitched))
         # self.state.titanic.sort("ccw")  # This breaks everything.
         self.state.ears = Table()
+        self.state.splits = self.split()
+        self.state.titanic = self.state.splits[0]
+        self.state.splits.pop(0)
 
     @work(EAR_CLIPPING_MAX_WORK)
     def clip(self) -> Ear:
@@ -546,10 +553,18 @@ class EarClippingStep(SequenceStep):
             ear = Ear(list(walk))
 
             # The ear must be fully inside the boundary.
-            probe = walk.center.to(ear.diagonal.midpoint).midpoint
             # if not self.state.titanic.contains(ear.diagonal.midpoint, inclusive=True):
-            if not self.state.titanic.contains(probe, inclusive=True):
-                continue
+            if not self.state.titanic.contains(ear.diagonal.midpoint, inclusive=True):
+
+                if any(ear.diagonal == stitch for stitch in self.gallery.stitches):
+                    probe = walk.center.to(ear.diagonal.midpoint).midpoint
+                    # The stitch exception is valid only on the free-space side of the stitch.
+                    if not self.gallery.boundary.contains(probe, inclusive=True):
+                        continue
+                    if any(obstacle.contains(probe, inclusive=False) for obstacle in self.gallery.obstacles):
+                        continue
+                else:
+                    continue
 
             # The ear must not contain any other vertices.
             if any(
