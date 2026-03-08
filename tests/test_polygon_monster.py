@@ -15,6 +15,7 @@ from models import User
 from tests.utils import assert_convex_components_visibility_within_component
 from tests.utils import assert_ears_simple_and_convex
 from tests.utils import assert_no_redundant_guards
+from tests.utils import assert_no_stitches_share_a_point
 from tests.utils import print_guard_coverage_report
 from steps import ConvexComponentOptimizationStep
 from steps import EarClippingStep
@@ -126,6 +127,7 @@ def test_polygon_monster_full_pipeline_ten_guards_forty_nine_convex_components()
         stdout=dict(stdout),
     )
     stdout.update(StitchingStep(job=job_stitch, user=_user(), state={}).run())
+    assert_no_stitches_share_a_point(stdout["stitches"])
 
     job_ear = Job(
         id=Identifier("polygon-monster-ear"),

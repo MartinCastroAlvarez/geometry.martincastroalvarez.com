@@ -37,6 +37,26 @@ def _segment_clear_of_obstacles(seg: Segment, obstacles: list[Polygon]) -> tuple
     return (True, "")
 
 
+def assert_no_stitches_share_a_point(stitches_serialized: list) -> None:
+    """
+    After stitching: validate that no two stitches (bridge segments) share a point.
+    stitches_serialized is the list from stdout["stitches"] (list of serialized Segment).
+    Raises AssertionError with segment indices and shared point on failure.
+    """
+    segments = [Segment.unserialize(s) for s in stitches_serialized]
+    for i in range(len(segments)):
+        for j in range(i + 1, len(segments)):
+            pts_i = {segments[i][0], segments[i][1]}
+            pts_j = {segments[j][0], segments[j][1]}
+            shared = pts_i & pts_j
+            if shared:
+                raise AssertionError(
+                    f"Stitches {i} and {j} share point(s) {shared}. "
+                    f"Stitch {i}: {segments[i][0]}–{segments[i][1]}; "
+                    f"stitch {j}: {segments[j][0]}–{segments[j][1]}."
+                )
+
+
 def assert_ears_simple_and_convex(ears_serialized: dict) -> None:
     """
     After ear clipping: validate every ear is simple and convex.

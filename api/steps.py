@@ -421,8 +421,8 @@ class StitchingStep(SequenceStep):
                 if not self.gallery.boundary.contains(segment, inclusive=True):
                     continue
 
-                # Rejecting segment because it intersects another remaining obstacle.
-                if any(other.intersects(segment, inclusive=False) for other in obstacles if other is not obstacle):
+                # Rejecting segment because it intersects another obstacle.
+                if any(other.intersects(segment, inclusive=False) for other in self.gallery.obstacles if other is not obstacle):
                     continue
 
                 # Rejecting segment because it crosses an edge of the obstacle we are bridging.
@@ -572,18 +572,8 @@ class EarClippingStep(SequenceStep):
             ear = Ear(list(walk))
 
             # The ear must be fully inside the boundary.
-            # if not self.state.titanic.contains(ear.diagonal.midpoint, inclusive=True):
             if not self.state.titanic.contains(ear.diagonal.midpoint, inclusive=True):
-
-                if any(ear.diagonal == stitch for stitch in self.gallery.stitches):
-                    probe = walk.center.to(ear.diagonal.midpoint).midpoint
-                    # The stitch exception is valid only on the free-space side of the stitch.
-                    if not self.gallery.boundary.contains(probe, inclusive=True):
-                        continue
-                    if any(obstacle.contains(probe, inclusive=False) for obstacle in self.gallery.obstacles):
-                        continue
-                else:
-                    continue
+                continue
 
             # The ear must not contain any other vertices.
             if any(
