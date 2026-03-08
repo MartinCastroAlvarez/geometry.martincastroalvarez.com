@@ -512,7 +512,7 @@ class EarClippingStep(SequenceStep):
 
     def init(self) -> None:
         self.state.titanic = Polygon(list(self.gallery.stitched))
-        self.state.titanic.sort("ccw")
+        # self.state.titanic.sort("ccw")  # This breaks everything.
         self.state.ears = Table()
 
     @work(EAR_CLIPPING_MAX_WORK)
@@ -527,7 +527,7 @@ class EarClippingStep(SequenceStep):
         if n <= 3:
             if n == 3:
                 path: Walk = Walk(start=self.state.titanic[0], center=self.state.titanic[1], end=self.state.titanic[2])
-                if path.is_ccw():
+                if not path.is_collinear():
                     ear = Ear([self.state.titanic[0], self.state.titanic[1], self.state.titanic[2]])
                     ear.sort("ccw")
                     self.state.ears.add(ear)
@@ -539,19 +539,25 @@ class EarClippingStep(SequenceStep):
             walk: Walk = Walk(start=self.state.titanic[j - 1], center=self.state.titanic[j], end=self.state.titanic[j + 1])
 
             # CW ears are not valid because they contain empty space.
-            if walk.is_cw() or walk.is_collinear():
+            if walk.is_collinear() or walk.is_cw():
                 continue
 
             # Build the ear from the CCW walk.
             ear = Ear(list(walk))
 
             # The ear must be fully inside the boundary.
-            if not self.state.titanic.contains(ear.diagonal.midpoint, inclusive=True):
+            if not self.state.titanic.contains(ear.diagonal, inclusive=True):
                 continue
 
             # The ear must not contain any other vertices.
-            excluded = ((j - 1) % n, j, (j + 1) % n)
-            if any(ear.contains(self.state.titanic[k], inclusive=False) for k in range(n) if k not in excluded):
+            if any(
+                ear.contains(self.state.titanic[k], inclusive=False)
+                for k in range(n)
+                # Do not compare about the points of the ear itself.
+                if k not in ((j - 1) % n, j, (j + 1) % n)
+                # Do not compare with cycles that resulted from stitching.
+                and self.state.titanic[k] not in {walk.start, walk.center, walk.end}
+            ):
                 continue
 
             # Add the ear to the table and remove ear tip from polygon by index (position), not by point value;
@@ -560,14 +566,12 @@ class EarClippingStep(SequenceStep):
             self.state.titanic.pop(j)
             return ear
 
-        raise EarClippingFailureError("No valid ear found for polygon")
+        raise EarClippingFailureError(f"No valid ear found for polygon: {self.state.titanic}")
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
         while True:
             try:
                 self.clip()
-            except EarClippingFailureError:
-                break
             except NoMoreEarsError:
                 break
 
@@ -906,7 +910,7 @@ class GuardPlacementStep(SequenceStep):
                     for component_id in self.state.component_id_by_midpoint[midpoint]
                 ]
                 candidates = list(candidates_list)
-                assert candidates, "Candidates are all monsters: f{self.remaining_points}"
+                assert candidates, f"Candidates are all monsters: f{self.state.remaining_points}"
 
             # Add the best guard and its visibility to state (gallery is read-only until completion).
             best_guard, best_visibility = self.compete(candidates)

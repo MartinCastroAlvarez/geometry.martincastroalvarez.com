@@ -7,6 +7,9 @@ from attributes import Email
 from attributes import Identifier
 from enums import StepName
 from exceptions import SuspendedStepError
+from geometry import ConvexComponent
+from geometry import Ear
+from geometry import Polygon
 from models import Job
 from models import User
 from tests.utils import assert_convex_components_visibility_within_component
@@ -142,6 +145,18 @@ def test_sky_full_pipeline_requires_twelve_guards():
         except SuspendedStepError as e:
             state = e.state
     assert_ears_simple_and_convex(stdout["ears"])
+
+    stitched_points = set(Polygon.unserialize(stdout["stitched"]))
+    ears_points = set()
+    for ear_ser in stdout["ears"].values():
+        ear = Ear.unserialize(ear_ser)
+        ears_points.update(ear)
+    assert stitched_points == ears_points, (
+        f"Ears' vertices must equal stitched vertices. "
+        f"Only in stitched: {stitched_points - ears_points}. "
+        f"Only in ears: {ears_points - stitched_points}."
+    )
+
     job_convex = Job(
         id=Identifier("sky-c"),
         step_name=StepName.CONVEX_COMPONENT_OPTIMIZATION,
@@ -152,6 +167,17 @@ def test_sky_full_pipeline_requires_twelve_guards():
 
     assert_convex_components_visibility_within_component(
         stdout["convex_components"], stdout["obstacles"]
+    )
+
+    stitched_points = set(Polygon.unserialize(stdout["stitched"]))
+    component_points = set()
+    for comp_ser in stdout["convex_components"].values():
+        comp = ConvexComponent.unserialize(comp_ser)
+        component_points.update(comp)
+    assert stitched_points == component_points, (
+        f"Convex components' vertices must equal stitched vertices. "
+        f"Only in stitched: {stitched_points - component_points}. "
+        f"Only in components: {component_points - stitched_points}."
     )
 
     job_guard = Job(

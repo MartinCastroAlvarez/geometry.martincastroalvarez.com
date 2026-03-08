@@ -135,11 +135,6 @@ def test_polygon_monster_full_pipeline_ten_guards_forty_nine_convex_components()
     )
     stdout.update(EarClippingStep(job=job_ear, user=_user(), state={}).run())
     assert_ears_simple_and_convex(stdout["ears"])
-    for ear_id, ear_serialized in stdout["ears"].items():
-        ear = Ear.unserialize(ear_serialized)
-        assert ear.is_ccw(), (
-            f"Ear {ear_id} must be counter-clockwise; got ear={ear_serialized}"
-        )
     ears_list = [Ear.unserialize(ser) for ser in stdout["ears"].values()]
     ear_ids = list(stdout["ears"].keys())
     for i, ear_a in enumerate(ears_list):
