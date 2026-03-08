@@ -527,7 +527,7 @@ class EarClippingStep(SequenceStep):
         if n <= 3:
             if n == 3:
                 path: Walk = Walk(start=self.state.titanic[0], center=self.state.titanic[1], end=self.state.titanic[2])
-                if not path.is_collinear():
+                if not path.is_collinear() and not path.is_cw():
                     ear = Ear([self.state.titanic[0], self.state.titanic[1], self.state.titanic[2]])
                     ear.sort("ccw")
                     self.state.ears.add(ear)
@@ -539,14 +539,16 @@ class EarClippingStep(SequenceStep):
             walk: Walk = Walk(start=self.state.titanic[j - 1], center=self.state.titanic[j], end=self.state.titanic[j + 1])
 
             # CW ears are not valid because they contain empty space.
-            if walk.is_collinear():
+            if walk.is_collinear() or walk.is_cw():
                 continue
 
             # Build the ear from the CCW walk.
             ear = Ear(list(walk))
 
             # The ear must be fully inside the boundary.
-            if not self.state.titanic.contains(ear.diagonal.midpoint, inclusive=True):
+            probe = walk.center.to(ear.diagonal.midpoint).midpoint
+            # if not self.state.titanic.contains(ear.diagonal.midpoint, inclusive=True):
+            if not self.state.titanic.contains(probe, inclusive=True):
                 continue
 
             # The ear must not contain any other vertices.
@@ -663,7 +665,7 @@ class ConvexComponentOptimizationStep(SequenceStep):
         self.state.convex_components -= best_pair[0]
         self.state.convex_components -= best_pair[1]
         self.state.convex_components += best_merge
-        self.state.adjacency = self.explore(self.state.convex_components)
+        self.state.adjacency = self.build_adjacency_table(self.state.convex_components)
 
     def run(self, **kwargs: Any) -> dict[str, Any]:
         logger.info("ConvexComponentOptimizationStep.run() | job.id=%s components=%s", self.job.id, len(self.state.convex_components))
