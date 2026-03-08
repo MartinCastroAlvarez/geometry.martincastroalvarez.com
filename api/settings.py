@@ -60,22 +60,15 @@ DEFAULT_ORIGIN: str = os.getenv("DEFAULT_ORIGIN") or "https://geometry.martincas
 # Stitching: max number of valid bridge candidates kept in the bucket
 # before we pick the smallest one by size and stop. Default 5 is empirical.
 STITCH_BUCKET_SIZE: int = int(os.getenv("STITCH_BUCKET_SIZE", "5"))
-# Stitching: max unit of work (bridge calls) per run before suspending.
-STITCH_MAX_WORK_PER_RUN: int = int(os.getenv("STITCH_MAX_WORK_PER_RUN", "50"))
 
 # Task continuation: max number of times a step may re-queue (START same job_id) before failing.
 MAX_TASK_CONTINUATION_STEPS: int = int(os.getenv("MAX_TASK_CONTINUATION_STEPS", "300"))
 
-# Ear clipping: max clip() calls (ears) per run before suspending.
-EAR_CLIPPING_MAX_WORK_PER_RUN: int = int(os.getenv("EAR_CLIPPING_MAX_WORK_PER_RUN", "100"))
-
-# Convex component optimization: max merge() calls per run before suspending.
-CONVEX_COMPONENT_OPTIMIZATION_MAX_WORK_PER_RUN: int = int(
-    os.getenv("CONVEX_COMPONENT_OPTIMIZATION_MAX_WORK_PER_RUN", "200")
-)
-
-# Guard placement: max sees() calls per run before suspending (for worker handoff). Unit tests override to a large value.
-GUARD_PLACEMENT_MAX_SEES_PER_RUN: int = int(os.getenv("GUARD_PLACEMENT_MAX_SEES_PER_RUN", "5000"))
+# Max units of work of each run.
+STITCHING_MAX_WORK: int = int(os.getenv("STITCHING_MAX_WORK", "50"))
+EAR_CLIPPING_MAX_WORK: int = int(os.getenv("EAR_CLIPPING_MAX_WORK", "100"))
+CONVEX_COMPONENT_OPTIMIZATION_MAX_WORK: int = int(os.getenv("CONVEX_COMPONENT_OPTIMIZATION_MAX_WORK", "200"))
+GUARD_PLACEMENT_MAX_WORK: int = int(os.getenv("GUARD_PLACEMENT_MAX_WORK", "5000"))
 
 # Anonymous and test user constants (used by User model)
 ANONYMOUS_EMAIL: str = "nobody@unknown.local"

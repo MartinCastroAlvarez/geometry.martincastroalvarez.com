@@ -251,7 +251,7 @@ class Attempt(int):
 class Work(int):
     """
     Unit of work: non-negative integer count for step run limits (e.g. bridge calls, sees calls).
-    Must be >= 0. Supports += 1 for decorators that increment per call.
+    Must be >= 0. Supports += 1 and -= 1 for decorators that increment per call (and undo when skipping work).
     """
 
     def __new__(cls, value: Any) -> "Work":
@@ -270,6 +270,12 @@ class Work(int):
 
     def __radd__(self, other: Any) -> "Work":
         return Work(super().__radd__(other))
+
+    def __sub__(self, other: Any) -> "Work":
+        return Work(super().__sub__(other))
+
+    def __rsub__(self, other: Any) -> "Work":
+        return Work(super().__rsub__(other))
 
 
 class Countdown(int):

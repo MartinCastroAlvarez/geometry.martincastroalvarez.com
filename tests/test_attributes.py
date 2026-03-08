@@ -115,7 +115,7 @@ class TestLimit:
 
 
 class TestWork:
-    """Test Work (unit of work, non-negative int, supports += 1)."""
+    """Test Work (unit of work, non-negative int, supports += 1 and -= 1)."""
 
     def test_zero(self):
         from attributes import Work
@@ -148,6 +148,21 @@ class TestWork:
         w2 = w + 1
         assert w2 == 1
         assert type(w2).__name__ == "Work"
+
+    def test_sub_one(self):
+        from attributes import Work
+
+        w = Work(1)
+        w2 = w - 1
+        assert w2 == 0
+        assert type(w2).__name__ == "Work"
+
+    def test_sub_below_zero_raises(self):
+        from attributes import Work
+
+        w = Work(0)
+        with pytest.raises(ValidationError, match=">= 0"):
+            _ = w - 1
 
 
 class TestAttributesGetAttr:

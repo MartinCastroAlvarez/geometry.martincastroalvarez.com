@@ -169,6 +169,15 @@ class Task(Controller):
         except SuspendedStepError as err:
             self.state = dict(err.state)
             return self.suspend()
+        except Exception as err:
+            # Step or execute() raised: ensure job is marked failed and persisted.
+            # execute() may already catch and call job.fail(), but if an exception
+            # escapes (e.g. different code path or deployment), we still persist failure.
+            logger.exception("Task failed job_id=%s error=%s", self.job.id, err)
+            if not self.job.is_failed():
+                self.job.fail(err)
+            self.save()
+            return {"status": Status.FAILED, "job_id": self.job.id, "error": str(err)}
 
         # Execute completed normally: persist job and state, then broadcast (e.g. START next or REPORT parent).
         self.save()

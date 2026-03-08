@@ -25,6 +25,7 @@ from decimal import Decimal
 from functools import cached_property
 from typing import Iterator
 
+from attributes import Signature
 from enums import Orientation
 from geometry.point import Point
 from geometry.point import PointLike
@@ -73,6 +74,9 @@ class Walk:
 
     def __repr__(self) -> str:
         return f"Walk(start={self.start!r}, center={self.center!r}, end={self.end!r})"
+
+    def __hash__(self) -> Signature:
+        return Signature(f"{self.start!r}:{self.center!r}:{self.end!r}")
 
     def __getitem__(self, index: int) -> Point:
         if index == 0:

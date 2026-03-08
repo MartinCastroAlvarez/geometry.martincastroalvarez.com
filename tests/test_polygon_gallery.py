@@ -229,7 +229,6 @@ GALLERY_STDIN = {
 }
 
 
-@pytest.mark.xfail(reason="Ear clipping can reach 'no valid ear' state for this polygon; algorithm limitation")
 def test_gallery_full_pipeline_requires_sixty_four_guards():
     """Run full pipeline for gallery polygon; expect 64 guards for sufficient coverage."""
     stdout = {}

@@ -64,11 +64,11 @@ from models import ArtGallery
 from models import Job
 from models import User
 from repositories import JobsRepository
-from settings import CONVEX_COMPONENT_OPTIMIZATION_MAX_WORK_PER_RUN
-from settings import EAR_CLIPPING_MAX_WORK_PER_RUN
-from settings import GUARD_PLACEMENT_MAX_SEES_PER_RUN
+from settings import CONVEX_COMPONENT_OPTIMIZATION_MAX_WORK
+from settings import EAR_CLIPPING_MAX_WORK
+from settings import GUARD_PLACEMENT_MAX_WORK
 from settings import STITCH_BUCKET_SIZE
-from settings import STITCH_MAX_WORK_PER_RUN
+from settings import STITCHING_MAX_WORK
 from states import ArtGalleryStepState
 from states import ConvexComponentOptimizationStepState
 from states import EarClippingStepState
@@ -86,7 +86,7 @@ def work(max_work: int):
     """
     Decorator for step instance methods: increments self.work by 1 each call;
     if self.work > max_work, calls self.suspend() before invoking the method.
-    Use a value from settings (e.g. STITCH_MAX_WORK_PER_RUN, GUARD_PLACEMENT_MAX_SEES_PER_RUN).
+    Use a value from settings (e.g. STITCHING_MAX_WORK, GUARD_PLACEMENT_MAX_WORK).
     """
 
     def decorator(f):
@@ -390,7 +390,7 @@ class StitchingStep(SequenceStep):
         obstacles.sort(key=lambda obstacle: (obstacle.rightmost.x, obstacle.rightmost.y), reverse=True)
         return obstacles
 
-    @work(STITCH_MAX_WORK_PER_RUN)
+    @work(STITCHING_MAX_WORK)
     def bridge(self, obstacle: Polygon) -> None:
         """Find a valid bridge from state.points to obstacle, merge, and update state.points and state.stitches."""
         obstacle.sort("cw")
@@ -515,21 +515,20 @@ class EarClippingStep(SequenceStep):
         self.state.titanic.sort("ccw")
         self.state.ears = Table()
 
-    @work(EAR_CLIPPING_MAX_WORK_PER_RUN)
+    @work(EAR_CLIPPING_MAX_WORK)
     def clip(self) -> Ear:
         """
         Find and clip the next ear from state.titanic; update state.ears and state.titanic.
         Returns the ear, or raises NoMoreEarsError when done (≤3 vertices left).
         """
-        titanic: Polygon = self.state.titanic
-        n: int = len(titanic)
+        n: int = len(self.state.titanic)
 
         # Polygon reduced to ≤3 vertices: add final triangle as last ear if exactly 3, then signal done.
         if n <= 3:
             if n == 3:
-                path: Walk = Walk(start=titanic[0], center=titanic[1], end=titanic[2])
+                path: Walk = Walk(start=self.state.titanic[0], center=self.state.titanic[1], end=self.state.titanic[2])
                 if path.is_ccw():
-                    ear = Ear([titanic[0], titanic[1], titanic[2]])
+                    ear = Ear([self.state.titanic[0], self.state.titanic[1], self.state.titanic[2]])
                     ear.sort("ccw")
                     self.state.ears.add(ear)
             raise NoMoreEarsError("No more ears to clip")
@@ -537,7 +536,7 @@ class EarClippingStep(SequenceStep):
         # Ear clipping: find one valid ear (only clip if we would leave at least 3 vertices).
         for j in range(n):
             # Check if the triangle (j-1, j, j+1) is a valid ear.
-            walk: Walk = Walk(start=titanic[j - 1], center=titanic[j], end=titanic[j + 1])
+            walk: Walk = Walk(start=self.state.titanic[j - 1], center=self.state.titanic[j], end=self.state.titanic[j + 1])
 
             # CW ears are not valid because they contain empty space.
             if walk.is_cw() or walk.is_collinear():
@@ -547,18 +546,18 @@ class EarClippingStep(SequenceStep):
             ear = Ear(list(walk))
 
             # The ear must be fully inside the boundary.
-            if not titanic.contains(ear.diagonal.midpoint, inclusive=True):
+            if not self.state.titanic.contains(ear.diagonal.midpoint, inclusive=True):
                 continue
 
             # The ear must not contain any other vertices.
             excluded = ((j - 1) % n, j, (j + 1) % n)
-            if any(ear.contains(titanic[k], inclusive=False) for k in range(n) if k not in excluded):
+            if any(ear.contains(self.state.titanic[k], inclusive=False) for k in range(n) if k not in excluded):
                 continue
 
             # Add the ear to the table and remove ear tip from polygon by index (position), not by point value;
             # the same point may appear at other indices and must be kept.
             self.state.ears.add(ear)
-            titanic.pop(j)
+            self.state.titanic.pop(j)
             return ear
 
         raise EarClippingFailureError("No valid ear found for polygon")
@@ -567,6 +566,8 @@ class EarClippingStep(SequenceStep):
         while True:
             try:
                 self.clip()
+            except EarClippingFailureError:
+                break
             except NoMoreEarsError:
                 break
 
@@ -623,7 +624,7 @@ class ConvexComponentOptimizationStep(SequenceStep):
             result.add(collection)
         return result
 
-    @work(CONVEX_COMPONENT_OPTIMIZATION_MAX_WORK_PER_RUN)
+    @work(CONVEX_COMPONENT_OPTIMIZATION_MAX_WORK)
     def merge(self) -> None:
         """
         Perform one merge: find the best adjacent pair by area, merge them, and update state.
@@ -777,28 +778,33 @@ class GuardPlacementStep(SequenceStep):
 
         return visibility
 
+    @work(GUARD_PLACEMENT_MAX_WORK)
     def sees(self, guard: Point, target: Point) -> bool:
         """
         True if target is visible from guard in the art gallery. Caches by segment in visibility_by_segment.
-        Cached lookups do not count toward work; uncached calls are counted and may suspend after max.
+        Only uncached visibility checks count as work; guard==target or cache hit undo the decorator's increment.
         """
         if guard == target:
+            self.work -= 1
             return True
         segment: Segment = guard.to(target)
         if segment in self.state.visibility_by_segment:
+            self.work -= 1
             return self.state.visibility_by_segment[segment]
-        return self._sees_uncached(guard, target, segment)
 
-    @work(GUARD_PLACEMENT_MAX_SEES_PER_RUN)
-    def _sees_uncached(self, guard: Point, target: Point, segment: Segment) -> bool:
-        """Uncached visibility check; decorated so each call counts as work and may suspend."""
+        # Segment must lie inside or on the boundary polygon.
         if not self.gallery.boundary.contains(segment, inclusive=True):
             self.state.visibility_by_segment[segment] = False
             return False
+
         for obstacle in self.gallery.obstacles:
+
+            # No obstacle may contain the segment midpoint (strictly inside obstacle => blocked).
             if obstacle.intersects(segment.midpoint, inclusive=False):
                 self.state.visibility_by_segment[segment] = False
                 return False
+
+            # No obstacle edge may properly cross the segment (line-of-sight cut).
             for edge in obstacle.edges:
                 if segment.crosses(edge):
                     self.state.visibility_by_segment[segment] = False

@@ -12,6 +12,7 @@ from attributes import Identifier
 from enums import Action
 from enums import Status
 from enums import StepName
+from exceptions import EarClippingFailureError
 from exceptions import MaxTaskContinuationAttemptsError
 from exceptions import RecordNotFoundError
 from exceptions import StepNotHandledError
@@ -261,6 +262,41 @@ class TestStartTask:
         assert "error:stitching" in str(job.stderr)
         mock_repo.save.assert_called_once()
         # When job is failed, broadcast() returns without enqueuing; no put expected.
+        mock_tasks_queue.put.assert_not_called()
+
+    @patch("tasks.queue")
+    @patch("tasks.JobStateRepository")
+    @patch("tasks.JobsRepository")
+    @patch("tasks.Step")
+    def test_execute_ear_clipping_failure_saves_job_failed_with_error_in_stderr(
+        self, mock_step_cls, mock_repo_cls, mock_state_repo_cls, mock_tasks_queue
+    ):
+        """When EarClippingStep raises EarClippingFailureError, job is saved as FAILED with error in stderr."""
+        mock_repo = MagicMock()
+        mock_repo_cls.return_value = mock_repo
+        mock_state_repo_cls.return_value.get.side_effect = RecordNotFoundError("")
+        job = Job(
+            id=Identifier("j1"),
+            step_name=StepName.EAR_CLIPPING,
+            stdin={},
+            stdout={"stitched": [[0, 0], [10, 0], [10, 10], [0, 10]]},
+            children_ids=[],
+            parent_id=None,
+        )
+        mock_repo.get.return_value = job
+        mock_step_instance = MagicMock()
+        mock_step_instance.run.side_effect = EarClippingFailureError("No valid ear found for polygon")
+        mock_step_instance.job = job
+        mock_step_cls.of.return_value.return_value = mock_step_instance
+        task = StartTask()
+        req = {"job_id": Identifier("j1"), "user_email": Email("u@e.com")}
+        result = task.handler(req)
+        assert result["status"] == Status.FAILED
+        assert result["job_id"] == job.id
+        assert job.status == Status.FAILED
+        assert job.stderr.get("error:ear-clipping:message") == "No valid ear found for polygon"
+        assert job.stderr.get("error:ear-clipping:type") == "EarClippingFailureError"
+        mock_repo.save.assert_called_once_with(job)
         mock_tasks_queue.put.assert_not_called()
 
     @patch("tasks.queue")

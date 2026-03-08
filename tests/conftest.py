@@ -12,7 +12,10 @@ os.environ.setdefault("DATA_BUCKET_NAME", "test-data-bucket")
 os.environ.setdefault("SECRETS_BUCKET_NAME", "test-secrets-bucket")
 
 # Guard placement: unit tests run to completion without suspending (patch to very large value)
-os.environ.setdefault("GUARD_PLACEMENT_MAX_SEES_PER_RUN", "999999999")
+os.environ.setdefault("GUARD_PLACEMENT_MAX_WORK", "999999999")
+os.environ.setdefault("EAR_CLIPPING_MAX_WORK", "999999999")
+os.environ.setdefault("CONVEX_COMPONENT_OPTIMIZATION_MAX_WORK", "999999999")
+os.environ.setdefault("STITCHING_MAX_WORK", "999999999")
 
 # Allow api package to load without boto3/jwt (e.g. in local pytest without Lambda deps)
 if "boto3" not in sys.modules:
