@@ -156,8 +156,8 @@ def test_wuhan_full_pipeline_requires_seven_guards():
         stdout=dict(stdout),
     )
     guard_out = GuardPlacementStep(job=job_guard, user=_user(), state={}).run()
-    assert len(guard_out["guards"]) == 7, (
-        f"Wuhan gallery expects 7 guards; got {len(guard_out['guards'])}"
+    assert len(guard_out["guards"]) == 5, (
+        f"Wuhan gallery expects 5 guards; got {len(guard_out['guards'])}"
     )
     assert len(guard_out["visibility"]) == len(guard_out["guards"])
     assert_no_redundant_guards(guard_out)

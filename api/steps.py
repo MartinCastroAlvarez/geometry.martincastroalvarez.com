@@ -396,7 +396,6 @@ class StitchingStep(SequenceStep):
         bridge: Segment | None = None
         anchor: Point | None = None
         stitched: Polygon = self.state.points
-        obstacles: list[Polygon] = self.state.remaining_obstacles
 
         # Find the valid bridge from the obstacle to the stitched polygon.
         # After lots of testing, there is no real benefit in finding the shortest bridge.
@@ -442,10 +441,7 @@ class StitchingStep(SequenceStep):
 
                 # Reject if the bridge segment intersects any boundary edge other than at its endpoints
                 # (interior or collinear overlap). Such a stitch would create self-intersection and break ear clipping.
-                if any(
-                    not segment.touches(edge) and segment.intersects(edge, inclusive=True)
-                    for edge in self.gallery.boundary.edges
-                ):
+                if any(not segment.touches(edge) and segment.intersects(edge, inclusive=True) for edge in self.gallery.boundary.edges):
                     continue
                 # Reject if the bridge segment intersects any obstacle edge other than at its endpoints.
                 if any(
@@ -454,6 +450,7 @@ class StitchingStep(SequenceStep):
                     for edge in other_obstacle.edges
                 ):
                     continue
+
                 # Reject if the bridge segment intersects any existing stitch other than at endpoints.
                 if any(
                     not segment.touches(existing_stitch) and segment.intersects(existing_stitch, inclusive=True)
@@ -575,6 +572,8 @@ class EarClippingStep(SequenceStep):
                 path: Walk = Walk(start=self.state.titanic[0], center=self.state.titanic[1], end=self.state.titanic[2])
                 if not path.is_collinear() and not path.is_cw():
                     ear = Ear([self.state.titanic[0], self.state.titanic[1], self.state.titanic[2]])
+                    ear.sort("ccw")
+                    self.state.ears.add(ear)
             raise NoMoreEarsError("No more ears to clip")
 
         # Ear clipping: find one valid ear (only clip if we would leave at least 3 vertices).
