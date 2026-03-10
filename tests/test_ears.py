@@ -13,7 +13,6 @@ from geometry import Ear
 from geometry import Point
 from geometry import Polygon
 from geometry import Segment
-from geometry.polygon import _segments_share_endpoint
 from geometry import Walk
 from models import Job
 from models import User
@@ -73,7 +72,7 @@ def _ear_edge_crosses_or_overlaps_stitched(ear: Ear, stitched: Polygon) -> tuple
         for stitched_edge in stitched_edges:
             if _segment_same(ear_edge, stitched_edge):
                 continue
-            if _segments_share_endpoint(ear_edge, stitched_edge):
+            if ear_edge.touches(stitched_edge):
                 continue
             if ear_edge.crosses(stitched_edge):
                 return (

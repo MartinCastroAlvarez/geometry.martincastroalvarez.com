@@ -1,7 +1,7 @@
 """
 Test that api/steps.py runs the full pipeline (validation, stitching, ear clipping,
 convex component merge, guard placement) for the monster polygon (boundary + 5 obstacles).
-Expects 10 guards and 46 convex components (obstacle-safe merges only).
+Expects 10 guards and 45 convex components (obstacle-safe merges only).
 """
 
 from attributes import Email
@@ -171,8 +171,8 @@ def test_polygon_monster_full_pipeline_ten_guards_forty_nine_convex_components()
         stdout["convex_components"], stdout["obstacles"]
     )
 
-    assert len(convex_out["convex_components"]) == 46, (
-        f"Monster polygon expects 46 convex components; got {len(convex_out['convex_components'])}"
+    assert len(convex_out["convex_components"]) == 45, (
+        f"Monster polygon expects 45 convex components; got {len(convex_out['convex_components'])}"
     )
 
     job_guard = Job(

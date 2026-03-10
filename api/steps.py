@@ -56,8 +56,6 @@ from geometry import Point
 from geometry import Polygon
 from geometry.convex import ConvexComponent
 from geometry.ear import Ear
-from geometry.polygon import _segments_intersect
-from geometry.polygon import _segments_share_endpoint
 from geometry.segment import Segment
 from geometry.walk import Walk
 from models import ArtGallery
@@ -323,7 +321,7 @@ class ValidationPolygonStep(SequenceStep):
         two obstacles may intersect or touch. Prevents ambiguous topology for bridging.
         """
         if any(
-            _segments_intersect(edge, boundary_edge, inclusive=True) and not _segments_share_endpoint(edge, boundary_edge)
+            edge.intersects(boundary_edge, inclusive=True) and not edge.touches(boundary_edge)
             for obstacle in self.gallery.obstacles
             for edge in obstacle.edges
             for boundary_edge in self.gallery.boundary.edges
@@ -434,13 +432,35 @@ class StitchingStep(SequenceStep):
                     Walk(start=edge[0], center=edge[1], end=segment[0]).is_collinear()
                     and Walk(start=edge[0], center=edge[1], end=segment[1]).is_collinear()
                     for edge in self.gallery.boundary.edges
-                    if not _segments_share_endpoint(edge, segment)
+                    if not edge.touches(segment)
                 ):
                     continue
 
                 # Rejecting segment because it crosses an edge of the current stitched polygon.
                 if any(segment.crosses(edge) for edge in stitched.edges):
                     continue
+
+                # Reject if the bridge segment intersects any boundary edge other than at its endpoints
+                # (interior or collinear overlap). Such a stitch would create self-intersection and break ear clipping.
+                if any(
+                    not segment.touches(edge) and segment.intersects(edge, inclusive=True)
+                    for edge in self.gallery.boundary.edges
+                ):
+                    continue
+                # Reject if the bridge segment intersects any obstacle edge other than at its endpoints.
+                if any(
+                    not segment.touches(edge) and segment.intersects(edge, inclusive=True)
+                    for other_obstacle in self.gallery.obstacles
+                    for edge in other_obstacle.edges
+                ):
+                    continue
+                # Reject if the bridge segment intersects any existing stitch other than at endpoints.
+                if any(
+                    not segment.touches(existing_stitch) and segment.intersects(existing_stitch, inclusive=True)
+                    for existing_stitch in self.state.stitches
+                ):
+                    continue
+
                 if i >= STITCH_BUCKET_SIZE:
                     break
                 i += 1
@@ -555,8 +575,6 @@ class EarClippingStep(SequenceStep):
                 path: Walk = Walk(start=self.state.titanic[0], center=self.state.titanic[1], end=self.state.titanic[2])
                 if not path.is_collinear() and not path.is_cw():
                     ear = Ear([self.state.titanic[0], self.state.titanic[1], self.state.titanic[2]])
-                    ear.sort("ccw")
-                    self.state.ears.add(ear)
             raise NoMoreEarsError("No more ears to clip")
 
         # Ear clipping: find one valid ear (only clip if we would leave at least 3 vertices).
@@ -571,24 +589,26 @@ class EarClippingStep(SequenceStep):
             # Build the ear from the CCW walk.
             ear = Ear(list(walk))
 
-            # The ear must be fully inside the boundary.
-            if not self.state.titanic.contains(ear.diagonal.midpoint, inclusive=True):
-                continue
+            # Stitches are automatically accepted as valid diagonals of an ear.
+            if ear.diagonal not in self.gallery.stitches:
 
-            # The ear must not contain any other vertices.
-            if any(
-                ear.contains(self.state.titanic[k], inclusive=False)
-                for k in range(n)
-                # Do not compare about the points of the ear itself.
-                if k not in ((j - 1) % n, j, (j + 1) % n)
-                # Do not compare with cycles that resulted from stitching.
-                and self.state.titanic[k] not in {walk.start, walk.center, walk.end}
-            ):
-                continue
+                # The ear must be fully inside the boundary.
+                if not self.state.titanic.contains(ear.diagonal.midpoint, inclusive=True):
+                    continue
+
+                # The ear must not contain any other vertices.
+                if any(
+                    ear.contains(self.state.titanic[k], inclusive=False)
+                    for k in range(n)
+                    # Do not compare about the points of the ear itself.
+                    if k not in ((j - 1) % n, j, (j + 1) % n)
+                    # Do not compare with cycles that resulted from stitching.
+                    and self.state.titanic[k] not in {walk.start, walk.center, walk.end}
+                ):
+                    continue
 
             # Add the ear to the table and remove ear tip from polygon by index (position), not by point value;
             # the same point may appear at other indices and must be kept.
-            self.state.ears.add(ear)
             self.state.titanic.pop(j)
             return ear
 
@@ -597,7 +617,9 @@ class EarClippingStep(SequenceStep):
     def run(self, **kwargs: Any) -> dict[str, Any]:
         while True:
             try:
-                self.clip()
+                ear: Ear = self.clip()
+                ear.sort("ccw")
+                self.state.ears.add(ear)
             except NoMoreEarsError:
                 break
 

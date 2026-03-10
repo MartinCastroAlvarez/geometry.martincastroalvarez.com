@@ -169,7 +169,7 @@ class GeometryStack extends Stack {
         SECRETS_BUCKET_NAME: 'com.martincastroalvarez.secrets',
         DATA_BUCKET_NAME: apiBucket.bucketName,
         QUEUE_NAME: geometryQueue.queueName,
-        LOG_LEVEL: 'DEBUG',
+        LOG_LEVEL: 'WARNING',
       },
       timeout: Duration.seconds(900),
       memorySize: 512,

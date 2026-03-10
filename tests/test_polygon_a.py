@@ -12,7 +12,6 @@ from geometry import Ear
 from geometry import Point
 from geometry import Polygon
 from geometry import Segment
-from geometry.polygon import _segments_share_endpoint
 from models import Job
 from models import User
 from tests.utils import assert_convex_components_visibility_within_component
@@ -157,7 +156,7 @@ def test_polygon_a_full_pipeline_requires_one_guard():
                     f"midpoint {segment.midpoint} is inside obstacle."
                 )
                 for edge in obstacle.edges:
-                    if _segments_share_endpoint(edge, segment):
+                    if edge.touches(segment):
                         continue
                     if segment.crosses(edge):
                         raise AssertionError(

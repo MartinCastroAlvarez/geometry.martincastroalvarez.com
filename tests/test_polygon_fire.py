@@ -9,7 +9,6 @@ from enums import StepName
 from geometry import ConvexComponent
 from geometry import Polygon
 from geometry import Segment
-from geometry.polygon import _segments_share_endpoint
 from models import Job
 from tests.utils import assert_convex_components_visibility_within_component
 from tests.utils import assert_ears_simple_and_convex
@@ -116,7 +115,7 @@ def test_fire_no_stitch_crosses_obstacle():
     for i, stitch in enumerate(stitches):
         for j, obstacle in enumerate(obstacles):
             for edge in obstacle.edges:
-                if _segments_share_endpoint(stitch, edge):
+                if stitch.touches(edge):
                     continue
                 assert not stitch.crosses(edge), (
                     f"Stitch {i} crosses obstacle {j}: stitch={stitch.serialize()}, "

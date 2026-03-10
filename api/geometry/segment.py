@@ -244,6 +244,17 @@ class Segment(list, Spatial, Bounded, Serializable[SerializedSegment]):
 
         return walk1.orientation != walk2.orientation and walk3.orientation != walk4.orientation
 
+    def touches(self, other: Segment) -> bool:
+        """True iff this segment and other share at least one endpoint."""
+        if not isinstance(other, Segment):
+            raise NotImplementedError(f"Segment.touches only supports Segment, got {type(other).__name__}")
+        return (
+            self[0] == other[0]
+            or self[0] == other[1]
+            or self[1] == other[0]
+            or self[1] == other[1]
+        )
+
     def serialize(self) -> SerializedSegment:
         return [self[0].serialize(), self[1].serialize()]
 

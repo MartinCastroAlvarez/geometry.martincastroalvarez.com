@@ -12,7 +12,6 @@ from geometry import Interval
 from geometry import Point
 from geometry import Polygon
 from geometry import Segment
-from geometry.polygon import _segments_share_endpoint
 from geometry import Walk
 from attributes import Email
 from models import Job
@@ -720,18 +719,18 @@ class TestSegment:
         with pytest.raises(NotImplementedError, match="only supports Segment"):
             s.intersects(Point([0, 0]))
 
-    def test_segments_share_endpoint(self):
-        """Segments that share an endpoint are detected by _segments_share_endpoint."""
+    def test_segment_touches(self):
+        """Segments that share an endpoint are detected by Segment.touches()."""
         a = Point([0, 0])
         b = Point([1, 0])
         c = Point([2, 0])
         s1 = Segment([a, b])
         s2 = Segment([b, c])
-        assert _segments_share_endpoint(s1, s2) is True
+        assert s1.touches(s2) is True
         s3 = Segment([a, c])
-        assert _segments_share_endpoint(s1, s3) is True
+        assert s1.touches(s3) is True
         s4 = Segment([Point([3, 0]), Point([4, 0])])
-        assert _segments_share_endpoint(s1, s4) is False
+        assert s1.touches(s4) is False
 
     def test_crosses_proper_intersection(self):
         """Segments that meet at a single interior point cross."""

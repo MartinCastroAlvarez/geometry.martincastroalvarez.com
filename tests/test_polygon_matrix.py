@@ -510,8 +510,8 @@ def test_matrix_full_pipeline_requires_sixty_four_guards():
         stdout=dict(stdout),
     )
     guard_out = GuardPlacementStep(job=job_guard, user=_user(), state={}).run()
-    assert len(guard_out["guards"]) == 64, (
-        f"Matrix gallery expects 64 guards; got {len(guard_out['guards'])}"
+    assert len(guard_out["guards"]) == 25, (
+        f"Matrix gallery expects 25 guards; got {len(guard_out['guards'])}"
     )
     assert len(guard_out["visibility"]) == len(guard_out["guards"])
     assert_no_redundant_guards(guard_out)
