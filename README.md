@@ -28,6 +28,28 @@ The pipeline decomposes polygons into **convex components**: regions that can be
 
 The convex-decomposition step repeatedly merges adjacent triangles (or larger convex pieces) only when their union remains convex, so every component in the final partition is convex.
 
+## [geometry.martincastroalvarez.com](https://geometry.martincastroalvarez.com)
+
+![Screenshot](samples/Screenshot%202026-03-11%20at%2001.06.26.png)
+
+![Screenshot](samples/Screenshot%202026-03-11%20at%2001.08.48.png)
+
+![Screenshot](samples/Screenshot%202026-03-11%20at%2001.09.30.png)
+
+![Screenshot](samples/Screenshot%202026-03-11%20at%2001.11.52.png)
+
+![Recording](samples/Screen%20Recording%202026-03-11%20at%2001.10.36.gif)
+
+![Recording](samples/Screen%20Recording%202026-03-11%20at%2001.11.09.gif)
+
+![Recording](samples/Screen%20Recording%202026-03-11%20at%2001.12.23.gif)
+
+![Recording](samples/Screen%20Recording%202026-03-11%20at%2001.13.05.gif)
+
+![Recording](samples/Screen%20Recording%202026-03-11%20at%2001.13.38.gif)
+
+![Recording](samples/Screen%20Recording%202026-03-11%20at%2001.16.43.gif)
+
 ## Lab examples
 
 The [lab](lab/) directory contains a Python prototype and example galleries. Each example builds an art gallery (polygon with holes), runs the pipeline (stitched boundary, ear-clipping triangulation, convex components, guards), and can be visualized (save the figure as `exampleN.png`).
