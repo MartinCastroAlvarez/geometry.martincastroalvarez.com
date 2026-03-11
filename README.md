@@ -30,8 +30,6 @@ The convex-decomposition step repeatedly merges adjacent triangles (or larger co
 
 ## [geometry.martincastroalvarez.com](https://geometry.martincastroalvarez.com)
 
-![Screenshot](samples/Screenshot%202026-03-11%20at%2001.06.26.png)
-
 ![Screenshot](samples/Screenshot%202026-03-11%20at%2001.08.48.png)
 
 ![Screenshot](samples/Screenshot%202026-03-11%20at%2001.09.30.png)
