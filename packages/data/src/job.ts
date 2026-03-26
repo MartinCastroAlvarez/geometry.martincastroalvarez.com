@@ -66,6 +66,7 @@ export const useJobs = (params?: { nextToken?: string; limit?: number }) => {
     const token = useAuthentication();
     const query = useQuery({
         queryKey: [...JOBS_QUERY_KEY, params?.nextToken ?? "", params?.limit ?? 20, token ?? ""],
+        placeholderData: (previousData) => previousData,
         queryFn: async () => {
             console.log("[data] useJobs request", { params, token: token ?? null });
             const res = await new GeometryApiClient(GEOMETRY_API_URL, token).getJobs(params);

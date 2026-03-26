@@ -118,7 +118,9 @@
     "confirmTitle": "Solo para estar seguros",
     "confirm": "Confirmar",
     "cancel": "Cancelar",
-    "copy": "Copiar"
+    "copy": "Copiar",
+    "previousPage": "Página anterior",
+    "nextPage": "Página siguiente"
   },
   "inspector": {
     "truncated": "Truncado en pantalla. Usá \"Copiar\" para obtener el JSON completo."

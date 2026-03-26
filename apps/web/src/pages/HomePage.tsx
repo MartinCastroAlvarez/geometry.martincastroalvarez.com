@@ -4,17 +4,18 @@
  * Context: Fetches galleries via useArtGalleries from @geometry/data. Displays each in a
  * Container: Viewer (non-interactive) + title row; clicking navigates to /:id.
  * Row layout: on mobile each cell is full width (12); otherwise each row uses a random
- * pattern [4,4,4], [4,8], or [8,4] for cell sizes.
+ * pattern [4,4,4], [4,8], or [8,4] for cell sizes. Cursor pagination uses API next_token.
  */
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Gallery } from "@geometry/domain";
-import { Page, Container, Title, Text, useDevice } from "@geometry/ui";
+import { Page, Container, Title, Text, useDevice, Pagination } from "@geometry/ui";
 import { Viewer } from "@geometry/editor";
 import { useArtGalleries, useSession } from "@geometry/data";
 import { useLocale } from "@geometry/i18n";
 import { CircleDotDashed, UserStar } from "lucide-react";
-import { HomePageSkeleton } from "../skeletons";
+import { HomePageSkeleton, HomePageGridSkeleton } from "../skeletons";
+import { useCursorPagination } from "../hooks/useCursorPagination";
 
 const DEFAULT_CELL_HEIGHT = 240;
 
@@ -86,19 +87,29 @@ export const HomePage = () => {
     const { t } = useLocale();
     const { isMobile } = useDevice();
     const { isLoading: sessionLoading } = useSession();
-    const { galleries, isLoading: galleriesLoading } = useArtGalleries({ limit: 20 });
-    const loading = sessionLoading || galleriesLoading;
+    const { requestNextToken, canGoPrevious, goNext, goPrev, pageIndex } = useCursorPagination();
+    const {
+        galleries,
+        isLoading: galleriesLoading,
+        isFetching: galleriesFetching,
+        isPlaceholderData: galleriesPlaceholder,
+    } = useArtGalleries({ limit: 20, nextToken: requestNextToken });
+    const loading = sessionLoading || (galleries == null && galleriesLoading);
 
     const rows = useMemo(
         () => buildRows(galleries?.data ?? [], isMobile),
         [galleries?.data, isMobile]
     );
 
-    if (galleries == null || loading) {
+    if (loading) {
         return <HomePageSkeleton />;
     }
 
-    if (galleries.data.length === 0) {
+    if (!galleries) {
+        return <HomePageSkeleton />;
+    }
+
+    if (!galleriesPlaceholder && galleries.data.length === 0 && pageIndex === 0) {
         return (
             <Page>
                 <Container padded spaced>
@@ -108,17 +119,35 @@ export const HomePage = () => {
         );
     }
 
+    const showPagination = canGoPrevious || Boolean(galleries.next_token);
+
     return (
         <Page>
-            <Container padded spaced>
-                {rows.flatMap((row) =>
-                    row.items.map((gallery, j) => (
-                        <Container key={gallery.id} size={row.pattern[j]}>
-                            <Cell gallery={gallery} />
-                        </Container>
-                    ))
-                )}
-            </Container>
+            {galleriesPlaceholder ? (
+                <HomePageGridSkeleton />
+            ) : (
+                <Container padded spaced>
+                    {rows.flatMap((row) =>
+                        row.items.map((gallery, j) => (
+                            <Container key={gallery.id} size={row.pattern[j]}>
+                                <Cell gallery={gallery} />
+                            </Container>
+                        ))
+                    )}
+                </Container>
+            )}
+            {showPagination && (
+                <Pagination
+                    loading={galleriesFetching}
+                    canGoPrevious={canGoPrevious}
+                    canGoNext={Boolean(galleries.next_token)}
+                    onPrevious={goPrev}
+                    onNext={() => {
+                        const token = galleries.next_token;
+                        if (token) goNext(token);
+                    }}
+                />
+            )}
         </Page>
     );
 };

@@ -3,7 +3,7 @@
  * Each cell mirrors Cell: Container (padded, spaced, rounded) with ViewerSkeleton, TitleSkeleton (8 cols),
  * BadgeSkeleton (4 cols). Responsive grid: 12/6/4 cols per cell.
  */
-import { Skeleton, Page, Container, TitleSkeleton, BadgeSkeleton, useDevice } from "@geometry/ui";
+import { Skeleton, Page, Container, TitleSkeleton, BadgeSkeleton, useDevice, PaginationSkeleton } from "@geometry/ui";
 import { ViewerSkeleton } from "@geometry/editor";
 
 const VIEWER_HEIGHT = 250;
@@ -23,20 +23,28 @@ const CellSkeleton = () => (
     </Container>
 );
 
-export const JobsPageSkeleton = () => {
+/** Grid-only skeleton for pagination transitions. */
+export const JobsPageGridSkeleton = () => {
     const { isMobile, isTablet } = useDevice();
     const size = isMobile ? 12 : isTablet ? 6 : 4;
 
     return (
+        <Container spaced>
+            {Array.from({ length: CELL_COUNT }, (_, i) => (
+                <Container key={i} size={size}>
+                    <CellSkeleton />
+                </Container>
+            ))}
+        </Container>
+    );
+};
+
+export const JobsPageSkeleton = () => {
+    return (
         <Skeleton>
             <Page>
-                <Container spaced>
-                    {Array.from({ length: CELL_COUNT }, (_, i) => (
-                        <Container key={i} size={size}>
-                            <CellSkeleton />
-                        </Container>
-                    ))}
-                </Container>
+                <JobsPageGridSkeleton />
+                <PaginationSkeleton />
             </Page>
         </Skeleton>
     );

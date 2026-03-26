@@ -6,22 +6,23 @@
  * the API; useSession is used so the loading state reflects both session and jobs—JobsPageSkeleton
  * is shown when jobs are null or isLoading.
  *
- * If jobs is an empty list and not loading, the user is redirected to home. Each job is rendered
- * as a Cell: viewer on top, then title (localized "Untitled Gallery" when missing) and status
- * badge below; responsive grid size (12 on mobile, 6 on tablet, 4 on desktop). Clicking the Cell
- * navigates to the job page.
+ * If jobs is an empty list on the first page and not loading, the user is redirected to home.
+ * Each job is rendered as a Cell: viewer on top, then title (localized "Untitled Gallery" when missing)
+ * and status badge below; responsive grid size (12 on mobile, 6 on tablet, 4 on desktop). Clicking
+ * the Cell navigates to the job page. Cursor pagination uses API next_token.
  */
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Job } from "@geometry/domain";
 import { Status } from "@geometry/domain";
-import { Page, Container, Title, Badge, useDevice } from "@geometry/ui";
+import { Page, Container, Title, Badge, useDevice, Pagination } from "@geometry/ui";
 import { Viewer } from "@geometry/editor";
 import { useJobs, useSession } from "@geometry/data";
 import { useLocale } from "@geometry/i18n";
 import { Clock, TriangleAlert, CircleDotDashed, UserStar } from "lucide-react";
-import { JobsPageSkeleton } from "../skeletons";
+import { JobsPageSkeleton, JobsPageGridSkeleton } from "../skeletons";
 import { getDisplayStatus } from "../utils/jobStatus";
+import { useCursorPagination } from "../hooks/useCursorPagination";
 
 const VIEWER_HEIGHT = 250;
 
@@ -78,32 +79,60 @@ export const JobsPage = () => {
     const navigate = useNavigate();
     const { isMobile, isTablet } = useDevice();
     const { isLoading: sessionLoading } = useSession();
-    const { jobs, isLoading: jobsLoading } = useJobs();
-    const loading = sessionLoading || jobsLoading;
+    const { requestNextToken, canGoPrevious, goNext, goPrev, pageIndex } = useCursorPagination();
+    const {
+        jobs,
+        isLoading: jobsLoading,
+        isFetching: jobsFetching,
+        isPlaceholderData: jobsPlaceholder,
+    } = useJobs({ nextToken: requestNextToken });
+    const loading = sessionLoading || (jobs == null && jobsLoading);
 
     useEffect(() => {
-        if (!loading && jobs?.data?.length === 0) {
+        if (!loading && jobs && !jobsPlaceholder && jobs.data.length === 0 && pageIndex === 0) {
             navigate("/", { replace: true });
         }
-    }, [loading, jobs?.data?.length, navigate]);
+    }, [loading, jobs, jobsPlaceholder, jobs?.data?.length, navigate, pageIndex]);
 
-    if (jobs == null || loading) {
+    if (loading) {
         return <JobsPageSkeleton />;
     }
 
-    if (jobs.data.length === 0) {
+    if (!jobs) {
         return null;
     }
 
+    if (!jobsPlaceholder && jobs.data.length === 0 && pageIndex === 0) {
+        return null;
+    }
+
+    const showPagination = canGoPrevious || Boolean(jobs.next_token);
+
     return (
         <Page>
-            <Container spaced>
-                {jobs.data.map((job) => (
-                    <Container key={job.id} size={isMobile ? 12 : isTablet ? 6 : 4}>
-                        <Cell job={job} />
-                    </Container>
-                ))}
-            </Container>
+            {jobsPlaceholder ? (
+                <JobsPageGridSkeleton />
+            ) : (
+                <Container spaced>
+                    {jobs.data.map((job) => (
+                        <Container key={job.id} size={isMobile ? 12 : isTablet ? 6 : 4}>
+                            <Cell job={job} />
+                        </Container>
+                    ))}
+                </Container>
+            )}
+            {showPagination && (
+                <Pagination
+                    loading={jobsFetching}
+                    canGoPrevious={canGoPrevious}
+                    canGoNext={Boolean(jobs.next_token)}
+                    onPrevious={goPrev}
+                    onNext={() => {
+                        const token = jobs.next_token;
+                        if (token) goNext(token);
+                    }}
+                />
+            )}
         </Page>
     );
 };

@@ -118,7 +118,9 @@
     "confirmTitle": "Just to be sure",
     "confirm": "Confirm",
     "cancel": "Cancel",
-    "copy": "Copy"
+    "copy": "Copy",
+    "previousPage": "Previous page",
+    "nextPage": "Next page"
   },
   "inspector": {
     "truncated": "Truncated for display. Use \"Copy\" to get full JSON."
